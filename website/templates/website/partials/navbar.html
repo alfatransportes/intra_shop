@@ -1,0 +1,146 @@
+{% load static %}
+{% load custom_tags %}
+
+<nav id="mainNav" class="navbar navbar-expand-lg bg-white shadow-sm fixed-top border-top border-alfa border-5">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-primary" href="{% url 'index' %}">
+            <img src="{{ config_website.logo.url }}" alt="{{ config_website.titulo }}" width="100" />
+        </a>
+        <button class="navbar-toggler border-0 bi bi-list" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarAlfa" aria-controls="navbarAlfa" aria-expanded="false"
+            aria-label="Alternar navegação"></button>
+
+        <div class="collapse navbar-collapse" id="navbarAlfa">
+            <div class="d-lg-flex align-items-center w-100">
+                <!-- MENUS CENTRALIZADOS NO DESKTOP -->
+                <ul class="navbar-nav mb-2 mb-lg-0 nav-links flex-lg-grow-1 justify-content-lg-center">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}"><i
+                                class="bi bi-house"></i> Início</a></li>
+
+                    <!-- Mega: Tipo produtos -->
+                    {% if tipo_produtos %}
+                    <li class="nav-item dropdown position-static">
+                        <a class="nav-link dropdown-toggle" href="#" id="TiposProsDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-card-list me-2"></i>Tipos de produtos</a>
+                        <div class="dropdown-menu mega w-100 p-4" aria-labelledby="TiposProsDropdown">
+                            <div class="mega-close d-lg-none">
+                                <button type="button" class="btn-close btn-close-mobile"
+                                    aria-label="Fechar"></button>
+                            </div>
+                            <div class="container">
+                                <div class="row g-4">
+                                    <div class="col-lg-4">
+                                        <div class="card border-0 bg-transparent">
+                                            <div class="card-body px-0">
+                                                <h5 class="fw-bold">Alfa Transportes</h5>
+                                                <p class="text-muted mb-2">Logística eficiente com prazos ágeis e
+                                                    cobertura nacional.</p>
+                                                <a href="#" class="fw-semibold text-decoration-none"
+                                                    style="color:var(--alfa-red)">Conheça a Alfa
+                                                    →</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% for tipo in tipo_produtos %}
+                                        {% if forloop.first or forloop.counter0|divisibleby:6 %}
+                                        <div class="col-lg-2 mb-3">
+                                            <h6 class="fw-bold">Produtos</h6>
+                                            <ul class="list-unstyled mb-0">
+                                                {% endif %}
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                        href="#">
+                                                        {{ tipo.nome }}
+                                                    </a>
+                                                </li>
+                                                {% if forloop.counter|divisibleby:6 or forloop.last %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                            </div>
+                        </div>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <!-- DIREITA -->
+                <div class="d-flex align-items-center ms-lg-auto">
+                    <div class="btn-group dropdown position-static" id="clienteDropdown" role="group"
+                        aria-label="Acesso do cliente">
+                        <a class="btn btn-alfa" href="#"
+                            rel="noopener">
+                            <i class="bi bi-person"></i> Perfil
+                        </a>
+                        <button type="button"
+                            class="btn btn-alfa dropdown-toggle dropdown-toggle-split bi bi-caret-down-fill"
+                            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mais opções do cliente">
+                            <span class="visually-hidden">Abrir menu</span>
+                        </button>
+                        <div class="dropdown-menu mega w-100 p-4">
+                            <div class="mega-close d-lg-none">
+                                <button type="button" class="btn-close btn-close-mobile"
+                                    aria-label="Fechar"></button>
+                            </div>
+                            <div class="container">
+                                <div class="row g-4">
+                                    <div class="col-lg-4">
+                                        <div class="card border-0 bg-transparent">
+                                            <div class="card-body px-0">
+                                                <h5 class="fw-bold">Área do Cliente</h5>
+                                                <p class="text-muted mb-2">Acesso a serviços e informações da sua
+                                                    conta.</p>
+                                                <a href="https://areadocliente.alfatransportes.com.br"
+                                                    target="_blank" rel="noopener"
+                                                    class="fw-semibold text-decoration-none"
+                                                    style="color:var(--alfa-red)">Entrar na Área do
+                                                    Cliente →</a>
+                                            </div>
+                                            <ul class="list-unstyled d-flex">
+                                                <li class="me-3"><a
+                                                        class="link-body-emphasis bi bi-instagram text-danger-alfa"
+                                                        href="#" aria-label="Instagram"></a></li>
+                                                <li class="me-3"><a
+                                                        class="link-body-emphasis bi bi-facebook text-danger-alfa"
+                                                        href="#" aria-label="Facebook"></a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <h6 class="fw-bold">Acessos</h6>
+                                        <ul class="list-unstyled mb-0">
+                                            <li><a class="dropdown-item"
+                                                    href="https://agregados.alfatransportes.com.br"
+                                                    target="_blank">Portal
+                                                    do Agregado</a></li>
+                                            <li><a class="dropdown-item"
+                                                    href="https://relatorios.alfatransportes.com.br/"
+                                                    target="_blank">Portal
+                                                    de Relatórios</a></li>
+                                            <li><a class="dropdown-item" href="https://alfa.atrol.com.br/"
+                                                    target="_blank">Atrol</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <h6 class="fw-bold">Colaboradores</h6>
+                                        <ul class="list-unstyled mb-0">
+                                            <li><a class="dropdown-item" target="_blank"
+                                                    href="https://treinamento.alfatransportes.com.br/">Portal
+                                                    de Treinamento</a></li>
+                                            <li><a class="dropdown-item" target="_blank"
+                                                    href="https://platform.senior.com.br/login/?redirectTo=https%3A%2F%2Fplatform.senior.com.br%2Fsenior-x%2F&tenant=alfatransportes.com.br">Portal
+                                                    do Colaborador</a></li>
+                                            <li><a class="dropdown-item" target="_blank"
+                                                    href="https://platform.senior.com.br/hcmrs/hcm/curriculo/?tenant=alfatransportes&tenantdomain=alfatransportes.com.br#!/vacancies/list">Trabalhe
+                                                    Conosco</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

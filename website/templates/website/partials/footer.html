@@ -1,0 +1,34 @@
+<div class="container mb-5">
+	<footer class="py-5">
+		<div class="row align-items-center gy-3 border-top pt-3 mt-3">
+
+			<!-- Logo: primeiro no mobile, centralizado -->
+			<div class="col-12 col-md-4 order-1 order-md-2 d-flex justify-content-center">
+				<a href="/"
+					class="d-inline-flex align-items-center justify-content-center link-body-emphasis text-decoration-none"
+					aria-label="Alfa Transportes">
+					<img src="{{ config_website.logo.url }}" alt="{{ config_website.titulo }}" width="100">
+				</a>
+			</div>
+
+			<!-- Texto © : abaixo do logo no mobile, à esquerda no desktop -->
+			<div class="col-12 col-md-4 order-2 order-md-1 text-center text-md-start">
+				<p class="mb-0 text-body-secondary">
+					© {% now 'Y' %} {{ config_website.titulo }}. Todos os direitos reservados.
+				</p>
+			</div>
+
+			<!-- Link de gerenciamento: último no mobile, à direita no desktop -->
+			<div class="col-12 col-md-4 order-3 d-flex justify-content-center justify-content-md-end">
+				<ul class="nav">
+					<li class="nav-item">
+						<a id="btnGerenciar" class="nav-link px-0 text-danger-alfa text-decoration-none" role="button">
+							Gerenciar cookies, termos e condições.
+						</a>
+					</li>
+				</ul>
+			</div>
+
+		</div>
+	</footer>
+</div>

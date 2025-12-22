@@ -1,0 +1,23 @@
+{% load static %}
+{% if messages %}
+
+    <div class="toast-container position-fixed top-50 start-50 translate-middle p-3">
+          {% for message in messages %}
+              <div class="toast show text-bg-light" role="alert" aria-live="assertive" aria-atomic="true">
+                  <div class="toast-header">
+                  {% comment %} <i class="bi bi-building-fill-gear me-1" width="20" height="20"></i> {% endcomment %}
+                  <img class="me-auto" src="{% static 'website/img/fav_logo_alfa.png' %}" alt="favicon" width="20" height="20">
+                  {% comment %} <strong class="me-auto">Área do Cliente</strong> {% endcomment %}
+                  <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                  </div>
+                  <div class="toast-body text-center">
+                      {{message}}
+                      <div class="mt-2 pt-2 border-top d-flex justify-content-around">
+                        <button type="button" class="btn btn-danger btn-sm" data-bs-dismiss="toast">Fechar</button>
+                      </div>
+                  </div>
+              </div>
+          {% endfor %}
+    </div>
+
+{% endif %}
