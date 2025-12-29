@@ -17,7 +17,7 @@ if not SECRET_KEY:
         raise RuntimeError("DJANGO_SECRET_KEY não definido em produção.")
 DEBUG = True
 
-ALLOWED_HOSTS = ["api.alfatransportes.com.br", "intrashop.alfatransportes.com.br", "alfatransportes.com.br", "127.0.0.1", "localhost", "[::1]", "192.168.1.27"]
+ALLOWED_HOSTS = ["api.alfatransportes.com.br", "intrashop.alfatransportes.com.br", "alfatransportes.com.br", "127.0.0.1", "localhost", "[::1]", "192.168.1.27", "192.168.18.121"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://api.alfatransportes.com.br",
@@ -35,7 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'website',
+    'website.apps.WebsiteConfig',
+    # 'website',
 ]
 
 MIDDLEWARE = [
@@ -154,16 +155,13 @@ USE_L10N = True
 USE_TZ = True
 
 
-STATIC_URL = "/static/"
+# Arquivos Staticos
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
-# onde ficam seus estáticos "de origem" (dev)
-STATICFILES_DIRS = [BASE_DIR / "static"]
-
-# onde o collectstatic vai juntar tudo (produção)
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# Arquivos de Media/upload
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

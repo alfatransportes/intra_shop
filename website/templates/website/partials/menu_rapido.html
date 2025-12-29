@@ -6,10 +6,14 @@
     <a href="{% url 'index' %}" class="menu-item text-center rounded-5 p-2 text-decoration-none text-break">
         <img src="{{ config_website.logo.url }}" alt="{ config_website.titulo }}" width="40" />
     </a>
-    <a href="#carrinho" class="menu-item text-center rounded-5 p-2 text-decoration-none text-break"
+    {% comment %} <a href="#carrinho" class="menu-item text-center rounded-5 p-2 text-decoration-none text-break"
         data-bs-toggle="modal" data-bs-target="#carrinho" role="button">
         <i class="mb-1 bi bi-cart4"></i>
         <span class="lh-1">Seu<br>Carrinho</span>
+    </a> {% endcomment %}
+    <a href="{% url 'carrinho_detail' %}" class="menu-item text-center rounded-5 p-2 text-decoration-none text-break">
+        <i class="mb-1 bi bi-cart4">({{ carrinho_header_total_itens }})</i>
+        <span class="lh-1">Carrinho</span>
     </a>
 </div>
 
