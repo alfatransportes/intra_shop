@@ -5,104 +5,161 @@
 
 {% block conteudo %}
 <main class="py-4 mt-5">
-  <div class="container">
+	<div class="container mt-3">
+		<nav aria-label="breadcrumb" class="mb-3">
+			<ol class="breadcrumb mb-0">
 
-    <div class="row g-4">
-      <div class="col-12 col-lg-7">
-        <div class="card shadow-sm">
-          <div class="card-body">
+				<li class="breadcrumb-item">
+					<a href="{% url 'index' %}">Início</a>
+				</li>
 
-            {% with img=produto.imagens.all|first %}
-              {% if img and img.imagem %}
-                <img id="imgPrincipal" src="{{ img.imagem.url }}" class="w-100 rounded"
-                     alt="{{ produto.nome }}" style="max-height:520px; object-fit:contain;">
-              {% else %}
-                <img id="imgPrincipal" src="{% static 'img/sem-imagem.png' %}" class="w-100 rounded"
-                     alt="Sem imagem" style="max-height:520px; object-fit:contain;">
-              {% endif %}
-            {% endwith %}
+				<li class="breadcrumb-item">
+					<span>{{ produto.unidade_prod }}</span>
+				</li>
 
-            {% if produto.imagens.all %}
-              <div class="d-flex gap-2 mt-3 flex-wrap">
-                {% for img in produto.imagens.all %}
-                  {% if img.imagem %}
-                    <button type="button" class="btn p-0 border rounded" style="width:72px; height:72px; overflow:hidden;"
-                            onclick="document.getElementById('imgPrincipal').src='{{ img.imagem.url }}'">
-                      <img src="{{ img.imagem.url }}" alt="Imagem {{ forloop.counter }}"
-                           style="width:72px; height:72px; object-fit:cover;">
-                    </button>
-                  {% endif %}
-                {% endfor %}
-              </div>
-            {% endif %}
+				<li class="breadcrumb-item">
+					<span>{{ produto.tipo_prod }}</span>
+				</li>
 
-          </div>
-        </div>
-      </div>
+				<li class="breadcrumb-item active fw-semibold" aria-current="page">
+					{{ produto.nome }}
+				</li>
 
-      <div class="col-12 col-lg-5">
-        <div class="card shadow-sm">
-          <div class="card-body">
+			</ol>
+		</nav>
 
-            <div class="small text-muted mb-1">
-              {{ produto.tipo_prod }} • {{ produto.nivel_ava_prod }} • {{ produto.unidade_prod }}
-            </div>
+		<div class="row g-4">
 
-            <h2 class="h4 mb-3">{{ produto.nome }}</h2>
+			{# GALERIA #}
+			<div class="col-12 col-lg-7">
+				<div class="card shadow-sm">
+					<div class="card-body">
 
-            {% if produto.estoque_disponivel|default:0 > 0 %}
-            <span class="badge text-bg-success">Em estoque</span>
-            <span class="ms-2 small text-muted">Quantidade disponível: {{ produto.estoque_disponivel }}</span>
-            {% else %}
-            <span class="badge text-bg-danger">Esgotado</span>
-            {% endif %}
+						{% with img_principal=produto.imagens.all|first %}
+						{% if img_principal and img_principal.imagem %}
+						<img id="imgPrincipal" src="{{ img_principal.imagem.url }}" class="w-100 rounded"
+							alt="{{ produto.nome }}" style="max-height:520px; object-fit:contain;">
+						{% else %}
+						<img id="imgPrincipal" src="{% static 'img/sem-imagem.png' %}" class="w-100 rounded"
+							alt="Sem imagem" style="max-height:520px; object-fit:contain;">
+						{% endif %}
+						{% endwith %}
 
-            <div class="mb-3">
-              {% if produto.porcen_desconto|default:0 > 0 %}
-                <div class="text-muted text-decoration-line-through">
-                  R$ {{ produto.valor_nota|floatformat:2 }}
-                </div>
-                <div class="display-6 fw-bold mb-1">
-                  R$ {{ produto.valor_venda|floatformat:2 }}
-                </div>
-                <div class="text-success fw-semibold">
-                  {{ produto.porcen_desconto|floatformat:2 }}% OFF
-                </div>
-              {% else %}
-                <div class="display-6 fw-bold">
-                  R$ {{ produto.valor_venda|floatformat:2 }}
-                </div>
-              {% endif %}
-            </div>
+						{% if produto.imagens.exists %}
+						<div class="d-flex gap-2 mt-3 flex-wrap">
+							{% for img in produto.imagens.all %}
+							{% if img.imagem %}
+							<button type="button" class="btn p-0 border rounded"
+								style="width:72px; height:72px; overflow:hidden;"
+								onclick="document.getElementById('imgPrincipal').src='{{ img.imagem.url }}'">
+								<img src="{{ img.imagem.url }}" alt="Imagem {{ forloop.counter }}"
+									style="width:72px; height:72px; object-fit:cover;">
+							</button>
+							{% endif %}
+							{% endfor %}
+						</div>
+						{% endif %}
 
-            <div class="d-grid gap-2">
-                {% if produto.estoque_disponivel|default:0 > 0 %}
-                <a href="{% url 'carrinho_add' produto.id %}" class="btn btn-alfa btn-lg">
-                    <i class="bi bi-cart-plus"></i> Adicionar ao carrinho
-                </a>
-                {% else %}
-                <button class="btn btn-secondary btn-lg" disabled>Sem estoque</button>
-                {% endif %}
+					</div>
+				</div>
 
-            </div>
+				{# DESCRIÇÃO (estilo ML) #}
+				<div class="card shadow-sm mt-3">
+					<div class="card-body">
+						<h3 class="h6 mb-3">Descrição</h3>
+						{% if produto.descricao %}
+						<div class="text-body" style="white-space: pre-line;">
+							{{ produto.descricao }}
+						</div>
+						{% else %}
+						<div class="text-muted">Sem descrição.</div>
+						{% endif %}
+					</div>
+				</div>
+			</div>
 
-            <hr class="my-4">
+			{# CAIXA COMPRA / INFO #}
+			<div class="col-12 col-lg-5">
+				<div class="card shadow-sm">
+					<div class="card-body">
 
-            <div class="small">
-              <div><strong>Unidade:</strong> {{ produto.unidade_prod }}</div>
-              <div><strong>Tipo:</strong> {{ produto.tipo_prod }}</div>
-              <div><strong>Nível de avaria:</strong> {{ produto.nivel_ava_prod }}</div>
-            </div>
+						<div class="small text-muted mb-2">
+							BO: <strong>#{{ produto.numero_bo }}</strong>
+						</div>
 
-          </div>
-        </div>
-      </div>
-    </div>
+						<div class="small text-muted mb-1">
+							{{ produto.tipo_prod }} • {{ produto.nivel_ava_prod }} • {{ produto.unidade_prod }}
+						</div>
 
-    <div class="mt-4">
-      <a href="{% url 'index' %}" class="btn btn-link px-0">← Voltar</a>
-    </div>
+						<h2 class="h4 mb-3">{{ produto.nome }}</h2>
 
-  </div>
+						{# ESTOQUE #}
+						{% if produto.estoque_disponivel|default:0 > 0 %}
+						<div class="mb-3">
+							<span class="badge text-bg-success">Em estoque</span>
+							<span class="ms-2 small text-muted">
+								Disponível: {{ produto.estoque_disponivel }}
+							</span>
+						</div>
+						{% else %}
+						<div class="mb-3">
+							<span class="badge text-bg-danger">Esgotado</span>
+						</div>
+						{% endif %}
+
+						{# PREÇO #}
+						<div class="mb-3">
+							{% if produto.porcen_desconto|default:0 > 0 %}
+							<div class="text-muted text-decoration-line-through">
+								R$ {{ produto.valor_nota|floatformat:2 }}
+							</div>
+							<div class="display-6 fw-bold mb-1">
+								R$ {{ produto.valor_venda|floatformat:2 }}
+							</div>
+							<div class="text-success fw-semibold">
+								{{ produto.porcen_desconto|floatformat:2 }}% OFF
+							</div>
+							{% else %}
+							<div class="display-6 fw-bold">
+								R$ {{ produto.valor_venda|floatformat:2 }}
+							</div>
+							{% endif %}
+						</div>
+
+						{# AÇÕES #}
+						<div class="d-grid gap-2">
+							{% if produto.estoque_disponivel|default:0 > 0 %}
+							<a href="{% url 'carrinho_add' produto.id %}" class="btn btn-alfa btn-lg">
+								<i class="bi bi-cart-plus"></i> Adicionar ao carrinho
+							</a>
+							<a href="{% url 'carrinho_detail' %}" class="btn btn-outline-secondary">
+								Ver carrinho
+							</a>
+							{% else %}
+							<button class="btn btn-secondary btn-lg" disabled>Sem estoque</button>
+							{% endif %}
+						</div>
+
+						<hr class="my-4">
+
+						{# DETALHES #}
+						<h3 class="h6 mb-2">Detalhes do produto</h3>
+						<div class="small">
+							<div><strong>Unidade:</strong> {{ produto.unidade_prod }}</div>
+							<div><strong>Tipo:</strong> {{ produto.tipo_prod }}</div>
+							<div><strong>Nível de avaria:</strong> {{ produto.nivel_ava_prod }}</div>
+							<div><strong>Estoque total:</strong> {{ produto.quantidade }}</div>
+							<div><strong>Disponível agora:</strong> {{ produto.estoque_disponivel }}</div>
+						</div>
+
+					</div>
+				</div>
+
+
+
+			</div>
+		</div>
+
+	</div>
 </main>
 {% endblock conteudo %}

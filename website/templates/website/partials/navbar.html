@@ -16,6 +16,8 @@
                 <ul class="navbar-nav mb-2 mb-lg-0 nav-links flex-lg-grow-1 justify-content-lg-center">
                     <li class="nav-item"><a class="nav-link" href="{% url 'index' %}"><i
                                 class="bi bi-house"></i> Início</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'minhas_compras' %}"><i
+                                class="bi bi-basket2-fill"></i> Minhas compras</a></li>
 
                     <!-- Mega: Tipo produtos -->
                     {% if tipo_produtos %}
@@ -70,12 +72,12 @@
                         aria-label="Acesso do cliente">
                         <a class="btn btn-alfa" href="#"
                             rel="noopener">
-                            <i class="bi bi-person"></i> Perfil
+                            <i class="bi bi-building-up"></i> 1 - Caçador
                         </a>
                         <button type="button"
-                            class="btn btn-alfa dropdown-toggle dropdown-toggle-split bi bi-caret-down-fill"
+                            class="btn btn-alfa dropdown-toggle dropdown-toggle-split bi bi-person"
                             data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mais opções do cliente">
-                            <span class="visually-hidden">Abrir menu</span>
+                            <span class="visually-hidden">Abrir menu</span>{{user.numero_cracha}}
                         </button>
                         <div class="dropdown-menu mega w-100 p-4">
                             <div class="mega-close d-lg-none">
@@ -87,54 +89,48 @@
                                     <div class="col-lg-4">
                                         <div class="card border-0 bg-transparent">
                                             <div class="card-body px-0">
-                                                <h5 class="fw-bold">Área do Cliente</h5>
-                                                <p class="text-muted mb-2">Acesso a serviços e informações da sua
-                                                    conta.</p>
-                                                <a href="https://areadocliente.alfatransportes.com.br"
-                                                    target="_blank" rel="noopener"
+                                                <h5 class="fw-bold">Intra Shop</h5>
+                                                <p class="text-muted mb-2">
+                                                  Loja interna de itens avariados Alfa Transportes.
+                                                </p>
+                                              
+                                                {% if request.user.is_authenticated %}
+                                                  <div class="mb-2 small">
+                                                    Olá, <strong>{{ request.user.email }}</strong>
+                                                  </div>
+                                              
+                                                  <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button
+                                                      type="submit"
+                                                      class="fw-semibold text-decoration-none btn btn-link p-0"
+                                                      style="color:var(--alfa-red)"
+                                                    >
+                                                      Sair ←
+                                                    </button>
+                                                  </form>
+                                                {% else %}
+                                                  <a
+                                                    href="{% url 'login' %}"
                                                     class="fw-semibold text-decoration-none"
-                                                    style="color:var(--alfa-red)">Entrar na Área do
-                                                    Cliente →</a>
-                                            </div>
-                                            <ul class="list-unstyled d-flex">
-                                                <li class="me-3"><a
-                                                        class="link-body-emphasis bi bi-instagram text-danger-alfa"
-                                                        href="#" aria-label="Instagram"></a></li>
-                                                <li class="me-3"><a
-                                                        class="link-body-emphasis bi bi-facebook text-danger-alfa"
-                                                        href="#" aria-label="Facebook"></a></li>
-                                            </ul>
+                                                    style="color:var(--alfa-red)"
+                                                  >
+                                                    Entrar →
+                                                  </a>
+                                                {% endif %}
+                                              </div>
+                                              
                                         </div>
                                     </div>
                                     <div class="col-lg-4">
-                                        <h6 class="fw-bold">Acessos</h6>
+                                        {% comment %} <h6 class="fw-bold">Acessos</h6>
                                         <ul class="list-unstyled mb-0">
-                                            <li><a class="dropdown-item"
-                                                    href="https://agregados.alfatransportes.com.br"
-                                                    target="_blank">Portal
-                                                    do Agregado</a></li>
-                                            <li><a class="dropdown-item"
-                                                    href="https://relatorios.alfatransportes.com.br/"
-                                                    target="_blank">Portal
-                                                    de Relatórios</a></li>
-                                            <li><a class="dropdown-item" href="https://alfa.atrol.com.br/"
-                                                    target="_blank">Atrol</a></li>
-                                        </ul>
+                                            <li>
+                                                <a class="dropdown-item" href="https://agregados.alfatransportes.com.br" target="_blank">Portal do Agregado</a>
+                                            </li>
+                                        </ul> {% endcomment %}
                                     </div>
-                                    <div class="col-lg-4">
-                                        <h6 class="fw-bold">Colaboradores</h6>
-                                        <ul class="list-unstyled mb-0">
-                                            <li><a class="dropdown-item" target="_blank"
-                                                    href="https://treinamento.alfatransportes.com.br/">Portal
-                                                    de Treinamento</a></li>
-                                            <li><a class="dropdown-item" target="_blank"
-                                                    href="https://platform.senior.com.br/login/?redirectTo=https%3A%2F%2Fplatform.senior.com.br%2Fsenior-x%2F&tenant=alfatransportes.com.br">Portal
-                                                    do Colaborador</a></li>
-                                            <li><a class="dropdown-item" target="_blank"
-                                                    href="https://platform.senior.com.br/hcmrs/hcm/curriculo/?tenant=alfatransportes&tenantdomain=alfatransportes.com.br#!/vacancies/list">Trabalhe
-                                                    Conosco</a></li>
-                                        </ul>
-                                    </div>
+                                    <div class="col-lg-4"> </div>
                                 </div>
                             </div>
                         </div>

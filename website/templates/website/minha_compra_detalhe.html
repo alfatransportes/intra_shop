@@ -1,0 +1,63 @@
+{% extends "website/base.html" %}
+{% block title %}Pedido #{{ venda.id }}{% endblock %}
+
+{% block conteudo %}
+<main class="py-4 mt-5">
+  <div class="container">
+    <a href="{% url 'minhas_compras' %}" class="btn btn-link px-0">← Voltar</a>
+
+    <div class="card shadow-sm mt-2">
+      <div class="card-body">
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+          <div>
+            <h1 class="h5 mb-1">Pedido #{{ venda.id }}</h1>
+            <div class="small text-muted">Forma de pagamento: {{ venda.forma_pagamento }}</div>
+          </div>
+
+          <div class="text-end">
+            <div class="fw-bold fs-5">R$ {{ venda.total|floatformat:2 }}</div>
+            <div class="small">
+              Status:
+              <strong>{{ venda.get_status_display|default:venda.status }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <hr>
+
+        <h2 class="h6 mb-2">Itens</h2>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th class="text-end">Qtd</th>
+                <th class="text-end">Preço</th>
+                <th class="text-end">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in venda.itens.all %}
+                <tr>
+                  <td>{{ item.produto.nome }}</td>
+                  <td class="text-end">{{ item.quantidade }}</td>
+                  <td class="text-end">R$ {{ item.preco_unitario|floatformat:2 }}</td>
+                  <td class="text-end">R$ {{ item.subtotal|floatformat:2 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if venda.observacao %}
+          <hr>
+          <div class="small">
+            <strong>Observação:</strong><br>
+            {{ venda.observacao }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

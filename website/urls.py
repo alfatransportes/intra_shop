@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_carrinho, views_checkout
+from . import views, views_carrinho, views_checkout, views_vendas
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -13,6 +13,9 @@ urlpatterns = [
 
     path("checkout/", views_checkout.checkout, name="checkout"),
     path("checkout/confirmar/<int:forma_id>/", views_checkout.checkout_confirmar, name="checkout_confirmar"),
+
+    path("minhas-compras/", views_vendas.minhas_compras, name="minhas_compras"),
+    path("minhas-compras/<int:pk>/", views_vendas.minha_compra_detalhe, name="minha_compra_detalhe"),
 
     path("venda/<int:pk>/", views_checkout.venda_detalhe, name="venda_detalhe"),
 ]

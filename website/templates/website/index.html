@@ -4,76 +4,77 @@
 
 {% block conteudo %}
 <main class="py-4 mt-5">
-    <section class="section py-4">
-    <div class="container">
-      <div class="row row-cols-1 row-cols-md-3 g-4">
+	<section class="section py-4">
+		<div class="container">
+			<div class="row row-cols-2 row-cols-md-3 g-4">
 
-        {% for produto in produtos %}
-          <div class="col">
-            <div class="card h-100 shadow-sm position-relative">
+				{% for produto in produtos %}
+				<div class="col">
+					<div class="card h-100 shadow-sm position-relative">
 
-              <a href="{% url 'detalhe_produto' produto.id %}" class="stretched-link" aria-label="Ver detalhes de {{ produto.nome }}"></a>
+						<a href="{% url 'detalhe_produto' produto.id %}" class="stretched-link"
+							aria-label="Ver detalhes de {{ produto.nome }}"></a>
 
-              {% with img=produto.imagens.all|first %}
-                {% if img and img.imagem %}
-                  <img src="{{ img.imagem.url }}" class="card-img-top" alt="{{ produto.nome }}"
-                       style="height:220px; object-fit:cover;">
-                {% else %}
-                  <img src="{% static 'img/sem-imagem.png' %}" class="card-img-top" alt="Sem imagem"
-                       style="height:220px; object-fit:contain;">
-                {% endif %}
-              {% endwith %}
+						{% with img=produto.imagens.all|first %}
+						{% if img and img.imagem %}
+						<img src="{{ img.imagem.url }}" class="card-img-top" alt="{{ produto.nome }}"
+							style="height:220px; object-fit:cover;">
+						{% else %}
+						<img src="{% static 'img/sem-imagem.png' %}" class="card-img-top" alt="Sem imagem"
+							style="height:220px; object-fit:contain;">
+						{% endif %}
+						{% endwith %}
 
-              <div class="position-absolute top-0 start-0 p-2">
-                {% if produto.estoque_disponivel|default:0 > 0 %}
-                <span class="badge text-bg-success">Em estoque: {{ produto.estoque_disponivel }}</span>
-                {% else %}
-                <span class="badge text-bg-danger">Esgotado</span>
-                {% endif %}
-              </div>
+						<div class="position-absolute top-0 start-0 p-2">
+							{% if produto.estoque_disponivel|default:0 > 0 %}
+							<span class="badge text-bg-success">Em estoque: {{ produto.estoque_disponivel }}</span>
+							{% else %}
+							<span class="badge text-bg-danger">Esgotado</span>
+							{% endif %}
+						</div>
 
-              <div class="card-body">
-                <h5 class="card-title mb-1">{{ produto.nome }}</h5>
+						<div class="card-body">
+							<h5 class="card-title mb-1">{{ produto.nome }}</h5>
 
-                <div class="small text-muted mb-2">
-                  {{ produto.tipo_prod }} • {{ produto.nivel_ava_prod }} • {{ produto.unidade_prod }}
-                </div>
+							<div class="small text-muted mb-2">
+								{{ produto.tipo_prod }} • {{ produto.nivel_ava_prod }} • {{ produto.unidade_prod }}
+							</div>
 
-                <div class="d-flex align-items-end justify-content-between">
-                  <div>
-                    {% if produto.porcen_desconto|default:0 > 0 %}
-                      <div class="small text-muted text-decoration-line-through">
-                        R$ {{ produto.valor_nota|floatformat:2 }}
-                      </div>
-                      <div class="fw-bold fs-5">
-                        R$ {{ produto.valor_venda|floatformat:2 }}
-                      </div>
-                      <div class="small text-success">
-                        {{ produto.porcen_desconto|floatformat:2 }}% OFF
-                      </div>
-                    {% else %}
-                      <div class="fw-bold fs-5">
-                        R$ {{ produto.valor_venda|floatformat:2 }}
-                      </div>
-                    {% endif %}
-                  </div>
+							<div class="d-flex align-items-end justify-content-between">
+								<div>
+									{% if produto.porcen_desconto|default:0 > 0 %}
+									<div class="small text-muted text-decoration-line-through">
+										R$ {{ produto.valor_nota|floatformat:2 }}
+									</div>
+									<div class="fw-bold fs-5">
+										R$ {{ produto.valor_venda|floatformat:2 }}
+									</div>
+									<div class="small text-success">
+										{{ produto.porcen_desconto|floatformat:2 }}% OFF
+									</div>
+									{% else %}
+									<div class="fw-bold fs-5">
+										R$ {{ produto.valor_venda|floatformat:2 }}
+									</div>
+									{% endif %}
+								</div>
 
-                  <div class="text-end">
-                    <span class="small text-muted">Ver detalhes</span>
-                  </div>
-                </div>
-              </div>
+								<div class="text-end">
+									<span class="small text-muted">Ver detalhes</span>
+								</div>
+							</div>
+						</div>
 
-            </div>
-          </div>
-        {% empty %}
-          <div class="col-12">
-            <div class="alert alert-info mb-0">Nenhum produto cadastrado.</div>
-          </div>
-        {% endfor %}
+					</div>
+				</div>
+				{% empty %}
+				<div class="col-12">
+					<div class="alert alert-info mb-0">Nenhum produto cadastrado.</div>
+				</div>
+				{% endfor %}
 
-      </div>
-    </div>
-  </section>
+			</div>
+		</div>
+	</section>
 </main>
 {% endblock conteudo %}

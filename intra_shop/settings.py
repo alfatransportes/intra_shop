@@ -29,6 +29,8 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 INSTALLED_APPS = [
+    'accounts',
+    'django.contrib.humanize',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,6 +40,13 @@ INSTALLED_APPS = [
     'website.apps.WebsiteConfig',
     # 'website',
 ]
+
+
+AUTH_USER_MODEL = "accounts.User"
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "index"
+LOGOUT_REDIRECT_URL = "index"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

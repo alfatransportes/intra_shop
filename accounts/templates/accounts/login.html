@@ -1,0 +1,30 @@
+{% extends "website/base.html" %}
+{% block title %}Entrar{% endblock %}
+
+{% block conteudo %}
+<main class="py-4 mt-5">
+  <div class="container" style="max-width:520px;">
+    <h1 class="h4 mb-3">Entrar</h1>
+
+    <form method="post" class="vstack gap-3">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      <div>
+        <label class="form-label">E-mail</label>
+        {{ form.username }}
+        <div class="text-danger small">{{ form.username.errors }}</div>
+      </div>
+
+      <div>
+        <label class="form-label">Senha</label>
+        {{ form.password }}
+        <div class="text-danger small">{{ form.password.errors }}</div>
+      </div>
+
+      <button class="btn btn-alfa btn-lg">Entrar</button>
+      <a class="btn btn-link" href="{% url 'cadastrar' %}">Criar conta</a>
+    </form>
+  </div>
+</main>
+{% endblock %}

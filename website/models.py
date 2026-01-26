@@ -1,18 +1,18 @@
 
 # website/models.py
 import os
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from io import BytesIO
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.core.validators import (MaxValueValidator, MinValueValidator,
-                                    RegexValidator)
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Sum
+from django.db.models import DecimalField, F, Sum
 from django.db.models.functions import Coalesce
-from django.utils.text import slugify
+from django.utils import timezone
 from PIL import Image, ImageOps
 
 
@@ -80,7 +80,7 @@ class Unidade(models.Model):
         ordering = ["codigo"]
 
     def __str__(self):
-        return str(self.codigo)  # <- corrigido: precisa ser string
+        return f'{self.codigo} - {self.nome}'
 
 
 class Tipo(models.Model):
@@ -104,6 +104,11 @@ class NivelAvaria(models.Model):
 
 
 class Produto(models.Model):
+    numero_bo = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Número do BO"
+    )
     unidade_prod = models.ForeignKey(
         Unidade,
         on_delete=models.PROTECT,
@@ -152,6 +157,9 @@ class Produto(models.Model):
         decimal_places=2,
         verbose_name="Valor de Venda",
         editable=False,
+    )
+    descricao = models.TextField(
+        verbose_name="Descrição do produto"
     )
 
     class Meta:
@@ -285,43 +293,79 @@ class Carrinho(models.Model):
         return f"Carrinho {self.id} - {self.usuario} ({self.status})"
 
     @property
-    def total(self) -> Decimal:
-        return sum((item.subtotal for item in self.itens.all()), Decimal("0.00"))
+    def total_itens(self) -> int:
+        return int(
+            self.itens.aggregate(q=Coalesce(Sum("quantidade"), 0))["q"] or 0
+        )
 
     @property
-    def total_itens(self) -> int:
-        return sum(item.quantidade for item in self.itens.all())
+    def total_valor(self) -> Decimal:
+        total = Decimal("0.00")
+        for item in self.itens.all():
+            total += (item.subtotal or Decimal("0.00"))
+        return total.quantize(Decimal("0.01"))
 
 
 class CarrinhoItem(models.Model):
     carrinho = models.ForeignKey("Carrinho", on_delete=models.CASCADE, related_name="itens")
-    produto = models.ForeignKey("Produto", on_delete=models.PROTECT, related_name="itens_carrinho")  # <= aqui
+    produto = models.ForeignKey("Produto", on_delete=models.PROTECT, related_name="itens_carrinho")
     quantidade = models.PositiveIntegerField(default=1)
-    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ("carrinho", "produto")
 
-    def __str__(self):
-        return f"{self.produto.nome} x {self.quantidade}"
-
     def save(self, *args, **kwargs):
-        # garante que o preço do item fica “congelado” no valor_venda do produto no momento
         if not self.preco_unitario or self.preco_unitario <= 0:
             self.preco_unitario = self.produto.valor_venda
         super().save(*args, **kwargs)
 
     @property
     def subtotal(self) -> Decimal:
-        return (self.preco_unitario * Decimal(self.quantidade)).quantize(Decimal("0.01"))
+        preco = self.preco_unitario or Decimal("0.00")
+        qtd = self.quantidade or 0
+        return (preco * Decimal(qtd)).quantize(Decimal("0.01"))
+    
+    @property
+    def total_itens(self) -> int:
+        agg = self.itens.aggregate(q=Coalesce(Sum("quantidade"), 0))
+        return int(agg["q"] or 0)
+
+    @property
+    def total_valor(self) -> Decimal:
+        agg = self.itens.aggregate(
+            total=Coalesce(
+                Sum(
+                    F("quantidade") * F("preco_unitario"),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                ),
+                Decimal("0.00"),
+            )
+        )
+        return (agg["total"] or Decimal("0.00")).quantize(Decimal("0.01"))
+
+    @property
+    def tempo_no_carrinho(self):
+        if not self.criado_em:
+            return timedelta(0)
+        return timezone.now() - self.criado_em
+
+    @property
+    def expira_em(self):
+        if not self.criado_em:
+            return None
+        return self.criado_em + timedelta(hours=4)
+
+    @property
+    def expirado(self):
+        expira = self.expira_em
+        return bool(expira and timezone.now() >= expira)
 
 
 
-from decimal import Decimal
-
-from django.conf import settings
-from django.core.validators import MinValueValidator
-from django.db import models
 
 
 class FormaPagamento(models.Model):

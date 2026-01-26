@@ -1,10 +1,16 @@
 # website/admin.py
+from decimal import Decimal
+
 from django import forms
 from django.contrib import admin
+from django.db.models import Prefetch
+from django.utils import timezone
 from django.utils.html import format_html
+from django.utils.timezone import localtime, timedelta, timezone
 
-from .models import (ConfigWebsite, FormaPagamento, NivelAvaria, Produto,
-                     ProdutoImagem, Tipo, Unidade, Venda, VendaItem)
+from .models import (Carrinho, CarrinhoItem, ConfigWebsite, FormaPagamento,
+                     NivelAvaria, Produto, ProdutoImagem, Tipo, Unidade, Venda,
+                     VendaItem)
 
 # -----------------------
 # ConfigWebsite (mantido)
@@ -146,18 +152,22 @@ class ProdutoImagemInline(admin.TabularInline):
 @admin.register(Produto)
 class ProdutoAdmin(admin.ModelAdmin):
     list_display = (
-        "id",
+        "numero_bo",
         "nome",
-        "quantidade",
         "unidade_prod",
         "tipo_prod",
         "nivel_ava_prod",
+        "quantidade",
+        "estoque_disponivel_admin",
         "valor_nota",
         "porcen_desconto",
         "valor_venda",
+        "imagem_principal_admin",
     )
     search_fields = (
+        "numero_bo",
         "nome",
+        "descricao",
         "unidade_prod__nome",
         "tipo_prod__nome",
         "nivel_ava_prod__nome",
@@ -167,7 +177,7 @@ class ProdutoAdmin(admin.ModelAdmin):
         "tipo_prod",
         "nivel_ava_prod",
     )
-    ordering = ("nome",)
+    ordering = ("-id",)
     list_per_page = 25
 
     autocomplete_fields = ("unidade_prod", "tipo_prod", "nivel_ava_prod")
@@ -176,12 +186,36 @@ class ProdutoAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Informações do produto", {
-            "fields": ("nome", "quantidade", "unidade_prod", "tipo_prod", "nivel_ava_prod"),
+            "fields": (
+                "numero_bo",
+                "nome",
+                "descricao",
+                "unidade_prod",
+                "tipo_prod",
+                "nivel_ava_prod",
+                "quantidade",
+            ),
         }),
         ("Valores", {
             "fields": ("valor_nota", "porcen_desconto", "valor_venda"),
         }),
     )
+
+    @admin.display(description="Estoque disponível", ordering="quantidade")
+    def estoque_disponivel_admin(self, obj):
+        # usa sua property do model
+        return obj.estoque_disponivel
+
+    @admin.display(description="Imagem principal")
+    def imagem_principal_admin(self, obj):
+        img = obj.imagens.filter(principal=True).first() or obj.imagens.order_by("ordem", "id").first()
+        if img and img.imagem:
+            return format_html(
+                '<img src="{}" style="height:45px; width:45px; border-radius:6px; object-fit:cover;" />',
+                img.imagem.url
+            )
+        return "—"
+
 
 
 # -----------------------
@@ -212,6 +246,82 @@ class ProdutoImagemAdmin(admin.ModelAdmin):
             ProdutoImagem.objects.filter(
                 produto_id=obj.produto_id
             ).exclude(pk=obj.pk).update(principal=False)
+
+
+
+class CarrinhoItemInline(admin.TabularInline):
+    model = CarrinhoItem
+    extra = 0
+    autocomplete_fields = ("produto",)
+    fields = ("produto", "quantidade", "preco_unitario", "subtotal_admin", "criado_em", "expira_em_admin", "expirado_admin")
+    readonly_fields = ("subtotal_admin", "criado_em", "expira_em_admin", "expirado_admin")
+
+    @admin.display(description="Subtotal")
+    def subtotal_admin(self, obj):
+        return obj.subtotal
+
+    @admin.display(description="Expira em")
+    def expira_em_admin(self, obj):
+        return obj.expira_em
+
+    @admin.display(description="Status")
+    def expirado_admin(self, obj):
+        if obj.expirado:
+            return format_html('<span style="color:#b91c1c;font-weight:600;">Expirado</span>')
+        return format_html('<span style="color:#15803d;font-weight:600;">Ativo</span>')
+
+
+@admin.register(Carrinho)
+class CarrinhoAdmin(admin.ModelAdmin):
+    list_display = ("id", "usuario", "status", "criado_em", "total_itens_admin", "total_valor_admin")
+    list_filter = ("status", "criado_em")
+    search_fields = ("usuario__email", "usuario__numero_cracha")
+    ordering = ("-id",)
+    inlines = (CarrinhoItemInline,)
+
+    @admin.display(description="Total itens")
+    def total_itens_admin(self, obj):
+        return obj.total_itens
+
+    @admin.display(description="Total (R$)")
+    def total_valor_admin(self, obj):
+        return obj.total_valor
+
+
+@admin.register(CarrinhoItem)
+class CarrinhoItemAdmin(admin.ModelAdmin):
+    list_display = ("id", "carrinho", "produto", "quantidade", "preco_unitario", "subtotal", "criado_em", "atualizado_em")
+    list_filter = ("carrinho__status", "criado_em")
+    search_fields = ("produto__nome", "carrinho__usuario__email", "carrinho__usuario__numero_cracha")
+    autocomplete_fields = ("carrinho", "produto")
+    ordering = ("-id",)
+
+    fields = (
+        "carrinho",
+        "produto",
+        "quantidade",
+        "preco_unitario",
+        "subtotal",
+        "criado_em",
+        "atualizado_em",
+    )
+    readonly_fields = ("subtotal", "criado_em", "atualizado_em")
+
+    @admin.display(description="Usuário")
+    def usuario_admin(self, obj):
+        return getattr(obj.carrinho, "usuario", None)
+
+    @admin.display(description="Expira em")
+    def expira_em_admin(self, obj):
+        if not obj.criado_em:
+            return "—"
+        return obj.expira_em
+
+    @admin.display(description="Expirado?")
+    def expirado_admin(self, obj):
+        return "Sim" if obj.expirado else "Não"
+
+
 
 
 @admin.register(FormaPagamento)
