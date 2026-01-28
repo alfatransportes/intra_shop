@@ -1,30 +1,58 @@
-{% extends "website/base.html" %}
+{% extends "accounts/base.html" %}
+{% load static %}
+
 {% block title %}Entrar{% endblock %}
 
 {% block conteudo %}
-<main class="py-4 mt-5">
-  <div class="container" style="max-width:520px;">
-    <h1 class="h4 mb-3">Entrar</h1>
+<main class="min-vh-100 d-flex align-items-center py-4">
+	<div class="container">
+		<div class="row shadow-lg rounded-4 overflow-hidden">
 
-    <form method="post" class="vstack gap-3">
-      {% csrf_token %}
-      {{ form.non_field_errors }}
+			<!-- Lado da imagem -->
+			<div class="col-md-6 d-none d-md-block p-0">
+				<div class="h-100 w-100" style="
+					min-height: 520px;
+					background-image: url('{% static 'website/img/login.png' %}');
+					background-size: cover;
+					background-position: center;">
+				</div>
+			</div>
 
-      <div>
-        <label class="form-label">E-mail</label>
-        {{ form.username }}
-        <div class="text-danger small">{{ form.username.errors }}</div>
-      </div>
+			<!-- Lado do formulário -->
+			<div class="col-md-6 p-4 p-lg-5 bg-white">
+				{% if config_website.logo %}
+				<img src="{{ config_website.logo.url }}" alt="{{ config_website.titulo }}" width="150" class="mb-3">
+				{% endif %}
 
-      <div>
-        <label class="form-label">Senha</label>
-        {{ form.password }}
-        <div class="text-danger small">{{ form.password.errors }}</div>
-      </div>
+				<h1 class="h4 mb-4 text-danger-alfa">Acessar sua conta</h1>
 
-      <button class="btn btn-alfa btn-lg">Entrar</button>
-      <a class="btn btn-link" href="{% url 'cadastrar' %}">Criar conta</a>
-    </form>
-  </div>
+				<form method="post" class="vstack gap-3">
+					{% csrf_token %}
+					{{ form.non_field_errors }}
+
+					<div class="form-floating mb-1">
+						{{ form.username }}
+						<label for="{{ form.username.id_for_label }}">E-mail</label>
+						<div class="text-danger small">{{ form.username.errors }}</div>
+					</div>
+
+					<div class="form-floating">
+						{{ form.password }}
+						<label for="{{ form.password.id_for_label }}">Senha</label>
+						<div class="text-danger small">{{ form.password.errors }}</div>
+					</div>
+
+					<button class="btn btn-alfa btn-lg w-100">Entrar</button>
+
+					<div class="text-center">
+						<a class="btn btn-link text-danger-alfa" href="{% url 'cadastrar' %}">
+							Criar conta
+						</a>
+					</div>
+				</form>
+			</div>
+
+		</div>
+	</div>
 </main>
 {% endblock %}

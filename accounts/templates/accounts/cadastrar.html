@@ -1,48 +1,76 @@
-{% extends "website/base.html" %}
+{% extends "accounts/base.html" %}
+{% load static %}
+
 {% block title %}Criar conta{% endblock %}
 
 {% block conteudo %}
-<main class="py-4 mt-5">
-  <div class="container" style="max-width:520px;">
-    <h1 class="h4 mb-3">Criar conta</h1>
+<main class="min-vh-100 d-flex align-items-center py-4">
+	<div class="container">
+		<div class="row shadow-lg rounded-4 overflow-hidden">
 
-    <form method="post" class="vstack gap-3">
-      {% csrf_token %}
-      {{ form.non_field_errors }}
+			<!-- Lado da imagem -->
+			<div class="col-md-6 d-none d-md-block p-0">
+				<div class="h-100 w-100" style="
+					min-height: 520px;
+					background-image: url('{% static 'website/img/login.png' %}');
+					background-size: cover;
+					background-position: center;">
+				</div>
+			</div>
 
-      <div>
-        <label class="form-label">E-mail</label>
-        {{ form.email }}
-        <div class="text-danger small">{{ form.email.errors }}</div>
-      </div>
+			<!-- Lado do formulário -->
+			<div class="col-md-6 p-4 p-lg-5 bg-white">
+				{% if config_website.logo %}
+				<img src="{{ config_website.logo.url }}" alt="{{ config_website.titulo }}" width="150" class="mb-1">
+				{% endif %}
 
-      <div>
-        <label class="form-label">Número do crachá</label>
-        {{ form.numero_cracha }}
-        <div class="text-danger small">{{ form.numero_cracha.errors }}</div>
-      </div>
+				<h1 class="h4 mb-4 text-danger-alfa">Criar conta</h1>
 
-      <div>
-        <label class="form-label">WhatsApp</label>
-        {{ form.whatsapp }}
-        <div class="text-danger small">{{ form.whatsapp.errors }}</div>
-      </div>
+				<form method="post" class="vstack gap-3">
+					{% csrf_token %}
+					{{ form.non_field_errors }}
 
-      <div>
-        <label class="form-label">Senha</label>
-        {{ form.password1 }}
-        <div class="text-danger small">{{ form.password1.errors }}</div>
-      </div>
+					<div class="form-floating mb-1">
+						{{ form.email }}
+						<label for="{{ form.email.id_for_label }}">E-mail</label>
+						<div class="text-danger small">{{ form.email.errors }}</div>
+					</div>
 
-      <div>
-        <label class="form-label">Confirmar senha</label>
-        {{ form.password2 }}
-        <div class="text-danger small">{{ form.password2.errors }}</div>
-      </div>
+					<div class="form-floating mb-1">
+						{{ form.numero_cracha }}
+						<label for="{{ form.numero_cracha.id_for_label }}">Número do crachá</label>
+						<div class="text-danger small">{{ form.numero_cracha.errors }}</div>
+					</div>
 
-      <button class="btn btn-alfa btn-lg">Criar conta</button>
-      <a class="btn btn-link" href="{% url 'login' %}">Já tenho conta</a>
-    </form>
-  </div>
+					<div class="form-floating mb-1">
+						{{ form.whatsapp }}
+						<label for="{{ form.whatsapp.id_for_label }}">WhatsApp</label>
+						<div class="text-danger small">{{ form.whatsapp.errors }}</div>
+					</div>
+
+					<div class="form-floating mb-1">
+						{{ form.password1 }}
+						<label for="{{ form.password1.id_for_label }}">Senha</label>
+						<div class="text-danger small">{{ form.password1.errors }}</div>
+					</div>
+
+					<div class="form-floating mb-1">
+						{{ form.password2 }}
+						<label for="{{ form.password2.id_for_label }}">Confirmar senha</label>
+						<div class="text-danger small">{{ form.password2.errors }}</div>
+					</div>
+
+					<button class="btn btn-alfa btn-lg w-100">Criar conta</button>
+
+					<div class="text-center">
+						<a class="btn btn-link text-danger-alfa" href="{% url 'login' %}">
+							Já tenho conta
+						</a>
+					</div>
+				</form>
+			</div>
+
+		</div>
+	</div>
 </main>
 {% endblock %}

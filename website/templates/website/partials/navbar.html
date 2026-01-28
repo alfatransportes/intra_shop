@@ -49,9 +49,8 @@
                                             <h6 class="fw-bold">Produtos</h6>
                                             <ul class="list-unstyled mb-0">
                                                 {% endif %}
-                                                <li>
-                                                    <a class="dropdown-item"
-                                                        href="#">
+                                               <li>
+                                                    <a class="dropdown-item" href="{% url 'index' %}?tipo={{ tipo.id }}">
                                                         {{ tipo.nome }}
                                                     </a>
                                                 </li>

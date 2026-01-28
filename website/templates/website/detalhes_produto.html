@@ -82,11 +82,11 @@
 			<div class="col-12 col-lg-5">
 				<div class="card shadow-sm">
 					<div class="card-body">
-
-						<div class="small text-muted mb-2">
-							BO: <strong>#{{ produto.numero_bo }}</strong>
-						</div>
-
+						{% if produto.numero_bo %}
+							<div class="small text-muted mb-2">
+								BO: <strong>#{{ produto.numero_bo }}</strong>
+							</div>
+						{% endif %}
 						<div class="small text-muted mb-1">
 							{{ produto.tipo_prod }} • {{ produto.nivel_ava_prod }} • {{ produto.unidade_prod }}
 						</div>

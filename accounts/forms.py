@@ -1,14 +1,62 @@
 # accounts/forms.py
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .models import User
 
+
+class StyledAuthenticationForm(AuthenticationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Float label precisa de placeholder e form-control
+        self.fields["username"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "E-mail",
+            "autocomplete": "username",
+        })
+
+        self.fields["password"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Senha",
+            "autocomplete": "current-password",
+        })
 
 class CadastroForm(UserCreationForm):
     class Meta:
         model = User
         fields = ("email", "numero_cracha", "whatsapp", "password1", "password2")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["email"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "E-mail",
+            "autocomplete": "email",
+        })
+
+        self.fields["numero_cracha"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Número do crachá",
+        })
+
+        self.fields["whatsapp"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "WhatsApp",
+        })
+
+        self.fields["password1"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Senha",
+            "autocomplete": "new-password",
+        })
+
+        self.fields["password2"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Confirmar senha",
+            "autocomplete": "new-password",
+        })
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower().strip()

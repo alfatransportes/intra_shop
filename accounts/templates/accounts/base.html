@@ -50,11 +50,7 @@
     </div>
     {% endif %}
 
-    {% include 'website/partials/navbar.html' %}
     {% include 'website/partials/messages.html' %}
-    {% if user.is_authenticated %}
-    {% include 'website/partials/menu_rapido.html' %}
-    {% endif %}
 
     {% block conteudo %}{% endblock conteudo %}
 
