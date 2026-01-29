@@ -4,7 +4,7 @@
 <nav id="mainNav" class="navbar navbar-expand-lg bg-white shadow-sm fixed-top border-top border-alfa border-5">
     <div class="container">
         <a class="navbar-brand fw-bold text-primary" href="{% url 'index' %}">
-            <img src="{{ config_website.logo.url }}" alt="{{ config_website.titulo }}" width="150" />
+            <img src="{{ config_website.logo.url }}" alt="{{ config_website.titulo }}" width="120" />
         </a>
         <button class="navbar-toggler border-0 bi bi-list" type="button" data-bs-toggle="collapse"
             data-bs-target="#navbarAlfa" aria-controls="navbarAlfa" aria-expanded="false"
@@ -70,12 +70,12 @@
                 <div class="d-flex align-items-center ms-lg-auto">
                     <div class="btn-group dropdown position-static" id="clienteDropdown" role="group"
                         aria-label="Acesso do cliente">
-                        <a class="btn btn-alfa" href="#"
+                        {% comment %} <a class="btn btn-alfa" href="#"
                             rel="noopener">
                             <i class="bi bi-building-up"></i> 1 - Caçador
-                        </a>
+                        </a> {% endcomment %}
                         <button type="button"
-                            class="btn btn-alfa dropdown-toggle dropdown-toggle-split bi bi-person"
+                            class="btn btn-alfa dropdown-toggle  bi bi-person"
                             data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mais opções do cliente">
                             <span class="visually-hidden">Abrir menu</span>{{user.numero_cracha}}
                         </button>

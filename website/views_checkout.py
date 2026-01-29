@@ -7,6 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
+from website.utils import inserir_ou_atualizar_valor
+
 from .forms import CheckoutForm, ComprovantePixForm
 from .models import FormaPagamento, Produto, Venda, VendaItem
 from .services.carrinho import get_carrinho_aberto
@@ -218,11 +220,18 @@ def pix_pagar(request, pk):
 
     # texto do QR
     fp = venda.forma_pagamento
-    pix_texto = (
-        fp.pix_copia_cola.strip()
-        if fp.pix_copia_cola
-        else f"PIX: {fp.pix_chave} | Valor: R$ {venda.total}"
-    )
+
+    if fp.pix_copia_cola:
+        # ✅ usa BR Code e injeta valor + recalcula CRC
+        try:
+            pix_texto = inserir_ou_atualizar_valor(fp.pix_copia_cola, float(venda.total))
+        except Exception:
+            # fallback se o payload estiver inválido
+            pix_texto = fp.pix_copia_cola.strip()
+    else:
+        # ⚠️ aqui ainda NÃO é um PIX válido.
+        # Ideal: obrigar pix_copia_cola no cadastro da forma de pagamento.
+        pix_texto = f"PIX: {fp.pix_chave} | Valor: R$ {venda.total}"
 
     return render(
         request,
