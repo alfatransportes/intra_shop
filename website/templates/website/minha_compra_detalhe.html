@@ -23,6 +23,33 @@
           </div>
         </div>
 
+        {# CTA para pagar Pix quando pendente e sem comprovante #}
+        {% if venda.forma_pagamento.codigo == "PIX" and venda.status == venda.Status.PENDENTE and not venda.comprovante_pix %}
+          <div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3">
+            <div>
+              <div class="fw-semibold">Pagamento pendente</div>
+              <div class="small mb-0">
+                Clique abaixo para efetuar o pagamento via Pix e enviar o comprovante.
+              </div>
+            </div>
+            <a href="{% url 'pix_pagar' venda.id %}" class="btn btn-primary">
+              Efetuar pagamento Pix
+            </a>
+          </div>
+        {% endif %}
+
+        {# Se for Pix e já enviou comprovante mas ainda está pendente #}
+        {% if venda.forma_pagamento.codigo == "PIX" and venda.status == venda.Status.PENDENTE and venda.comprovante_pix %}
+          <div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3">
+            <div class="small mb-0">
+              Comprovante enviado. Aguardando confirmação do administrador.
+            </div>
+            <a class="btn btn-sm btn-outline-primary" href="{{ venda.comprovante_pix.url }}" target="_blank" rel="noopener">
+              Ver comprovante
+            </a>
+          </div>
+        {% endif %}
+
         <hr>
 
         <h2 class="h6 mb-2">Itens</h2>
@@ -49,13 +76,82 @@
           </table>
         </div>
 
-        {% if venda.observacao %}
+        {# Quando confirmado, mostrar observação e comprovante conforme a forma #}
+        {% if venda.status == venda.Status.CONFIRMADA %}
           <hr>
-          <div class="small">
-            <strong>Observação:</strong><br>
-            {{ venda.observacao }}
+
+          <div class="row g-3">
+            <div class="col-12 col-lg-6">
+              <div class="card shadow-sm border-0">
+                <div class="card-body">
+                  <h2 class="h6 mb-2">Confirmação do pagamento</h2>
+
+                  {% if venda.observacao %}
+                    <div class="small">
+                      <div class="fw-semibold">Comentário / Observação</div>
+                      <div class="text-muted" style="white-space: pre-line;">{{ venda.observacao }}</div>
+                    </div>
+                  {% else %}
+                    <div class="small text-muted">Sem observações.</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+              <div class="card shadow-sm border-0">
+                <div class="card-body">
+                  <h2 class="h6 mb-2">Comprovante</h2>
+
+                  {% if venda.forma_pagamento.codigo == "PIX" %}
+                    {% if venda.comprovante_pix %}
+                      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="small text-muted">Comprovante Pix anexado.</div>
+                        <a class="btn btn-sm btn-primary" href="{{ venda.comprovante_pix.url }}" target="_blank" rel="noopener">
+                          Abrir comprovante
+                        </a>
+                      </div>
+                    {% else %}
+                      <div class="alert alert-warning mb-0 small">
+                        Pagamento confirmado, mas o comprovante Pix não está anexado.
+                      </div>
+                    {% endif %}
+
+                  {% elif venda.forma_pagamento.codigo == "VALE" %}
+                    {% if venda.comprovante_vale %}
+                      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="small text-muted">Comprovante Vale anexado.</div>
+                        <a class="btn btn-sm btn-primary" href="{{ venda.comprovante_vale.url }}" target="_blank" rel="noopener">
+                          Abrir comprovante
+                        </a>
+                      </div>
+                    {% else %}
+                      <div class="alert alert-warning mb-0 small">
+                        Pagamento confirmado, mas o comprovante do Vale não está anexado.
+                      </div>
+                    {% endif %}
+
+                  {% else %}
+                    <div class="small text-muted">
+                      Esta forma de pagamento não exige comprovante.
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
           </div>
+
+        {% else %}
+          {# Se não confirmado e tiver observação, mostra como antes #}
+          {% if venda.observacao %}
+            <hr>
+            <div class="small">
+              <strong>Observação:</strong><br>
+              <div style="white-space: pre-line;">{{ venda.observacao }}</div>
+            </div>
+          {% endif %}
         {% endif %}
+
       </div>
     </div>
   </div>

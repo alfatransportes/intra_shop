@@ -1,10 +1,7 @@
 # website/admin.py
-from datetime import timedelta
-from decimal import Decimal
-
 from django import forms
-from django.contrib import admin
-from django.utils import timezone
+from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 from django.utils.html import format_html
 
 from .models import (Carrinho, CarrinhoItem, ConfigWebsite, FormaPagamento,
@@ -300,6 +297,13 @@ class FormaPagamentoAdmin(admin.ModelAdmin):
     def nome_admin(self, obj):
         return obj.get_codigo_display()
 
+from django import forms
+from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
+from django.utils.html import format_html
+
+from .models import FormaPagamento, Venda, VendaItem
+
 # -----------------------
 # Venda / Itens
 # -----------------------
@@ -311,8 +315,38 @@ class VendaItemInline(admin.TabularInline):
     can_delete = False
 
 
+class VendaAdminForm(forms.ModelForm):
+    class Meta:
+        model = Venda
+        fields = "__all__"
+
+    def clean(self):
+        cleaned = super().clean()
+
+        status = cleaned.get("status")
+        fp = cleaned.get("forma_pagamento")
+        comp_pix = cleaned.get("comprovante_pix")
+        comp_vale = cleaned.get("comprovante_vale")
+
+        # Só valida se estiver tentando CONFIRMAR
+        if status == Venda.Status.CONFIRMADA and fp:
+            codigo = fp.codigo
+
+            if codigo == FormaPagamento.Codigo.PIX and not comp_pix:
+                self.add_error("comprovante_pix", "Obrigatório anexar o comprovante do PIX para confirmar.")
+                raise ValidationError("Não é possível confirmar sem comprovante do PIX.")
+
+            if codigo == FormaPagamento.Codigo.VALE and not comp_vale:
+                self.add_error("comprovante_vale", "Obrigatório anexar o comprovante do VALE para confirmar.")
+                raise ValidationError("Não é possível confirmar sem comprovante do VALE.")
+
+        return cleaned
+
+
 @admin.register(Venda)
 class VendaAdmin(admin.ModelAdmin):
+    form = VendaAdminForm  # ✅ AQUI
+
     list_display = ("id", "usuario", "status_badge", "forma_pagamento", "total", "criado_em", "comprovante_link")
     list_filter = ("status", "forma_pagamento", "criado_em")
     search_fields = ("id", "usuario__email", "usuario__numero_cracha")
@@ -324,32 +358,72 @@ class VendaAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Venda", {"fields": ("usuario", "status", "forma_pagamento", "total", "criado_em")}),
         ("PIX", {"fields": ("comprovante_pix",), "description": "Apenas para pagamentos via Pix."}),
+        ("VALE", {"fields": ("comprovante_vale",), "description": "Apenas para pagamentos via Vale."}),
         ("Observação", {"fields": ("observacao",)}),
     )
 
     @admin.display(description="Status")
     def status_badge(self, obj):
-        if obj.status == "PENDENTE":
+        if obj.status == Venda.Status.PENDENTE:
             return format_html('<span class="badge" style="background:#f59e0b;color:#111827;">Pendente</span>')
-        if obj.status == "CONFIRMADA":
+        if obj.status == Venda.Status.CONFIRMADA:
             return format_html('<span class="badge" style="background:#16a34a;">Confirmada</span>')
-        if obj.status == "CANCELADA":
+        if obj.status == Venda.Status.CANCELADA:
             return format_html('<span class="badge" style="background:#dc2626;">Cancelada</span>')
         return obj.status
 
-    @admin.display(description="Comprovante")
+    @admin.display(description="Comprovantes")
     def comprovante_link(self, obj):
-        if getattr(obj, "comprovante_pix", None):
+        links = []
+        if obj.comprovante_pix:
             try:
-                return format_html('<a href="{}" target="_blank">Ver</a>', obj.comprovante_pix.url)
+                links.append(format_html(
+                    '<a href="{}" target="_blank" rel="noopener">Pix</a>',
+                    obj.comprovante_pix.url
+                ))
             except Exception:
-                return "—"
-        return "—"
+                pass
+        if obj.comprovante_vale:
+            try:
+                links.append(format_html(
+                    '<a href="{}" target="_blank" rel="noopener">Vale</a>',
+                    obj.comprovante_vale.url
+                ))
+            except Exception:
+                pass
+        return format_html(" • ".join([str(x) for x in links])) if links else "—"
 
     @admin.action(description="Marcar como CONFIRMADA")
     def confirmar_vendas(self, request, queryset):
-        queryset.update(status="CONFIRMADA")
+        bloqueadas = []
+        confirmadas = 0
+
+        for v in queryset.select_related("forma_pagamento"):
+            codigo = v.forma_pagamento.codigo
+
+            if codigo == FormaPagamento.Codigo.PIX and not v.comprovante_pix:
+                bloqueadas.append(v.id)
+                continue
+
+            if codigo == FormaPagamento.Codigo.VALE and not v.comprovante_vale:
+                bloqueadas.append(v.id)
+                continue
+
+            if v.status != Venda.Status.CONFIRMADA:
+                v.status = Venda.Status.CONFIRMADA
+                v.save(update_fields=["status"])
+                confirmadas += 1
+
+        if confirmadas:
+            self.message_user(request, f"{confirmadas} venda(s) confirmada(s) com sucesso.", level=messages.SUCCESS)
+
+        if bloqueadas:
+            self.message_user(
+                request,
+                "Não foi possível confirmar (faltando comprovante) nos pedidos: " + ", ".join(map(str, bloqueadas)),
+                level=messages.ERROR,
+            )
 
     @admin.action(description="Marcar como CANCELADA (não devolve estoque)")
     def cancelar_vendas(self, request, queryset):
-        queryset.update(status="CANCELADA")
+        queryset.update(status=Venda.Status.CANCELADA)

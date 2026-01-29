@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import Venda
+from .models import FormaPagamento, Venda
 
 
 @login_required
@@ -12,13 +12,24 @@ def minhas_compras(request):
         Venda.objects
         .filter(usuario=request.user)
         .select_related("forma_pagamento")
-        .order_by("-id")  # ou "-criado_em"
+        .prefetch_related("itens__produto")  # melhora o template (itens.0.produto.nome)
+        .order_by("-id")
     )
 
     paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(request.GET.get("page"))
 
+    # flag para o template
+    for v in page_obj.object_list:
+        v.precisa_comprovante_pix = (
+            v.forma_pagamento
+            and getattr(v.forma_pagamento, "codigo", None) == FormaPagamento.Codigo.PIX
+            and v.status == Venda.Status.PENDENTE
+            and not v.comprovante_pix
+        )
+
     return render(request, "website/minhas_compras.html", {"page_obj": page_obj})
+
 
 
 @login_required

@@ -424,6 +424,12 @@ class Venda(models.Model):
         null=True,
         verbose_name="Comprovante Pix",
     )
+    comprovante_vale = models.FileField(
+        upload_to="comprovante_vale/",
+        blank=True,
+        null=True,
+        verbose_name="Comprovante Vale",
+    )
 
     # opcional (congelar total):
     total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
@@ -435,7 +441,18 @@ class Venda(models.Model):
         return f"Venda #{self.pk} - {self.usuario} - {self.status}"
     
     def precisa_comprovante_pix(self):
-        return self.forma_pagamento.tipo == FormaPagamento.Tipo.PIX
+        return (
+            self.forma_pagamento.codigo == FormaPagamento.Codigo.PIX
+            and self.status == self.Status.PENDENTE
+            and not self.comprovante_pix
+        )
+
+    def precisa_comprovante_vale(self):
+        return (
+            self.forma_pagamento.codigo == FormaPagamento.Codigo.VALE
+            and self.status == self.Status.PENDENTE
+            and not self.comprovante_vale
+        )
 
 
 class VendaItem(models.Model):
