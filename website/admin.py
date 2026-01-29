@@ -1,12 +1,11 @@
 # website/admin.py
+from datetime import timedelta
 from decimal import Decimal
 
 from django import forms
 from django.contrib import admin
-from django.db.models import Prefetch
 from django.utils import timezone
 from django.utils.html import format_html
-from django.utils.timezone import localtime, timedelta, timezone
 
 from .models import (Carrinho, CarrinhoItem, ConfigWebsite, FormaPagamento,
                      NivelAvaria, Produto, ProdutoImagem, Tipo, Unidade, Venda,
@@ -20,21 +19,13 @@ class ConfigWebsiteForm(forms.ModelForm):
     class Meta:
         model = ConfigWebsite
         fields = "__all__"
-        widgets = {
-            "cor_destaque": forms.TextInput(attrs={"type": "color"}),
-        }
+        widgets = {"cor_destaque": forms.TextInput(attrs={"type": "color"})}
 
 
 @admin.register(ConfigWebsite)
 class ConfigWebsiteAdmin(admin.ModelAdmin):
     form = ConfigWebsiteForm
-    list_display = (
-        "titulo",
-        "cor_destaque_colorida",
-        "preview_logo",
-        "preview_favicon",
-        "active",
-    )
+    list_display = ("titulo", "cor_destaque_colorida", "preview_logo", "preview_favicon", "active")
     search_fields = ("titulo",)
     list_filter = ("active",)
     ordering = ("titulo",)
@@ -43,52 +34,34 @@ class ConfigWebsiteAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Informações gerais", {
-            "fields": (
-                "titulo",
-                "cor_destaque",
-            ),
-            "description": "Configure o título e a cor de destaque usada no site."
+            "fields": ("titulo", "cor_destaque"),
+            "description": "Configure o título e a cor de destaque usada no site.",
         }),
         ("Imagens", {
-            "fields": (
-                "logo",
-                "preview_logo",
-                "favicon",
-                "preview_favicon",
-            ),
-            "description": "Envie o logotipo e o favicon nos formatos e dimensões adequados."
+            "fields": ("logo", "preview_logo", "favicon", "preview_favicon"),
+            "description": "Envie o logotipo e o favicon nos formatos e dimensões adequados.",
         }),
         ("Status", {
             "fields": ("active",),
-            "description": "Apenas uma configuração pode estar ativa por vez."
+            "description": "Apenas uma configuração pode estar ativa por vez.",
         }),
     )
 
     @admin.display(description="Cor destaque")
     def cor_destaque_colorida(self, obj):
         cor = getattr(obj, "cor_destaque", "#000000")
-        return format_html(
-            '<span style="color:{}; font-weight:bold;">{}</span>',
-            cor,
-            cor,
-        )
+        return format_html('<span style="color:{}; font-weight:bold;">{}</span>', cor, cor)
 
     @admin.display(description="Logo")
     def preview_logo(self, obj):
         if obj.logo:
-            return format_html(
-                '<img src="{}" width="120" style="border-radius:6px;">',
-                obj.logo.url
-            )
+            return format_html('<img src="{}" width="120" style="border-radius:6px;">', obj.logo.url)
         return "—"
 
     @admin.display(description="Favicon")
     def preview_favicon(self, obj):
         if obj.favicon:
-            return format_html(
-                '<img src="{}" width="32" height="32" style="border-radius:4px;">',
-                obj.favicon.url
-            )
+            return format_html('<img src="{}" width="32" height="32" style="border-radius:4px;">', obj.favicon.url)
         return "—"
 
 
@@ -138,7 +111,7 @@ class ProdutoImagemInline(admin.TabularInline):
             try:
                 return format_html(
                     '<img src="{}" style="height:60px; border-radius:6px; object-fit:cover;" />',
-                    obj.imagem.url
+                    obj.imagem.url,
                 )
             except Exception:
                 return "—"
@@ -172,11 +145,7 @@ class ProdutoAdmin(admin.ModelAdmin):
         "tipo_prod__nome",
         "nivel_ava_prod__nome",
     )
-    list_filter = (
-        "unidade_prod",
-        "tipo_prod",
-        "nivel_ava_prod",
-    )
+    list_filter = ("unidade_prod", "tipo_prod", "nivel_ava_prod")
     ordering = ("-id",)
     list_per_page = 25
 
@@ -196,14 +165,11 @@ class ProdutoAdmin(admin.ModelAdmin):
                 "quantidade",
             ),
         }),
-        ("Valores", {
-            "fields": ("valor_nota", "porcen_desconto", "valor_venda"),
-        }),
+        ("Valores", {"fields": ("valor_nota", "porcen_desconto", "valor_venda")}),
     )
 
     @admin.display(description="Estoque disponível", ordering="quantidade")
     def estoque_disponivel_admin(self, obj):
-        # usa sua property do model
         return obj.estoque_disponivel
 
     @admin.display(description="Imagem principal")
@@ -212,20 +178,19 @@ class ProdutoAdmin(admin.ModelAdmin):
         if img and img.imagem:
             return format_html(
                 '<img src="{}" style="height:45px; width:45px; border-radius:6px; object-fit:cover;" />',
-                img.imagem.url
+                img.imagem.url,
             )
         return "—"
 
 
-
 # -----------------------
-# ProdutoImagem (opcional registrar separado)
+# ProdutoImagem (registrado separado)
 # -----------------------
 
 @admin.register(ProdutoImagem)
 class ProdutoImagemAdmin(admin.ModelAdmin):
     list_display = ("id", "produto", "ordem", "principal", "thumb", "legenda")
-    search_fields = ("produto__nome", "legenda", "imagem")
+    search_fields = ("produto__nome", "legenda")
     list_filter = ("principal",)
     ordering = ("produto", "ordem", "id")
     list_per_page = 25
@@ -236,18 +201,19 @@ class ProdutoImagemAdmin(admin.ModelAdmin):
         if obj.imagem:
             return format_html(
                 '<img src="{}" style="height:45px; border-radius:6px; object-fit:cover;" />',
-                obj.imagem.url
+                obj.imagem.url,
             )
         return "—"
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if obj.principal and obj.produto_id:
-            ProdutoImagem.objects.filter(
-                produto_id=obj.produto_id
-            ).exclude(pk=obj.pk).update(principal=False)
+            ProdutoImagem.objects.filter(produto_id=obj.produto_id).exclude(pk=obj.pk).update(principal=False)
 
 
+# -----------------------
+# Carrinho / Itens
+# -----------------------
 
 class CarrinhoItemInline(admin.TabularInline):
     model = CarrinhoItem
@@ -278,6 +244,7 @@ class CarrinhoAdmin(admin.ModelAdmin):
     search_fields = ("usuario__email", "usuario__numero_cracha")
     ordering = ("-id",)
     inlines = (CarrinhoItemInline,)
+    autocomplete_fields = ("usuario",)
 
     @admin.display(description="Total itens")
     def total_itens_admin(self, obj):
@@ -290,45 +257,52 @@ class CarrinhoAdmin(admin.ModelAdmin):
 
 @admin.register(CarrinhoItem)
 class CarrinhoItemAdmin(admin.ModelAdmin):
-    list_display = ("id", "carrinho", "produto", "quantidade", "preco_unitario", "subtotal", "criado_em", "atualizado_em")
+    list_display = ("id", "usuario_admin", "carrinho", "produto", "quantidade", "preco_unitario", "subtotal", "criado_em", "atualizado_em", "expirado_admin")
     list_filter = ("carrinho__status", "criado_em")
     search_fields = ("produto__nome", "carrinho__usuario__email", "carrinho__usuario__numero_cracha")
     autocomplete_fields = ("carrinho", "produto")
     ordering = ("-id",)
 
-    fields = (
-        "carrinho",
-        "produto",
-        "quantidade",
-        "preco_unitario",
-        "subtotal",
-        "criado_em",
-        "atualizado_em",
-    )
+    fields = ("carrinho", "produto", "quantidade", "preco_unitario", "subtotal", "criado_em", "atualizado_em")
     readonly_fields = ("subtotal", "criado_em", "atualizado_em")
 
     @admin.display(description="Usuário")
     def usuario_admin(self, obj):
         return getattr(obj.carrinho, "usuario", None)
 
-    @admin.display(description="Expira em")
-    def expira_em_admin(self, obj):
-        if not obj.criado_em:
-            return "—"
-        return obj.expira_em
-
     @admin.display(description="Expirado?")
     def expirado_admin(self, obj):
         return "Sim" if obj.expirado else "Não"
 
 
-
+# -----------------------
+# FormaPagamento
+# -----------------------
 
 @admin.register(FormaPagamento)
 class FormaPagamentoAdmin(admin.ModelAdmin):
-    list_display = ("nome", "ativa")
-    list_filter = ("ativa",)
-    search_fields = ("nome",)
+    list_display = ("nome_admin", "codigo", "ativa")
+    list_filter = ("codigo", "ativa")
+    search_fields = ("codigo", "pix_chave", "pix_nome", "pix_cidade", "pix_copia_cola")
+    ordering = ("codigo",)
+
+    fieldsets = (
+        ("Dados básicos", {
+            "fields": ("codigo", "ativa"),
+        }),
+        ("Configuração Pix", {
+            "fields": ("pix_chave", "pix_nome", "pix_cidade", "pix_copia_cola"),
+            "description": "Preencha apenas se a forma for PIX.",
+        }),
+    )
+
+    @admin.display(description="Forma")
+    def nome_admin(self, obj):
+        return obj.get_codigo_display()
+
+# -----------------------
+# Venda / Itens
+# -----------------------
 
 class VendaItemInline(admin.TabularInline):
     model = VendaItem
@@ -336,13 +310,41 @@ class VendaItemInline(admin.TabularInline):
     readonly_fields = ("produto", "quantidade", "preco_unitario", "subtotal")
     can_delete = False
 
+
 @admin.register(Venda)
 class VendaAdmin(admin.ModelAdmin):
-    list_display = ("id", "usuario", "status", "forma_pagamento", "total", "criado_em")
+    list_display = ("id", "usuario", "status_badge", "forma_pagamento", "total", "criado_em", "comprovante_link")
     list_filter = ("status", "forma_pagamento", "criado_em")
-    search_fields = ("id", "usuario__username", "usuario__email")
+    search_fields = ("id", "usuario__email", "usuario__numero_cracha")
+    ordering = ("-id",)
     inlines = [VendaItemInline]
     actions = ["confirmar_vendas", "cancelar_vendas"]
+    readonly_fields = ("total", "criado_em")
+
+    fieldsets = (
+        ("Venda", {"fields": ("usuario", "status", "forma_pagamento", "total", "criado_em")}),
+        ("PIX", {"fields": ("comprovante_pix",), "description": "Apenas para pagamentos via Pix."}),
+        ("Observação", {"fields": ("observacao",)}),
+    )
+
+    @admin.display(description="Status")
+    def status_badge(self, obj):
+        if obj.status == "PENDENTE":
+            return format_html('<span class="badge" style="background:#f59e0b;color:#111827;">Pendente</span>')
+        if obj.status == "CONFIRMADA":
+            return format_html('<span class="badge" style="background:#16a34a;">Confirmada</span>')
+        if obj.status == "CANCELADA":
+            return format_html('<span class="badge" style="background:#dc2626;">Cancelada</span>')
+        return obj.status
+
+    @admin.display(description="Comprovante")
+    def comprovante_link(self, obj):
+        if getattr(obj, "comprovante_pix", None):
+            try:
+                return format_html('<a href="{}" target="_blank">Ver</a>', obj.comprovante_pix.url)
+            except Exception:
+                return "—"
+        return "—"
 
     @admin.action(description="Marcar como CONFIRMADA")
     def confirmar_vendas(self, request, queryset):

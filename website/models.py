@@ -365,18 +365,45 @@ class CarrinhoItem(models.Model):
         return bool(expira and timezone.now() >= expira)
 
 
-
-
-
 class FormaPagamento(models.Model):
-    nome = models.CharField(max_length=60, unique=True)
+    class Codigo(models.TextChoices):
+        PIX = "PIX", "Pix"
+        DINHEIRO = "DINHEIRO", "Dinheiro em espécie"
+        VALE = "VALE", "Vale no pagamento"
+
+    codigo = models.CharField(max_length=20, choices=Codigo.choices, unique=True)
+
     ativa = models.BooleanField(default=True)
 
+    # Pix
+    pix_chave = models.CharField(max_length=255, blank=True, default="")
+    pix_nome = models.CharField(max_length=120, blank=True, default="")
+    pix_cidade = models.CharField(max_length=60, blank=True, default="")
+    pix_copia_cola = models.TextField(blank=True, default="")
+
+
     class Meta:
-        ordering = ["nome"]
+        ordering = ["codigo"]
+
+    @property
+    def nome(self):
+        # “nome” vem do label do choice
+        return self.get_codigo_display()
+
+    def clean(self):
+        if self.codigo == self.Codigo.PIX:
+            if not (self.pix_chave or self.pix_copia_cola):
+                raise ValidationError("Para Pix, informe a chave Pix ou o código copia e cola.")
+        else:
+            self.pix_chave = ""
+            self.pix_nome = ""
+            self.pix_cidade = ""
+            self.pix_copia_cola = ""
 
     def __str__(self):
-        return self.nome
+        return self.get_codigo_display()
+
+
 
 
 class Venda(models.Model):
@@ -391,6 +418,13 @@ class Venda(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     observacao = models.TextField(blank=True, default="")
 
+    comprovante_pix = models.FileField(
+        upload_to="comprovantes_pix/",
+        blank=True,
+        null=True,
+        verbose_name="Comprovante Pix",
+    )
+
     # opcional (congelar total):
     total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
 
@@ -399,6 +433,9 @@ class Venda(models.Model):
 
     def __str__(self):
         return f"Venda #{self.pk} - {self.usuario} - {self.status}"
+    
+    def precisa_comprovante_pix(self):
+        return self.forma_pagamento.tipo == FormaPagamento.Tipo.PIX
 
 
 class VendaItem(models.Model):

@@ -1,0 +1,70 @@
+{% extends "website/base.html" %}
+{% load static %}
+{% block title %}Pagamento Pix{% endblock %}
+
+{% block conteudo %}
+<main class="py-4 mt-5">
+  <div class="container">
+    <a href="{% url 'minha_compra_detalhe' venda.id %}" class="btn btn-link px-0">← Voltar</a>
+
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h1 class="h5 mb-2">Pagamento via Pix</h1>
+
+            <div class="mb-2 small text-muted">
+              Pedido #{{ venda.id }} • Total:
+              <strong>R$ {{ venda.total|floatformat:2 }}</strong>
+            </div>
+
+            <div class="text-center my-3">
+              <img
+                src="https://chart.googleapis.com/chart?cht=qr&chs=320x320&chl={{ pix_texto|urlencode }}"
+                alt="QR Code Pix"
+                class="img-fluid"
+              >
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label fw-semibold">Pix copia e cola</label>
+              <textarea class="form-control" rows="3" readonly>{{ pix_texto }}</textarea>
+              <div class="form-text">Copie e cole no app do banco.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="h6 mb-2">Enviar comprovante</h2>
+
+            {% if venda.comprovante_pix %}
+              <div class="alert alert-success">
+                Comprovante já enviado. Aguarde a confirmação do administrador.
+              </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              {{ form.as_p }}
+              <button type="submit" class="btn btn-alfa">
+                Enviar comprovante
+              </button>
+              <a href="{% url 'minhas_compras' %}" class="btn btn-outline-secondary">
+                Minhas compras
+              </a>
+            </form>
+
+            <div class="small text-muted mt-3">
+              Após o envio, o administrador confirmará o pagamento e dará baixa.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}

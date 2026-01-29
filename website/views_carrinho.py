@@ -17,7 +17,7 @@ def carrinho_detail(request):
         .get(pk=carrinho.pk)
     )
 
-    formas_pagamento = FormaPagamento.objects.filter(ativa=True).order_by("nome")
+    formas_pagamento = FormaPagamento.objects.filter(ativa=True).order_by("codigo")
 
     return render(
         request,

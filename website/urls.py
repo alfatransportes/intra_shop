@@ -17,5 +17,6 @@ urlpatterns = [
     path("minhas-compras/", views_vendas.minhas_compras, name="minhas_compras"),
     path("minhas-compras/<int:pk>/", views_vendas.minha_compra_detalhe, name="minha_compra_detalhe"),
 
+    path("pix/<int:pk>/", views_checkout.pix_pagar, name="pix_pagar"),
     path("venda/<int:pk>/", views_checkout.venda_detalhe, name="venda_detalhe"),
 ]
