@@ -5,7 +5,7 @@
 
 {% block conteudo %}
 <main class="py-4 mt-5">
-	<div class="container mt-3">
+	<div class="container mt-5">
 		<nav aria-label="breadcrumb" class="mb-3">
 			<ol class="breadcrumb mb-0">
 
@@ -132,7 +132,7 @@
 							<a href="{% url 'carrinho_add' produto.id %}" class="btn btn-alfa btn-lg">
 								<i class="bi bi-cart-plus"></i> Adicionar ao carrinho
 							</a>
-							<a href="{% url 'carrinho_detail' %}" class="btn btn-outline-secondary">
+							<a href="{% url 'carrinho_detail' %}" class="btn btn-secundario">
 								Ver carrinho
 							</a>
 							{% else %}
