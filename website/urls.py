@@ -12,7 +12,7 @@ urlpatterns = [
     path("carrinho/remove/<int:item_id>/", views_carrinho.carrinho_remove, name="carrinho_remove"),
 
     path("checkout/", views_checkout.checkout, name="checkout"),
-    path("checkout/confirmar/<int:forma_id>/", views_checkout.checkout_confirmar, name="checkout_confirmar"),
+    # path("checkout/confirmar/<int:forma_id>/", views_checkout.checkout_confirmar, name="checkout_confirmar"),
 
     path("minhas-compras/", views_vendas.minhas_compras, name="minhas_compras"),
     path("minhas-compras/<int:pk>/", views_vendas.minha_compra_detalhe, name="minha_compra_detalhe"),

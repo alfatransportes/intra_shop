@@ -404,6 +404,40 @@ class FormaPagamento(models.Model):
         return self.get_codigo_display()
 
 
+class RegraParcelamentoVale(models.Model):
+    forma_pagamento = models.ForeignKey(
+        "FormaPagamento",
+        on_delete=models.CASCADE,
+        related_name="regras_parcelamento_vale",
+        limit_choices_to={"codigo": "VALE"},
+    )
+
+    valor_ate = models.DecimalField(
+        "Válido até (R$)",
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        help_text="Total do pedido até este valor (inclusive).",
+    )
+
+    max_parcelas = models.PositiveSmallIntegerField(
+        "Máx. parcelas",
+        validators=[MinValueValidator(1)],
+    )
+
+    class Meta:
+        ordering = ["valor_ate"]
+        unique_together = ("forma_pagamento", "valor_ate")
+
+    def __str__(self):
+        return f"Até R$ {self.valor_ate:.2f} → {self.max_parcelas}x"
+
+    def clean(self):
+        if self.forma_pagamento and self.forma_pagamento.codigo != FormaPagamento.Codigo.VALE:
+            raise ValidationError("Regras de parcelamento só podem ser cadastradas para a forma VALE.")
+
+
+
 
 
 class Venda(models.Model):
@@ -415,6 +449,7 @@ class Venda(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="vendas")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDENTE)
     forma_pagamento = models.ForeignKey(FormaPagamento, on_delete=models.PROTECT, related_name="vendas")
+    parcelas = models.PositiveSmallIntegerField(default=1)
     criado_em = models.DateTimeField(auto_now_add=True)
     observacao = models.TextField(blank=True, default="")
 

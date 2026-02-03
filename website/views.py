@@ -1,4 +1,5 @@
 # website/views.py
+# website/views.py
 from django.db.models import F, IntegerField, Q, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, render
@@ -19,7 +20,7 @@ def index(request):
                     filter=Q(itens_carrinho__carrinho__status="ABERTO"),
                 ),
                 0,
-                output_field=IntegerField()
+                output_field=IntegerField(),
             ),
             estoque_calc=F("quantidade") - F("reservado"),
         )

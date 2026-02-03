@@ -11,7 +11,19 @@
         <div class="d-flex justify-content-between flex-wrap gap-2">
           <div>
             <h1 class="h5 mb-1">Pedido #{{ venda.id }}</h1>
-            <div class="small text-muted">Forma de pagamento: {{ venda.forma_pagamento }}</div>
+            <div class="small text-muted">
+              Forma de pagamento: {{ venda.forma_pagamento }}
+
+              {% if venda.forma_pagamento.codigo == "VALE" %}
+                • Parcelamento: <strong>{{ venda.parcelas }}x</strong>
+                {% if valor_parcela and venda.parcelas|add:0 > 1 %}
+                  • <span class="text-muted">Valor por parcela:</span>
+                  <strong>R$ {{ valor_parcela|floatformat:2 }}</strong>
+                {% endif %}
+              {% endif %}
+            </div>
+
+
           </div>
 
           <div class="text-end">

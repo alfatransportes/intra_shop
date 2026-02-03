@@ -1,9 +1,12 @@
 # website/views_carrinho.py
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
+from .forms import CheckoutForm
 from .models import CarrinhoItem, FormaPagamento, Produto
 from .services.carrinho import get_carrinho_aberto
 
@@ -17,16 +20,29 @@ def carrinho_detail(request):
         .get(pk=carrinho.pk)
     )
 
+    # total para montar opções de parcelamento (VALE)
+    total = getattr(carrinho, "total_valor", None)
+    if total is None:
+        total = Decimal("0.00")
+
+    # ✅ usa o form (o template novo renderiza form.forma_pagamento, form.parcelas, etc.)
+    form = CheckoutForm(total=total)
+
+    # (opcional) mantém isso caso você ainda use em algum lugar do template antigo
     formas_pagamento = FormaPagamento.objects.filter(ativa=True).order_by("codigo")
 
     return render(
         request,
         "website/carrinho.html",
-        {"carrinho": carrinho, "formas_pagamento": formas_pagamento},
+        {
+            "carrinho": carrinho,
+            "form": form,
+            "formas_pagamento": formas_pagamento,
+        },
     )
 
 
-
+# views_carrinho.py
 @login_required
 @transaction.atomic
 def carrinho_add(request, pk):
@@ -40,21 +56,22 @@ def carrinho_add(request, pk):
             .get(carrinho=carrinho, produto=produto)
         )
         nova_qtd = item.quantidade + 1
-
+        qtd_atual = item.quantidade
     except CarrinhoItem.DoesNotExist:
-        nova_qtd = 1
         item = CarrinhoItem(
             carrinho=carrinho,
             produto=produto,
             quantidade=0,
             preco_unitario=produto.valor_venda,
         )
+        nova_qtd = 1
+        qtd_atual = 0
 
-    if nova_qtd > produto.quantidade:
-        messages.error(
-            request,
-            "Quantidade solicitada maior que o estoque disponível."
-        )
+    # disponível real + o que já é seu
+    disponivel_para_voce = produto.estoque_disponivel + qtd_atual
+
+    if nova_qtd > disponivel_para_voce:
+        messages.error(request, "Quantidade solicitada maior que o estoque disponível.")
         return redirect("detalhe_produto", pk=produto.pk)
 
     item.quantidade = nova_qtd
@@ -86,7 +103,9 @@ def carrinho_update(request, item_id):
         messages.info(request, "Item removido do carrinho.")
         return redirect("carrinho_detail")
 
-    if qtd > item.produto.quantidade:
+    disponivel_para_voce = item.produto.estoque_disponivel + item.quantidade
+
+    if qtd > disponivel_para_voce:
         messages.error(request, "Quantidade maior que o estoque disponível.")
         return redirect("carrinho_detail")
 
@@ -98,9 +117,15 @@ def carrinho_update(request, item_id):
     return redirect("carrinho_detail")
 
 
+
 @login_required
 def carrinho_remove(request, item_id):
-    item = get_object_or_404(CarrinhoItem, pk=item_id, carrinho__usuario=request.user, carrinho__status="ABERTO")
+    item = get_object_or_404(
+        CarrinhoItem,
+        pk=item_id,
+        carrinho__usuario=request.user,
+        carrinho__status="ABERTO",
+    )
     item.delete()
     messages.info(request, "Item removido do carrinho.")
     return redirect("carrinho_detail")

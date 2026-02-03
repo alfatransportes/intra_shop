@@ -26,11 +26,12 @@
 						{% endwith %}
 
 						<div class="position-absolute top-0 start-0 p-2">
-							{% if produto.estoque_disponivel|default:0 > 0 %}
-							<span class="badge text-bg-success">Em estoque: {{ produto.estoque_disponivel }}</span>
+							{% if produto.estoque_calc|default:0 > 0 %}
+							<span class="badge text-bg-success">Em estoque: {{ produto.estoque_calc }}</span>
 							{% else %}
 							<span class="badge text-bg-danger">Esgotado</span>
 							{% endif %}
+
 						</div>
 
 						<div class="card-body">

@@ -1,12 +1,14 @@
 # website/admin.py
+from decimal import ROUND_HALF_UP, Decimal
+
 from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.utils.html import format_html
 
 from .models import (Carrinho, CarrinhoItem, ConfigWebsite, FormaPagamento,
-                     NivelAvaria, Produto, ProdutoImagem, Tipo, Unidade, Venda,
-                     VendaItem)
+                     NivelAvaria, Produto, ProdutoImagem,
+                     RegraParcelamentoVale, Tipo, Unidade, Venda, VendaItem)
 
 # -----------------------
 # ConfigWebsite (mantido)
@@ -276,12 +278,23 @@ class CarrinhoItemAdmin(admin.ModelAdmin):
 # FormaPagamento
 # -----------------------
 
+class RegraParcelamentoValeInline(admin.TabularInline):
+    model = RegraParcelamentoVale
+    extra = 1
+    fields = ("valor_ate", "max_parcelas")
+    ordering = ("valor_ate",)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by("valor_ate")
+
 @admin.register(FormaPagamento)
 class FormaPagamentoAdmin(admin.ModelAdmin):
     list_display = ("nome_admin", "codigo", "ativa")
     list_filter = ("codigo", "ativa")
     search_fields = ("codigo", "pix_chave", "pix_nome", "pix_cidade", "pix_copia_cola")
     ordering = ("codigo",)
+    inlines = [RegraParcelamentoValeInline]  # ✅ AQUI
 
     fieldsets = (
         ("Dados básicos", {
@@ -291,18 +304,17 @@ class FormaPagamentoAdmin(admin.ModelAdmin):
             "fields": ("pix_chave", "pix_nome", "pix_cidade", "pix_copia_cola"),
             "description": "Preencha apenas se a forma for PIX.",
         }),
+        ("Parcelamento (Vale)", {
+            "fields": (),
+            "description": "Cadastre as regras no quadro abaixo: até R$ X → máximo Y parcelas (apenas para VALE).",
+        }),
     )
 
     @admin.display(description="Forma")
     def nome_admin(self, obj):
         return obj.get_codigo_display()
 
-from django import forms
-from django.contrib import admin, messages
-from django.core.exceptions import ValidationError
-from django.utils.html import format_html
 
-from .models import FormaPagamento, Venda, VendaItem
 
 # -----------------------
 # Venda / Itens
@@ -347,20 +359,31 @@ class VendaAdminForm(forms.ModelForm):
 class VendaAdmin(admin.ModelAdmin):
     form = VendaAdminForm  # ✅ AQUI
 
-    list_display = ("id", "usuario", "status_badge", "forma_pagamento", "total", "criado_em", "comprovante_link")
+    list_display = (
+        "id",
+        "usuario",
+        "status_badge",
+        "forma_pagamento",
+        "parcelas_admin",
+        "total",
+        "criado_em",
+        "comprovante_link",
+    )
+
     list_filter = ("status", "forma_pagamento", "criado_em")
     search_fields = ("id", "usuario__email", "usuario__numero_cracha")
     ordering = ("-id",)
     inlines = [VendaItemInline]
     actions = ["confirmar_vendas", "cancelar_vendas"]
-    readonly_fields = ("total", "criado_em")
+    readonly_fields = ("total", "criado_em", "parcelas")
 
     fieldsets = (
-        ("Venda", {"fields": ("usuario", "status", "forma_pagamento", "total", "criado_em")}),
+        ("Venda", {"fields": ("usuario", "status", "forma_pagamento", "parcelas", "total", "criado_em")}),
         ("PIX", {"fields": ("comprovante_pix",), "description": "Apenas para pagamentos via Pix."}),
         ("VALE", {"fields": ("comprovante_vale",), "description": "Apenas para pagamentos via Vale."}),
         ("Observação", {"fields": ("observacao",)}),
     )
+
 
     @admin.display(description="Status")
     def status_badge(self, obj):
@@ -423,6 +446,18 @@ class VendaAdmin(admin.ModelAdmin):
                 "Não foi possível confirmar (faltando comprovante) nos pedidos: " + ", ".join(map(str, bloqueadas)),
                 level=messages.ERROR,
             )
+
+
+    @admin.display(description="Parcelamento")
+    def parcelas_admin(self, obj):
+        if obj.forma_pagamento and obj.forma_pagamento.codigo == FormaPagamento.Codigo.VALE:
+            p = int(obj.parcelas or 1)
+            if p <= 0:
+                p = 1
+            valor = (obj.total / Decimal(p)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            return f"{p}x de R$ {valor}"
+        return "—"
+
 
     @admin.action(description="Marcar como CANCELADA (não devolve estoque)")
     def cancelar_vendas(self, request, queryset):

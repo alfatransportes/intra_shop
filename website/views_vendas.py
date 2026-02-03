@@ -1,3 +1,6 @@
+# views_vendas.py
+from decimal import ROUND_HALF_UP, Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -32,17 +35,27 @@ def minhas_compras(request):
 
 
 
+
 @login_required
 def minha_compra_detalhe(request, pk):
-    # pega a venda sem filtrar pelo usuário (pra poder validar e dar mensagem)
     venda = get_object_or_404(
         Venda.objects.select_related("forma_pagamento").prefetch_related("itens__produto"),
         pk=pk,
     )
 
-    # se não pertence ao usuário -> mensagem + redirect
     if venda.usuario_id != request.user.id:
         messages.error(request, "Você não tem permissão para acessar essa compra.")
         return redirect("index")
 
-    return render(request, "website/minha_compra_detalhe.html", {"venda": venda})
+    valor_parcela = None
+    if venda.forma_pagamento and venda.forma_pagamento.codigo == FormaPagamento.Codigo.VALE:
+        p = int(venda.parcelas or 1)
+        if p < 1:
+            p = 1
+        valor_parcela = (venda.total / Decimal(p)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    return render(
+        request,
+        "website/minha_compra_detalhe.html",
+        {"venda": venda, "valor_parcela": valor_parcela},
+    )

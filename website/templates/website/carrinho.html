@@ -1,190 +1,250 @@
-{# website/templates/website/carrinho.html #}
 {% extends "website/base.html" %}
 {% load static %}
 {% block title %}Carrinho{% endblock title %}
 
 {% block conteudo %}
 <main class="py-4 mt-5">
-	<div class="container mt-3">
+  <div class="container mt-3">
 
-		<div class="d-flex align-items-center justify-content-between mb-3">
-			<h1 class="h4 mb-0">Meu carrinho</h1>
-			<a href="{% url 'index' %}" class="btn btn-link">Continuar comprando</a>
-		</div>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h1 class="h4 mb-0">Meu carrinho</h1>
+      <a href="{% url 'index' %}" class="btn btn-link">Continuar comprando</a>
+    </div>
 
-		{% if messages %}
-		{% for message in messages %}
-		<div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
-		{% endfor %}
-		{% endif %}
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
 
-		{% if carrinho.itens.all %}
-		<div class="row g-4">
+    {% if carrinho.itens.all %}
+      <div class="row g-4">
 
-			{# LISTA DE ITENS #}
-			<div class="col-12 col-lg-8">
-				<div class="card shadow-sm">
-					<div class="card-body">
+        {# LISTA DE ITENS #}
+        <div class="col-12 col-lg-8">
+          <div class="card shadow-sm">
+            <div class="card-body">
 
-						{% for item in carrinho.itens.all %}
-						<div class="d-flex gap-3 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+              {% for item in carrinho.itens.all %}
+                <div class="d-flex gap-3 py-3 {% if not forloop.last %}border-bottom{% endif %}">
 
-							{# imagem #}
-							<div style="width:92px; flex:0 0 92px;">
-								{% with img=item.produto.imagens.all|first %}
-								{% if img and img.imagem %}
-								<img src="{{ img.imagem.url }}" class="rounded w-100" alt="{{ item.produto.nome }}"
-									style="height:92px; object-fit:cover;">
-								{% else %}
-								<img src="{% static 'img/sem-imagem.png' %}" class="rounded w-100" alt="Sem imagem"
-									style="height:92px; object-fit:contain;">
-								{% endif %}
-								{% endwith %}
-							</div>
+                  {# imagem #}
+                  <div style="width:92px; flex:0 0 92px;">
+                    {% with img=item.produto.imagens.all|first %}
+                      {% if img and img.imagem %}
+                        <img src="{{ img.imagem.url }}" class="rounded w-100" alt="{{ item.produto.nome }}"
+                             style="height:92px; object-fit:cover;">
+                      {% else %}
+                        <img src="{% static 'img/sem-imagem.png' %}" class="rounded w-100" alt="Sem imagem"
+                             style="height:92px; object-fit:contain;">
+                      {% endif %}
+                    {% endwith %}
+                  </div>
 
-							{# infos #}
-							<div class="flex-grow-1">
-								<div class="d-flex justify-content-between align-items-start gap-2">
-									<div>
-										<div class="small mt-1">
+                  {# infos #}
+                  <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div>
+                        <div class="small mt-1">
+                          {% if item.expirado %}
+                            <span class="badge text-bg-danger ms-2">Expirado</span>
+                          {% else %}
+                            <span class="text-danger fw-bold ms-2">
+                              • Expira em {{ item.expira_em|timeuntil }}
+                            </span>
+                          {% endif %}
+                        </div>
 
-											{% if item.expirado %}
-											<span class="badge text-bg-danger ms-2">Expirado</span>
-											{% else %}
-											<span class="text-danger fw-bold ms-2">
-												• Expira em {{ item.expira_em|timeuntil }}
-											</span>
-											{% endif %}
-										</div>
+                        <a class="text-decoration-none fw-semibold"
+                           href="{% url 'detalhe_produto' item.produto.id %}">
+                          {{ item.produto.nome }}
+                        </a>
 
-										<a class="text-decoration-none fw-semibold"
-											href="{% url 'detalhe_produto' item.produto.id %}">
-											{{ item.produto.nome }}
-										</a>
-										<div class="small text-muted">
-											{{ item.produto.tipo_prod }} • {{ item.produto.nivel_ava_prod }} •
-											{{ item.produto.unidade_prod }}
-										</div>
-										<div class="small text-muted">
-											Em estoque: {{ item.produto.quantidade }}
-										</div>
-										<span class="text-muted">
-											Adicionado há {{ item.criado_em|timesince }}
-										</span>
-									</div>
+                        <div class="small text-muted">
+                          {{ item.produto.tipo_prod }} • {{ item.produto.nivel_ava_prod }} • {{ item.produto.unidade_prod }}
+                        </div>
+                        <div class="small text-muted">
+                          Em estoque: {{ item.produto.quantidade }}
+                        </div>
+                        <span class="text-muted">
+                          Adicionado há {{ item.criado_em|timesince }}
+                        </span>
+                      </div>
 
-									<div class="text-end">
-										<div class="small text-muted">Unitário</div>
-										<div class="fw-semibold">R$ {{ item.preco_unitario|floatformat:2 }}</div>
-									</div>
-								</div>
+                      <div class="text-end">
+                        <div class="small text-muted">Unitário</div>
+                        <div class="fw-semibold">R$ {{ item.preco_unitario|floatformat:2 }}</div>
+                      </div>
+                    </div>
 
-								<div class="d-flex align-items-center justify-content-between mt-3 gap-3 flex-wrap">
+                    <div class="d-flex align-items-center justify-content-between mt-3 gap-3 flex-wrap">
 
-									{# atualizar quantidade #}
-									<form method="post" action="{% url 'carrinho_update' item.id %}"
-										class="d-flex align-items-center gap-2">
-										{% csrf_token %}
-										<label class="small text-muted mb-0" for="qtd_{{ item.id }}">Qtd</label>
-										<input id="qtd_{{ item.id }}" name="quantidade" type="number" min="0"
-											max="{{ item.produto.quantidade }}" value="{{ item.quantidade }}"
-											class="form-control form-control-sm" style="width:92px;">
-										<button class="btn btn-sm btn-outline-secondary" type="submit">
-											Atualizar
-										</button>
-										<span class="small text-muted ms-2">
-											(0 remove)
-										</span>
-									</form>
+                      {# atualizar quantidade #}
+                      <form method="post" action="{% url 'carrinho_update' item.id %}"
+                            class="d-flex align-items-center gap-2">
+                        {% csrf_token %}
+                        <label class="small text-muted mb-0" for="qtd_{{ item.id }}">Qtd</label>
+                        <input id="qtd_{{ item.id }}" name="quantidade" type="number" min="0"
+                               max="{{ item.produto.quantidade }}" value="{{ item.quantidade }}"
+                               class="form-control form-control-sm" style="width:92px;">
+                        <button class="btn btn-sm btn-outline-secondary" type="submit">
+                          Atualizar
+                        </button>
+                        <span class="small text-muted ms-2">(0 remove)</span>
+                      </form>
 
-									{# subtotal + remover #}
-									<div class="d-flex align-items-center gap-3">
-										<div class="text-end">
-											<div class="small text-muted">Subtotal</div>
-											<div class="fw-bold">
-												R$ {{ item.subtotal|floatformat:2 }}
-											</div>
-										</div>
+                      {# subtotal + remover #}
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="text-end">
+                          <div class="small text-muted">Subtotal</div>
+                          <div class="fw-bold">
+                            R$ {{ item.subtotal|floatformat:2 }}
+                          </div>
+                        </div>
 
-										<a href="{% url 'carrinho_remove' item.id %}"
-											class="btn btn-sm btn-outline-danger">
-											Remover
-										</a>
-									</div>
+                        <a href="{% url 'carrinho_remove' item.id %}"
+                           class="btn btn-sm btn-outline-danger">
+                          Remover
+                        </a>
+                      </div>
 
-								</div>
-							</div>
+                    </div>
+                  </div>
 
-						</div>
-						{% endfor %}
+                </div>
+              {% endfor %}
 
-					</div>
-				</div>
-			</div>
+            </div>
+          </div>
+        </div>
 
-			{# RESUMO + PAGAMENTO #}
-			<div class="col-12 col-lg-4">
-				<div class="card shadow-sm">
-					<div class="card-body">
+        {# RESUMO + PAGAMENTO #}
+        <div class="col-12 col-lg-4">
+          <div class="card shadow-sm">
+            <div class="card-body">
 
-						<h2 class="h6 mb-3">Resumo</h2>
+              <h2 class="h6 mb-3">Resumo</h2>
 
-						<div class="d-flex justify-content-between">
-							<span class="text-muted">Itens</span>
-							<span class="fw-semibold">{{ carrinho.total_itens }}</span>
-						</div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Itens</span>
+                <span class="fw-semibold">{{ carrinho.total_itens }}</span>
+              </div>
 
-						<div class="d-flex justify-content-between mt-2">
-							<span class="text-muted">Total</span>
-							<span class="fw-bold fs-5">R$ {{ carrinho.total_valor|floatformat:2 }}</span>
-						</div>
+              <div class="d-flex justify-content-between mt-2">
+                <span class="text-muted">Total</span>
+                <span class="fw-bold fs-5">R$ {{ carrinho.total_valor|floatformat:2 }}</span>
+              </div>
 
-						<hr class="my-3">
+              <hr class="my-3">
 
-						<h3 class="h6 mb-2">Forma de pagamento</h3>
+              <h3 class="h6 mb-2">Forma de pagamento</h3>
 
-						<form method="post" action="{% url 'checkout' %}">
-							{% csrf_token %}
+              {# ✅ agora usa CheckoutForm (form) #}
+              <form method="post" action="{% url 'checkout' %}">
+                {% csrf_token %}
 
-							{% if formas_pagamento %}
-							<div class="vstack gap-2">
-								{% for fp in formas_pagamento %}
-								<label class="border rounded p-2 d-flex align-items-center gap-2">
-									<input class="form-check-input m-0" type="radio" name="forma_pagamento"
-										value="{{ fp.id }}" required>
-									<div class="flex-grow-1">
-										<div class="fw-semibold">{{ fp.get_codigo_display }}</div>
-										{% if fp.descricao %}
-										<div class="small text-muted">{{ fp.descricao }}</div>
-										{% endif %}
-									</div>
-								</label>
-								{% endfor %}
-							</div>
+                {# erros gerais do form #}
+                {% if form.non_field_errors %}
+                  <div class="alert alert-danger">
+                    {% for e in form.non_field_errors %}
+                      <div>{{ e }}</div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
 
-							<div class="d-grid mt-3">
-								<button type="submit" class="btn btn-alfa btn-lg">
-									Confirmar compra
-								</button>
-							</div>
-							{% else %}
-							<div class="alert alert-warning mb-0">
-								Nenhuma forma de pagamento ativa.
-							</div>
-							{% endif %}
-						</form>
+                <div class="vstack gap-2">
+                  {% for fp in formas_pagamento %}
+                    <label class="border rounded p-2 d-flex align-items-center gap-2"
+                          data-codigo="{{ fp.codigo }}">
+                      <input type="radio"
+                            name="forma_pagamento"
+                            value="{{ fp.id }}"
+                            required
+                            {% if form.initial.forma_pagamento and form.initial.forma_pagamento|stringformat:"s" == fp.id|stringformat:"s" %}checked{% endif %}>
+                      <div class="flex-grow-1">
+                        <div class="fw-semibold">{{ fp.nome }}</div>
+                      </div>
+                    </label>
+                  {% endfor %}
+                </div>
 
-					</div>
-				</div>
-			</div>
 
-		</div>
-		{% else %}
-		<div class="alert alert-info">
-			Seu carrinho está vazio.
-		</div>
-		{% endif %}
+                {% for e in form.forma_pagamento.errors %}
+                  <div class="text-danger small mt-1">{{ e }}</div>
+                {% endfor %}
 
-	</div>
+                {# Parcelas (só VALE) #}
+                <div id="campo-parcelas" class="mt-3 d-none">
+                  <label class="form-label fw-semibold">{{ form.parcelas.label }}</label>
+                  {{ form.parcelas }}
+                  {% for e in form.parcelas.errors %}
+                    <div class="text-danger small">{{ e }}</div>
+                  {% endfor %}
+                  <div class="form-text">Disponível apenas para pagamento via Vale.</div>
+                </div>
+
+                {# Observação #}
+                {% if form.observacao %}
+                  <div class="mt-3">
+                    <label class="form-label fw-semibold">{{ form.observacao.label }}</label>
+                    {{ form.observacao }}
+                    {% for e in form.observacao.errors %}
+                      <div class="text-danger small">{{ e }}</div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                <div class="d-grid mt-3">
+                  <button type="submit" class="btn btn-alfa btn-lg">
+                    Confirmar compra
+                  </button>
+                </div>
+              </form>
+
+              <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                  const campoParcelas = document.getElementById("campo-parcelas");
+                  const radiosPagamento = document.querySelectorAll('input[name="forma_pagamento"]');
+
+                  function atualizarParcelas() {
+                    if (!campoParcelas) return;
+
+                    const checked = document.querySelector('input[name="forma_pagamento"]:checked');
+                    if (!checked) {
+                      campoParcelas.classList.add("d-none");
+                      return;
+                    }
+
+                    const label = checked.closest("label");
+                    const codigo = (label?.dataset?.codigo || "").toUpperCase();
+
+                    if (codigo === "VALE") {
+                      campoParcelas.classList.remove("d-none");
+                    } else {
+                      campoParcelas.classList.add("d-none");
+                      const sel = campoParcelas.querySelector("select");
+                      if (sel) sel.value = "1";
+                    }
+                  }
+
+                  radiosPagamento.forEach(r => r.addEventListener("change", atualizarParcelas));
+                  atualizarParcelas();
+                });
+                </script>
+
+
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        Seu carrinho está vazio.
+      </div>
+    {% endif %}
+
+  </div>
 </main>
 {% endblock conteudo %}
