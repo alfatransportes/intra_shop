@@ -174,7 +174,8 @@ def pix_pagar(request, pk):
     if request.method == "POST":
         form = ComprovantePixForm(request.POST, request.FILES, instance=venda)
         if form.is_valid():
-            form.save(update_fields=["comprovante_pix"])
+            venda = form.save(commit=False)
+            venda.save(update_fields=["comprovante_pix"])
             messages.success(request, "Comprovante enviado! Aguarde a confirmação do administrador.")
             return redirect("minha_compra_detalhe", pk=venda.pk)
     else:
