@@ -82,13 +82,8 @@
 			<div class="col-12 col-lg-5">
 				<div class="card shadow-sm">
 					<div class="card-body">
-						{% if produto.numero_bo %}
-							<div class="small text-muted mb-2">
-								BO: <strong>#{{ produto.numero_bo }}</strong>
-							</div>
-						{% endif %}
 						<div class="small text-muted mb-1">
-							{{ produto.tipo_prod }} • {{ produto.nivel_ava_prod }} • {{ produto.unidade_prod }}
+							{{ produto.tipo_prod }}
 						</div>
 
 						<h2 class="h4 mb-3">{{ produto.nome }}</h2>
@@ -117,7 +112,7 @@
 								R$ {{ produto.valor_venda|floatformat:2 }}
 							</div>
 							<div class="text-success fw-semibold">
-								{{ produto.porcen_desconto|floatformat:2 }}% OFF
+								{{ produto.porcen_desconto|floatformat }}% OFF
 							</div>
 							{% else %}
 							<div class="display-6 fw-bold">
@@ -148,18 +143,14 @@
 							<div><strong>Unidade:</strong> {{ produto.unidade_prod }}</div>
 							<div><strong>Tipo:</strong> {{ produto.tipo_prod }}</div>
 							<div><strong>Nível de avaria:</strong> {{ produto.nivel_ava_prod }}</div>
-							<div><strong>Estoque total:</strong> {{ produto.quantidade }}</div>
+							{% comment %} <div><strong>Estoque total:</strong> {{ produto.quantidade }}</div> {% endcomment %}
 							<div><strong>Disponível agora:</strong> {{ produto.estoque_disponivel }}</div>
 						</div>
 
 					</div>
 				</div>
-
-
-
 			</div>
 		</div>
-
 	</div>
 </main>
 {% endblock conteudo %}
