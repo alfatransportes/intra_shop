@@ -153,4 +153,73 @@
 		</div>
 	</div>
 </main>
+
+	<section class="d-flex align-items-center" data-carousel="produtos">
+		<div class="container">
+		  <div class="row row-cols-1">
+			<div class="col">
+			  <div class="position-relative carousel-wrap">
+	  
+				<button type="button" class="carousel-btn start-0 js-prev" aria-label="Anterior">‹</button>
+	  
+				<div class="carrosel-cards js-track" tabindex="0" aria-label="Produtos em destaque">
+	  
+				  {% for p in produtos_destaque %}
+					<a href="{% url 'detalhe_produto' p.id %}"
+					   class="card card-section text-decoration-none h-100">
+	  
+					  {# pega primeira principal; se não tiver, pega a primeira ordenada #}
+					  {% with img=p.imagens_principais.0 %}
+						{% if not img %}
+						  {% with img=p.imagens_ordenadas.0 %}
+						  {% endwith %}
+						{% endif %}
+	  
+						{% if img %}
+						  <img src="{{ img.imagem.url }}" alt="{{ p.nome }}"
+							   style="height:160px; object-fit:cover;">
+						{% else %}
+						  <div class="bg-secondary-subtle" style="height:160px;"></div>
+						{% endif %}
+					  {% endwith %}
+	  
+					  <div class="card-body">
+						<div class="card-title-prod text-uppercase fs-5">{{ p.nome }}</div>
+	  
+						<div class="text-muted small mt-1">
+						  <i class="bi bi-box-seam me-2"></i>Qtd: {{ p.estoque_disponivel }}
+						  {% if p.numero_bo %}
+							· <i class="bi bi-receipt me-2"></i>BO: {{ p.numero_bo }}
+						  {% endif %}
+						</div>
+	  
+						<div class="text-muted">
+						  <i class="bi bi-geo-alt me-2"></i>{{ p.unidade_prod }}
+						</div>
+	  
+						<div class="text-muted">
+						  <i class="bi bi-tags me-2"></i>{{ p.tipo_prod }} · {{ p.nivel_ava_prod }}
+						</div>
+	  
+						<div class="card-preco fw-bold mt-2" style="color:var(--alfa-red); font-size:1.1rem;">
+						  R$ {{ p.valor_venda }}
+						  {# ou: {{ p.valor_venda|currency_brl }} se tiver filtro #}
+						</div>
+					  </div>
+	  
+					</a>
+				  {% empty %}
+					<div class="text-muted px-3">Nenhum Produto em destaque no momento.</div>
+				  {% endfor %}
+	  
+				</div>
+	  
+				<button type="button" class="carousel-btn end-0 js-next" aria-label="Próximo">›</button>
+	  
+			  </div>
+			</div>
+		  </div>
+		</div>
+	  </section>
+	  
 {% endblock conteudo %}

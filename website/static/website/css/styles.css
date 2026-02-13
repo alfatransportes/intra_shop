@@ -125,8 +125,93 @@ html {
   margin-left: 8px;      /* distancia do ícone */
 }
 
+/* trilho horizontal */
+.carrosel-cards{
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 12px 56px;          /* espaço pras setas */
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 
+  align-items: stretch;        /* altura = a do maior */
+}
 
+/* esconder scrollbar (continua rolando) */
+.carrosel-cards::-webkit-scrollbar{ display:none; }
+.carrosel-cards{ scrollbar-width: none; }
+
+/* cada card */
+.card-section{
+  flex: 0 0 230px;             /* largura fixa, mas permite “stretch” na altura */
+  align-self: stretch;         /* força seguir o align-items: stretch do trilho */
+  height: auto;                /* importante: não “prender” a altura */
+
+  display: flex;
+  flex-direction: column;
+
+  border-radius: 14px;
+  border: 0;
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+  overflow: hidden;
+  color: inherit;
+  scroll-snap-align: center;
+}
+
+/* imagem/placeholder com altura fixa */
+.card-section img,
+.card-section .img-placeholder{
+  height: 160px;
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+/* corpo ocupa o resto do card */
+.card-section .card-body{
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;               /* evita “forçar” altura por overflow */
+}
+
+/* título com no máximo 2 linhas (evita variar altura do card) */
+.card-title-prod{
+  line-height: 1.2;
+  height: calc(1.2em * 2);      /* 2 linhas fixas */
+  overflow: hidden;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+/* preço sempre no rodapé */
+.card-preco{
+  margin-top: auto !important;
+}
+
+/* botões circulares por cima */
+.carousel-btn{
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 0;
+  color: var(--alfa-red);
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(0,0,0,.12);
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  line-height: 1;
+  z-index: 2;
+}
+
+.carousel-btn:hover{ filter: brightness(.98); }
+.carousel-btn:active{ transform: translateY(-50%) scale(.98); }
 
 
 .btn-alfa {
