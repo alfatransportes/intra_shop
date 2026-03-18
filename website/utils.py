@@ -1,4 +1,6 @@
-from website.models import ConfigWebsite, Tipo
+from django.db.models import Prefetch
+
+from website.models import ConfigWebsite, Produto, ProdutoImagem, Tipo
 
 
 def get_config_website():
@@ -6,6 +8,25 @@ def get_config_website():
 
 def get_tipo_produtos():
     return Tipo.objects.all().order_by('nome')
+
+
+def get_produtos_destaque(limit=12):
+    return (
+        Produto.objects.select_related("unidade_prod", "tipo_prod", "nivel_ava_prod")
+        .prefetch_related(
+            Prefetch(
+                "imagens",
+                queryset=ProdutoImagem.objects.filter(principal=True).order_by("ordem", "id"),
+                to_attr="imagens_principais",
+            ),
+            Prefetch(
+                "imagens",
+                queryset=ProdutoImagem.objects.order_by("ordem", "id"),
+                to_attr="imagens_ordenadas",
+            ),
+        )
+        .order_by("-id")[:limit]  # ou "-criado_em" se você tiver esse campo
+    )
 
 
 def crc16_ccitt_false(data: str) -> str:
