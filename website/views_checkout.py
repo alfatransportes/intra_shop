@@ -1,7 +1,9 @@
-# views_checkout.py
-
+# website/views_checkout.py
+import base64
 from decimal import Decimal
+from io import BytesIO
 
+import qrcode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -13,9 +15,6 @@ from .forms import CheckoutForm, ComprovantePixForm
 from .models import FormaPagamento, Produto, Venda, VendaItem
 from .services.carrinho import get_carrinho_aberto
 
-# -----------------------
-# Util
-# -----------------------
 
 def _calcular_total_carrinho(carrinho) -> Decimal:
     total = Decimal("0.00")
@@ -24,9 +23,42 @@ def _calcular_total_carrinho(carrinho) -> Decimal:
     return total.quantize(Decimal("0.01"))
 
 
-# -----------------------
-# Checkout
-# -----------------------
+def _gerar_qr_base64(payload: str) -> str:
+    """
+    Gera um PNG em base64 para renderizar no template.
+    """
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=8,
+        border=2,
+    )
+    qr.add_data(payload)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buff = BytesIO()
+    img.save(buff, format="PNG")
+    b64 = base64.b64encode(buff.getvalue()).decode("utf-8")
+    return f"data:image/png;base64,{b64}"
+
+
+def _payload_fallback(forma: FormaPagamento, total: Decimal) -> str:
+    """
+    Se o pix_payload não estiver configurado, pelo menos mostra algo útil.
+    (Não é payload EMV padrão, mas evita UI vazia em ambiente de teste.)
+    """
+    total_str = f"{total:.2f}".replace(".", ",")
+    partes = []
+    if forma.pix_nome:
+        partes.append(f"Recebedor: {forma.pix_nome}")
+    if forma.pix_chave:
+        partes.append(f"Chave Pix: {forma.pix_chave}")
+    if forma.pix_cidade:
+        partes.append(f"Cidade: {forma.pix_cidade}")
+    partes.append(f"Valor: R$ {total_str}")
+    return " | ".join(partes)
+
 
 @login_required
 @transaction.atomic
@@ -53,24 +85,26 @@ def checkout(request):
             forma = form.cleaned_data["forma_pagamento"]
             observacao = form.cleaned_data.get("observacao", "")
 
-            # Parcelas (apenas VALE)
             parcelas = 1
             if forma.codigo == FormaPagamento.Codigo.VALE:
                 parcelas = int(form.cleaned_data.get("parcelas") or 1)
 
             # trava produtos
             produto_ids = list(carrinho.itens.values_list("produto_id", flat=True))
-            produtos = Produto.objects.select_for_update().filter(id__in=produto_ids)
-            mapa_produtos = {p.id: p for p in produtos}
+            produtos_travados = Produto.objects.select_for_update().filter(id__in=produto_ids)
+            mapa_produtos = {p.id: p for p in produtos_travados}
 
-            # valida estoque
+            # valida estoque (no produto travado)
             for item in carrinho.itens.all():
-                produto = mapa_produtos[item.produto_id]
-                if item.quantidade > produto.quantidade:
-                    messages.error(request, f"Estoque insuficiente para {produto.nome}.")
+                produto_travado = mapa_produtos.get(item.produto_id)
+                if not produto_travado:
+                    messages.error(request, "Produto do carrinho não encontrado. Tente novamente.")
                     return redirect("carrinho_detail")
 
-            # cria venda
+                if item.quantidade > (produto_travado.quantidade or 0):
+                    messages.error(request, f"Estoque insuficiente para {produto_travado.nome}.")
+                    return redirect("carrinho_detail")
+
             venda = Venda.objects.create(
                 usuario=request.user,
                 forma_pagamento=forma,
@@ -82,16 +116,16 @@ def checkout(request):
 
             total = Decimal("0.00")
 
-            # cria itens + baixa estoque
+            # cria itens + baixa estoque (usando instância travada)
             for item in carrinho.itens.all():
-                produto = mapa_produtos[item.produto_id]
+                produto_travado = mapa_produtos[item.produto_id]
 
-                produto.quantidade -= item.quantidade
-                produto.save(update_fields=["quantidade"])
+                produto_travado.quantidade -= item.quantidade
+                produto_travado.save(update_fields=["quantidade"])
 
                 VendaItem.objects.create(
                     venda=venda,
-                    produto=produto,
+                    produto=produto_travado,
                     quantidade=item.quantidade,
                     preco_unitario=item.preco_unitario,
                 )
@@ -106,7 +140,6 @@ def checkout(request):
             carrinho.save(update_fields=["status"])
             carrinho.itens.all().delete()
 
-            # fluxo por forma de pagamento
             if forma.codigo == FormaPagamento.Codigo.PIX:
                 messages.info(request, "Agora faça o pagamento via Pix e envie o comprovante.")
                 return redirect("pix_pagar", pk=venda.pk)
@@ -135,9 +168,22 @@ def checkout(request):
     )
 
 
-# -----------------------
-# Detalhe da venda
-# -----------------------
+@login_required
+def minhas_compras(request):
+    vendas = (
+        Venda.objects
+        .filter(usuario=request.user)
+        .select_related("forma_pagamento")
+        .order_by("-id")
+    )
+
+    return render(
+        request,
+        "website/minhas_compras.html",
+        {
+            "vendas": vendas
+        }
+    )
 
 @login_required
 def venda_detalhe(request, pk):
@@ -151,10 +197,6 @@ def venda_detalhe(request, pk):
     return render(request, "website/venda_detalhe.html", {"venda": venda})
 
 
-# -----------------------
-# Pagamento PIX
-# -----------------------
-
 @login_required
 def pix_pagar(request, pk):
     venda = get_object_or_404(
@@ -167,36 +209,65 @@ def pix_pagar(request, pk):
         messages.error(request, "Esta venda não é Pix.")
         return redirect("minhas_compras")
 
-    if venda.comprovante_pix:
-        messages.info(request, "O comprovante deste pedido já foi enviado.")
-        return redirect("minha_compra_detalhe", pk=venda.pk)
+    forma = venda.forma_pagamento
 
-    if request.method == "POST":
-        form = ComprovantePixForm(request.POST, request.FILES, instance=venda)
-        if form.is_valid():
-            venda = form.save(commit=False)
-            venda.save(update_fields=["comprovante_pix"])
-            messages.success(request, "Comprovante enviado! Aguarde a confirmação do administrador.")
-            return redirect("minha_compra_detalhe", pk=venda.pk)
-    else:
-        form = ComprovantePixForm(instance=venda)
+    payload = (forma.pix_payload or "").strip()
 
-    fp = venda.forma_pagamento
-
-    if fp.pix_copia_cola:
+    # Se existir payload configurado, tenta atualizar o valor nele
+    if payload:
         try:
-            pix_texto = inserir_ou_atualizar_valor(fp.pix_copia_cola, float(venda.total))
+            payload = inserir_ou_atualizar_valor(payload, float(venda.total))
         except Exception:
-            pix_texto = fp.pix_copia_cola.strip()
+            # se falhar, mantém o payload original
+            pass
     else:
-        pix_texto = f"PIX: {fp.pix_chave} | Valor: R$ {venda.total}"
+        # fallback para não deixar UI vazia
+        payload = _payload_fallback(forma, venda.total)
+
+    # gera QR code (base64) sempre que possível
+    qr_code_data_url = None
+    try:
+        qr_code_data_url = _gerar_qr_base64(payload)
+    except Exception:
+        qr_code_data_url = None
 
     return render(
         request,
         "website/pix_pagar.html",
         {
             "venda": venda,
-            "form": form,
-            "pix_texto": pix_texto,
+            "payload": payload,
+            "qr_code_data_url": qr_code_data_url,
         },
+    )
+
+
+@login_required
+@transaction.atomic
+def enviar_comprovante_pix(request, pk):
+    venda = get_object_or_404(
+        Venda.objects.select_related("forma_pagamento"),
+        pk=pk,
+        usuario=request.user,
+    )
+
+    if venda.forma_pagamento.codigo != FormaPagamento.Codigo.PIX:
+        messages.error(request, "Esta venda não é Pix.")
+        return redirect("minhas_compras")
+
+    if request.method == "POST":
+        form = ComprovantePixForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            venda.comprovante_pix = form.cleaned_data["comprovante_pix"]
+            venda.save(update_fields=["comprovante_pix"])
+            messages.success(request, "Comprovante enviado! Aguarde a confirmação do administrador.")
+            return redirect("minhas_compras")
+    else:
+        form = ComprovantePixForm()
+
+    return render(
+        request,
+        "website/enviar_comprovante_pix.html",
+        {"venda": venda, "form": form},
     )

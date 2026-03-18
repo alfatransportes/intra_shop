@@ -14,6 +14,7 @@ from .services.carrinho import get_carrinho_aberto
 @login_required
 def carrinho_detail(request):
     carrinho = get_carrinho_aberto(request.user)
+
     carrinho = (
         carrinho.__class__.objects
         .prefetch_related("itens__produto", "itens__produto__imagens")
@@ -25,10 +26,7 @@ def carrinho_detail(request):
     if total is None:
         total = Decimal("0.00")
 
-    # ✅ usa o form (o template novo renderiza form.forma_pagamento, form.parcelas, etc.)
     form = CheckoutForm(total=total)
-
-    # (opcional) mantém isso caso você ainda use em algum lugar do template antigo
     formas_pagamento = FormaPagamento.objects.filter(ativa=True).order_by("codigo")
 
     return render(
@@ -42,7 +40,6 @@ def carrinho_detail(request):
     )
 
 
-# views_carrinho.py
 @login_required
 @transaction.atomic
 def carrinho_add(request, pk):
@@ -82,7 +79,6 @@ def carrinho_add(request, pk):
     return redirect("carrinho_detail")
 
 
-
 @login_required
 @transaction.atomic
 def carrinho_update(request, item_id):
@@ -115,7 +111,6 @@ def carrinho_update(request, item_id):
 
     messages.success(request, "Carrinho atualizado.")
     return redirect("carrinho_detail")
-
 
 
 @login_required

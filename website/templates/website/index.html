@@ -1,81 +1,213 @@
-{% extends 'website/base.html' %}
-{% load static %}
-{% block title %}Bem vindo ao Intra Shop{% endblock title %}
-
+{% extends "website/base.html" %}
+{% block title %}Loja{% endblock %}
 {% block conteudo %}
-<main class="py-4 mt-5">
-	<section class="section py-4 mt-5">
-		<div class="container">
-			<div class="row row-cols-2 row-cols-md-4 g-4">
-
-				{% for produto in produtos %}
-				<div class="col">
-					<div class="card h-100 shadow-sm position-relative">
-
-						<a href="{% url 'detalhe_produto' produto.id %}" class="stretched-link"
-							aria-label="Ver detalhes de {{ produto.nome }}"></a>
-
-						{% with img=produto.imagens.all|first %}
-						{% if img and img.imagem %}
-						<img src="{{ img.imagem.url }}" class="card-img-top" alt="{{ produto.nome }}"
-							style="height:220px; object-fit:cover;">
-						{% else %}
-						<img src="{% static 'img/sem-imagem.png' %}" class="card-img-top" alt="Sem imagem"
-							style="height:220px; object-fit:contain;">
-						{% endif %}
-						{% endwith %}
-
-						<div class="position-absolute top-0 start-0 p-2">
-							{% if produto.estoque_calc|default:0 > 0 %}
-							<span class="badge text-bg-success">Em estoque: {{ produto.estoque_calc }}</span>
-							{% else %}
-							<span class="badge text-bg-danger">Esgotado</span>
-							{% endif %}
-
-						</div>
-
-						<div class="card-body">
-							<h5 class="card-title mb-1">{{ produto.nome }}</h5>
-
-							<div class="small text-muted mb-2">
-								{{ produto.tipo_prod }} • {{ produto.nivel_ava_prod }} • {{ produto.unidade_prod }}
-							</div>
-
-							<div class="d-flex align-items-end justify-content-between">
-								<div>
-									{% if produto.porcen_desconto|default:0 > 0 %}
-									<div class="small text-muted text-decoration-line-through">
-										R$ {{ produto.valor_nota|floatformat:2 }}
-									</div>
-									<div class="fw-bold fs-5">
-										R$ {{ produto.valor_venda|floatformat:2 }}
-									</div>
-									<div class="small text-success">
-										{{ produto.porcen_desconto|floatformat }}% OFF
-									</div>
-									{% else %}
-									<div class="fw-bold fs-5">
-										R$ {{ produto.valor_venda|floatformat:2 }}
-									</div>
-									{% endif %}
-								</div>
-
-								<div class="text-end">
-									<span class="small text-muted">Ver detalhes</span>
-								</div>
-							</div>
-						</div>
-
-					</div>
-				</div>
-				{% empty %}
-				<div class="col-12">
-					<div class="alert alert-info mb-0">Nenhum produto cadastrado.</div>
-				</div>
-				{% endfor %}
-
-			</div>
-		</div>
-	</section>
-</main>
-{% endblock conteudo %}
+    <div class="container py-4 mt-5">
+        <!-- Top bar -->
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+            <div>
+                <h1 class="h4 mb-0">Produtos</h1>
+                <div class="text-muted small">
+                    {{ total_produtos }} item(ns) encontrados
+                    {% if page_obj.paginator.num_pages > 1 %}
+                        • Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Botão filtros (agora aparece em TODAS as telas) -->
+            <div>
+                <button class="btn btn-outline-secondary"
+                        type="button"
+                        data-bs-toggle="offcanvas"
+                        data-bs-target="#offcanvasFiltros"
+                        aria-controls="offcanvasFiltros">Filtros</button>
+            </div>
+        </div>
+        <!-- Chips de categorias -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="{% url 'index' %}"
+               class="badge rounded-pill text-bg-{% if not categoria %}primary{% else %}light{% endif %} text-decoration-none px-3 py-2">
+                Todas
+            </a>
+            {% for c in categorias %}
+                <a href="?categoria={{ c.id }}{% if busca %}&q={{ busca|urlencode }}{% endif %}{% if ordenar %}&ordenar={{ ordenar }}{% endif %}"
+                   class="badge rounded-pill text-bg-{% if categoria == c.id|stringformat:'s' %}primary{% else %}light{% endif %} text-decoration-none px-3 py-2">
+                    {{ c.nome }}
+                </a>
+            {% endfor %}
+        </div>
+        <!-- Linha: ordenar + busca -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <!-- Ordenação -->
+            <form method="get" class="d-flex align-items-center gap-2">
+                {% if busca %}<input type="hidden" name="q" value="{{ busca }}">{% endif %}
+                {% if categoria %}<input type="hidden" name="categoria" value="{{ categoria }}">{% endif %}
+                <label class="small text-muted mb-0">Ordenar</label>
+                <select name="ordenar"
+                        class="form-select form-select-sm"
+                        style="width: 220px"
+                        onchange="this.form.submit()">
+                    <option value="" {% if not ordenar %}selected{% endif %}>Mais recentes</option>
+                    <option value="preco" {% if ordenar == "preco" %}selected{% endif %}>Menor preço</option>
+                    <option value="preco_desc"
+                            {% if ordenar == "preco_desc" %}selected{% endif %}>Maior preço</option>
+                    <option value="nome" {% if ordenar == "nome" %}selected{% endif %}>Nome (A-Z)</option>
+                </select>
+                {% if filtros_ativos %}
+                    <a class="btn btn-link btn-sm" href="{% url 'index' %}">Limpar</a>
+                {% endif %}
+            </form>
+            <!-- Busca -->
+            <form method="get" class="d-flex align-items-center gap-2">
+                {% if categoria %}<input type="hidden" name="categoria" value="{{ categoria }}">{% endif %}
+                {% if ordenar %}<input type="hidden" name="ordenar" value="{{ ordenar }}">{% endif %}
+                <input type="search"
+                       name="q"
+                       value="{{ busca }}"
+                       class="form-control form-control-sm"
+                       style="width: min(420px, 70vw)"
+                       placeholder="Buscar por nome ou descrição...">
+                <button class="btn btn-primary btn-sm">Buscar</button>
+            </form>
+        </div>
+        <!-- Indicadores de filtros ativos -->
+        {% if filtros_ativos %}
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% if busca %}
+                    <span class="badge text-bg-light border">Busca: <span class="text-muted">{{ busca }}</span></span>
+                {% endif %}
+                {% if categoria %}<span class="badge text-bg-light border">Categoria aplicada</span>{% endif %}
+                {% if ordenar %}<span class="badge text-bg-light border">Ordenação aplicada</span>{% endif %}
+            </div>
+        {% endif %}
+        <!-- Grid produtos -->
+        <div class="row g-4">
+            {% for produto in produtos %}
+                <div class="col-6 col-md-6 col-xl-3">
+                    <div class="card h-100 shadow-sm border-0">
+                        {% with img=produto.imagens.all|first %}
+                            {% if img %}
+                                <img src="{{ img.imagem.url }}"
+                                     class="card-img-top"
+                                     alt="{{ produto.nome }}"
+                                     style="height:200px;
+                                            object-fit:cover">
+                            {% else %}
+                                <div class="border-bottom d-flex align-items-center justify-content-center"
+                                     style="height:200px">
+                                    <span class="text-muted small">Sem imagem</span>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                        <div class="card-body d-flex flex-column">
+                            <div class="small text-muted mb-1">{{ produto.tipo_prod.nome }}</div>
+                            <h6 class="card-title mb-2">{{ produto.nome }}</h6>
+                            <p class="small text-muted flex-grow-1">{{ produto.descricao|truncatechars:90 }}</p>
+                            <div class="d-flex align-items-end justify-content-between mt-2">
+                                <div>
+                                    <div class="small text-muted">Preço</div>
+                                    <div class="fw-bold">R$ {{ produto.valor_venda|floatformat:2 }}</div>
+                                    <div class="small text-muted">Disponível: {{ produto.estoque_calc }}</div>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'detalhe_produto' produto.id %}"
+                                       class="btn btn-outline-primary btn-sm">Ver</a>
+                                    <a href="{% url 'carrinho_add' produto.id %}"
+                                       class="btn btn-primary btn-sm">Adicionar</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-warning">Nenhum produto encontrado com esses filtros.</div>
+                </div>
+            {% endfor %}
+        </div>
+        <!-- Paginação -->
+        {% if page_obj.paginator.num_pages > 1 %}
+            <nav class="mt-4" aria-label="Paginação">
+                <ul class="pagination justify-content-center flex-wrap">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ page_obj.previous_page_number }}{% if busca %}&q={{ busca|urlencode }}{% endif %}{% if categoria %}&categoria={{ categoria }}{% endif %}{% if ordenar %}&ordenar={{ ordenar }}{% endif %}">
+                                Anterior
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Anterior</span>
+                        </li>
+                    {% endif %}
+                    <li class="page-item disabled">
+                        <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ page_obj.next_page_number }}{% if busca %}&q={{ busca|urlencode }}{% endif %}{% if categoria %}&categoria={{ categoria }}{% endif %}{% if ordenar %}&ordenar={{ ordenar }}{% endif %}">
+                                Próxima
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Próxima</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    </div>
+    <!-- Offcanvas filtros (mobile + desktop) -->
+    <div class="offcanvas offcanvas-end"
+         tabindex="-1"
+         id="offcanvasFiltros"
+         aria-labelledby="offcanvasFiltrosLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="offcanvasFiltrosLabel">Filtros</h5>
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="offcanvas"
+                    aria-label="Fechar"></button>
+        </div>
+        <div class="offcanvas-body">
+            <form method="get">
+                <div class="mb-3">
+                    <label class="form-label small">Pesquisar</label>
+                    <input type="text"
+                           name="q"
+                           value="{{ busca }}"
+                           class="form-control"
+                           placeholder="Nome ou descrição...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Categoria</label>
+                    <select name="categoria" class="form-select">
+                        <option value="">Todas</option>
+                        {% for c in categorias %}
+                            <option value="{{ c.id }}"
+                                    {% if categoria == c.id|stringformat:"s" %}selected{% endif %}>
+                                {{ c.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Ordenar</label>
+                    <select name="ordenar" class="form-select">
+                        <option value="" {% if not ordenar %}selected{% endif %}>Mais recentes</option>
+                        <option value="preco" {% if ordenar == "preco" %}selected{% endif %}>Menor preço</option>
+                        <option value="preco_desc"
+                                {% if ordenar == "preco_desc" %}selected{% endif %}>Maior preço</option>
+                        <option value="nome" {% if ordenar == "nome" %}selected{% endif %}>Nome (A-Z)</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary w-100">Aplicar</button>
+                {% if filtros_ativos %}
+                    <a href="{% url 'index' %}" class="btn btn-link w-100 mt-2">Limpar filtros</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+{% endblock %}

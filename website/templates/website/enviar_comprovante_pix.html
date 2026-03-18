@@ -1,0 +1,38 @@
+{% extends "website/base.html" %}
+{% block title %}
+    Enviar comprovante
+{% endblock title %}
+{% block conteudo %}
+    <div class="container py-4">
+        <a href="{% url 'pix_pagar' venda.id %}"
+           class="text-decoration-none d-inline-block mb-3">← Voltar para pagamento</a>
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h1 class="h4 mb-1">Enviar comprovante Pix</h1>
+                        <div class="text-muted mb-3">Pedido #{{ venda.id }}</div>
+                        <hr>
+                        <div class="mb-3">
+                            <strong>Total:</strong>
+                            R$ {{ venda.total|floatformat:2 }}
+                        </div>
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">Comprovante do pagamento</label>
+                                {{ form.comprovante_pix }}
+                                <div class="form-text">Envie PDF, JPG ou PNG (máx. 5MB)</div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary">Enviar comprovante</button>
+                                <a href="{% url 'minhas_compras' %}" class="btn btn-outline-secondary">Minhas compras</a>
+                            </div>
+                        </form>
+                        <div class="text-muted small mt-3">Após o envio, o administrador confirmará o pagamento.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock conteudo %}

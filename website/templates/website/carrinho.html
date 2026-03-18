@@ -1,250 +1,196 @@
 {% extends "website/base.html" %}
-{% load static %}
-{% block title %}Carrinho{% endblock title %}
-
+{% load humanize %}
+{% block title %}
+    Meu carrinho
+{% endblock title %}
 {% block conteudo %}
-<main class="py-4 mt-5">
-  <div class="container mt-3">
+    <style>
+        .produto-imagem-container {
+            width: 96px;
+            min-width: 96px;
+        }
 
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <h1 class="h4 mb-0">Meu carrinho</h1>
-      <a href="{% url 'index' %}" class="btn btn-link">Continuar comprando</a>
+        .produto-imagem-placeholder {
+            width: 96px;
+            height: 96px;
+        }
+
+        .quantidade-input {
+            width: 92px;
+        }
+
+        .preco-container {
+            min-width: 140px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+    <div class="container py-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <h1 class="h3 mb-0">Meu carrinho</h1>
+            <a href="{% url 'index' %}" class="btn btn-link">Continuar comprando</a>
+        </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} mb-3"
+                     role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        <div class="row g-3">
+            <!-- Coluna itens -->
+            <div class="col-12 col-lg-8">
+                {% if carrinho.itens.exists %}
+                    {% for item in carrinho.itens.all %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex gap-3">
+                                    <!-- imagem -->
+                                    <div class="produto-imagem-container">
+                                        {% with img=item.produto.imagens.all|first %}
+                                            {% if img %}
+                                                <img src="{{ img.imagem.url }}"
+                                                     class="img-fluid rounded border"
+                                                     alt="{{ item.produto.nome }}"
+                                                     width="96"
+                                                     height="96">
+                                            {% else %}
+                                                <div class="border rounded d-flex align-items-center justify-content-center produto-imagem-placeholder">
+                                                    <small class="text-muted">Sem foto</small>
+                                                </div>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                    <!-- infos -->
+                                    <div class="flex-grow-1">
+                                        <div class="text-danger fw-semibold mb-1">
+                                            {% if item.expira_em %}Expira em {{ item.expira_em|timeuntil }}{% endif %}
+                                        </div>
+                                        <a href="{% url 'detalhe_produto' item.produto.id %}"
+                                           class="h5 d-block mb-1 text-decoration-none">{{ item.produto.nome }}</a>
+                                        <div class="text-muted small mb-2">
+                                            Em estoque: {{ item.produto.quantidade }}
+                                            • Adicionado há {{ item.criado_em|timesince }}
+                                        </div>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                                            <form method="post"
+                                                  action="{% url 'carrinho_update' item.id %}"
+                                                  class="d-flex align-items-center gap-2">
+                                                {% csrf_token %}
+                                                <label class="small text-muted mb-0">Qtd</label>
+                                                <input type="number"
+                                                       name="quantidade"
+                                                       value="{{ item.quantidade }}"
+                                                       min="0"
+                                                       class="form-control quantidade-input">
+                                                <button class="btn btn-outline-secondary" type="submit">Atualizar</button>
+                                                <span class="text-muted small">(0 remove)</span>
+                                            </form>
+                                            <form method="post" action="{% url 'carrinho_remove' item.id %}">
+                                                {% csrf_token %}
+                                                <button class="btn btn-outline-danger" type="submit">Remover</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <!-- preços -->
+                                    <div class="text-end preco-container">
+                                        <div class="text-muted small">Unitário</div>
+                                        <div class="fw-semibold">R$ {{ item.preco_unitario|floatformat:2 }}</div>
+                                        <div class="text-muted small mt-3">Subtotal</div>
+                                        <div class="h5 mb-0">R$ {{ item.subtotal|floatformat:2 }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info">Seu carrinho está vazio.</div>
+                {% endif %}
+            </div>
+            <!-- Coluna resumo / checkout -->
+            <div class="col-12 col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Resumo</h5>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Itens</span>
+                            <strong>{{ carrinho.total_itens }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Total</span>
+                            <strong class="h5 mb-0">R$ {{ carrinho.total_valor|floatformat:2 }}</strong>
+                        </div>
+                        <hr>
+                        <form method="post" action="{% url 'checkout' %}">
+                            {% csrf_token %}
+                            <h6 class="mb-2">Forma de pagamento</h6>
+                            {% if formas_pagamento %}
+                                <div class="vstack gap-2 mb-3">
+                                    {% for fp in formas_pagamento %}
+                                        <label class="border rounded p-2 d-flex align-items-center gap-2">
+                                            <input class="form-check-input m-0"
+                                                   type="radio"
+                                                   name="forma_pagamento"
+                                                   value="{{ fp.id }}"
+                                                   {% if form.data.forma_pagamento == fp.id|stringformat:"s" %}checked{% endif %}
+                                                   data-codigo="{{ fp.codigo }}">
+                                            <span class="fw-semibold">{{ fp.get_codigo_display }}</span>
+                                            {% if fp.codigo == "PIX" %}
+                                                <span class="badge text-bg-light ms-auto">Comprovante</span>
+                                            {% elif fp.codigo == "VALE" %}
+                                                <span class="badge text-bg-light ms-auto">Parcelado</span>
+                                            {% endif %}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">Nenhuma forma de pagamento ativa foi cadastrada no admin.</div>
+                            {% endif %}
+                            <!-- Parcelas (aparece só no VALE) -->
+                            <div id="parcelas-bloco" class="mb-3 hidden">
+                                <label class="form-label mb-1">{{ form.parcelas.label }}</label>
+                                <select name="parcelas" class="form-select">
+                                    {% for v, lbl in form.fields.parcelas.choices %}
+                                        <option value="{{ v }}" {% if form.data.parcelas == v %}selected{% endif %}>{{ lbl }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">As opções dependem do total e das regras cadastradas.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label mb-1">{{ form.observacao.label }}</label>
+                                <textarea name="observacao" class="form-control" rows="4">{% if form.data.observacao %}{{ form.data.observacao }}{% endif %}</textarea>
+                            </div>
+                            <button class="btn btn-primary w-100"
+                                    type="submit"
+                                    {% if carrinho.total_itens == 0 %}disabled{% endif %}>Confirmar compra</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    <script>
+(function () {
+  function toggleParcelas() {
+    const checked = document.querySelector('input[name="forma_pagamento"]:checked');
+    const bloco = document.getElementById("parcelas-bloco");
+    if (!bloco) return;
+    if (!checked) { bloco.classList.add("hidden"); return; }
 
-    {% if messages %}
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
+    const codigo = checked.getAttribute("data-codigo");
+    if (codigo === "VALE") {
+      bloco.classList.remove("hidden");
+    } else {
+      bloco.classList.add("hidden");
+    }
+  }
 
-    {% if carrinho.itens.all %}
-      <div class="row g-4">
+  document.querySelectorAll('input[name="forma_pagamento"]').forEach((el) => {
+    el.addEventListener("change", toggleParcelas);
+  });
 
-        {# LISTA DE ITENS #}
-        <div class="col-12 col-lg-8">
-          <div class="card shadow-sm">
-            <div class="card-body">
-
-              {% for item in carrinho.itens.all %}
-                <div class="d-flex gap-3 py-3 {% if not forloop.last %}border-bottom{% endif %}">
-
-                  {# imagem #}
-                  <div style="width:92px; flex:0 0 92px;">
-                    {% with img=item.produto.imagens.all|first %}
-                      {% if img and img.imagem %}
-                        <img src="{{ img.imagem.url }}" class="rounded w-100" alt="{{ item.produto.nome }}"
-                             style="height:92px; object-fit:cover;">
-                      {% else %}
-                        <img src="{% static 'img/sem-imagem.png' %}" class="rounded w-100" alt="Sem imagem"
-                             style="height:92px; object-fit:contain;">
-                      {% endif %}
-                    {% endwith %}
-                  </div>
-
-                  {# infos #}
-                  <div class="flex-grow-1">
-                    <div class="d-flex justify-content-between align-items-start gap-2">
-                      <div>
-                        <div class="small mt-1">
-                          {% if item.expirado %}
-                            <span class="badge text-bg-danger ms-2">Expirado</span>
-                          {% else %}
-                            <span class="text-danger fw-bold ms-2">
-                              • Expira em {{ item.expira_em|timeuntil }}
-                            </span>
-                          {% endif %}
-                        </div>
-
-                        <a class="text-decoration-none fw-semibold"
-                           href="{% url 'detalhe_produto' item.produto.id %}">
-                          {{ item.produto.nome }}
-                        </a>
-
-                        <div class="small text-muted">
-                          {{ item.produto.tipo_prod }} • {{ item.produto.nivel_ava_prod }} • {{ item.produto.unidade_prod }}
-                        </div>
-                        <div class="small text-muted">
-                          Em estoque: {{ item.produto.quantidade }}
-                        </div>
-                        <span class="text-muted">
-                          Adicionado há {{ item.criado_em|timesince }}
-                        </span>
-                      </div>
-
-                      <div class="text-end">
-                        <div class="small text-muted">Unitário</div>
-                        <div class="fw-semibold">R$ {{ item.preco_unitario|floatformat:2 }}</div>
-                      </div>
-                    </div>
-
-                    <div class="d-flex align-items-center justify-content-between mt-3 gap-3 flex-wrap">
-
-                      {# atualizar quantidade #}
-                      <form method="post" action="{% url 'carrinho_update' item.id %}"
-                            class="d-flex align-items-center gap-2">
-                        {% csrf_token %}
-                        <label class="small text-muted mb-0" for="qtd_{{ item.id }}">Qtd</label>
-                        <input id="qtd_{{ item.id }}" name="quantidade" type="number" min="0"
-                               max="{{ item.produto.quantidade }}" value="{{ item.quantidade }}"
-                               class="form-control form-control-sm" style="width:92px;">
-                        <button class="btn btn-sm btn-outline-secondary" type="submit">
-                          Atualizar
-                        </button>
-                        <span class="small text-muted ms-2">(0 remove)</span>
-                      </form>
-
-                      {# subtotal + remover #}
-                      <div class="d-flex align-items-center gap-3">
-                        <div class="text-end">
-                          <div class="small text-muted">Subtotal</div>
-                          <div class="fw-bold">
-                            R$ {{ item.subtotal|floatformat:2 }}
-                          </div>
-                        </div>
-
-                        <a href="{% url 'carrinho_remove' item.id %}"
-                           class="btn btn-sm btn-outline-danger">
-                          Remover
-                        </a>
-                      </div>
-
-                    </div>
-                  </div>
-
-                </div>
-              {% endfor %}
-
-            </div>
-          </div>
-        </div>
-
-        {# RESUMO + PAGAMENTO #}
-        <div class="col-12 col-lg-4">
-          <div class="card shadow-sm">
-            <div class="card-body">
-
-              <h2 class="h6 mb-3">Resumo</h2>
-
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Itens</span>
-                <span class="fw-semibold">{{ carrinho.total_itens }}</span>
-              </div>
-
-              <div class="d-flex justify-content-between mt-2">
-                <span class="text-muted">Total</span>
-                <span class="fw-bold fs-5">R$ {{ carrinho.total_valor|floatformat:2 }}</span>
-              </div>
-
-              <hr class="my-3">
-
-              <h3 class="h6 mb-2">Forma de pagamento</h3>
-
-              {# ✅ agora usa CheckoutForm (form) #}
-              <form method="post" action="{% url 'checkout' %}">
-                {% csrf_token %}
-
-                {# erros gerais do form #}
-                {% if form.non_field_errors %}
-                  <div class="alert alert-danger">
-                    {% for e in form.non_field_errors %}
-                      <div>{{ e }}</div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-
-                <div class="vstack gap-2">
-                  {% for fp in formas_pagamento %}
-                    <label class="border rounded p-2 d-flex align-items-center gap-2"
-                          data-codigo="{{ fp.codigo }}">
-                      <input type="radio"
-                            name="forma_pagamento"
-                            value="{{ fp.id }}"
-                            required
-                            {% if form.initial.forma_pagamento and form.initial.forma_pagamento|stringformat:"s" == fp.id|stringformat:"s" %}checked{% endif %}>
-                      <div class="flex-grow-1">
-                        <div class="fw-semibold">{{ fp.nome }}</div>
-                      </div>
-                    </label>
-                  {% endfor %}
-                </div>
-
-
-                {% for e in form.forma_pagamento.errors %}
-                  <div class="text-danger small mt-1">{{ e }}</div>
-                {% endfor %}
-
-                {# Parcelas (só VALE) #}
-                <div id="campo-parcelas" class="mt-3 d-none">
-                  <label class="form-label fw-semibold">{{ form.parcelas.label }}</label>
-                  {{ form.parcelas }}
-                  {% for e in form.parcelas.errors %}
-                    <div class="text-danger small">{{ e }}</div>
-                  {% endfor %}
-                  <div class="form-text">Disponível apenas para pagamento via Vale.</div>
-                </div>
-
-                {# Observação #}
-                {% if form.observacao %}
-                  <div class="mt-3">
-                    <label class="form-label fw-semibold">{{ form.observacao.label }}</label>
-                    {{ form.observacao }}
-                    {% for e in form.observacao.errors %}
-                      <div class="text-danger small">{{ e }}</div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-
-                <div class="d-grid mt-3">
-                  <button type="submit" class="btn btn-alfa btn-lg">
-                    Confirmar compra
-                  </button>
-                </div>
-              </form>
-
-              <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                  const campoParcelas = document.getElementById("campo-parcelas");
-                  const radiosPagamento = document.querySelectorAll('input[name="forma_pagamento"]');
-
-                  function atualizarParcelas() {
-                    if (!campoParcelas) return;
-
-                    const checked = document.querySelector('input[name="forma_pagamento"]:checked');
-                    if (!checked) {
-                      campoParcelas.classList.add("d-none");
-                      return;
-                    }
-
-                    const label = checked.closest("label");
-                    const codigo = (label?.dataset?.codigo || "").toUpperCase();
-
-                    if (codigo === "VALE") {
-                      campoParcelas.classList.remove("d-none");
-                    } else {
-                      campoParcelas.classList.add("d-none");
-                      const sel = campoParcelas.querySelector("select");
-                      if (sel) sel.value = "1";
-                    }
-                  }
-
-                  radiosPagamento.forEach(r => r.addEventListener("change", atualizarParcelas));
-                  atualizarParcelas();
-                });
-                </script>
-
-
-
-            </div>
-          </div>
-        </div>
-
-      </div>
-    {% else %}
-      <div class="alert alert-info">
-        Seu carrinho está vazio.
-      </div>
-    {% endif %}
-
-  </div>
-</main>
+  toggleParcelas();
+})();
+    </script>
 {% endblock conteudo %}

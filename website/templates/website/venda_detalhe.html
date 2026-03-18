@@ -1,42 +1,55 @@
 {% extends "website/base.html" %}
 {% block title %}Pedido #{{ venda.id }}{% endblock %}
-
 {% block conteudo %}
-<main class="py-4 mt-5">
-  <div class="container mt-5">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h1 class="h5 mb-3">Pedido #{{ venda.id }}</h1>
-
-        <div class="small text-muted mb-3">
-          Status: <strong>{{ venda.get_status_display }}</strong><br>
-          Forma de pagamento: <strong>{{ venda.forma_pagamento }}</strong><br>
-          Total: <strong>R$ {{ venda.total|floatformat:2 }}</strong>
-        </div>
-
-        <hr>
-
-        <div class="vstack gap-2">
-          {% for item in venda.itens.all %}
-            <div class="d-flex justify-content-between">
-              <div>
-                <div class="fw-semibold">{{ item.produto.nome }}</div>
-                <div class="small text-muted">
-                  {{ item.quantidade }} x R$ {{ item.preco_unitario|floatformat:2 }}
+    <main class="py-4 mt-5">
+        <div class="container mt-5">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h1 class="h5 mb-3">Pedido #{{ venda.id }}</h1>
+                    <div class="small text-muted mb-3">
+                        Status: <strong>{{ venda.get_status_display }}</strong>
+                        <br>
+                        Forma de pagamento: <strong>{{ venda.forma_pagamento }}</strong>
+                        <br>
+                        Total: <strong>R$ {{ venda.total|floatformat:2 }}</strong>
+                    </div>
+                    <hr>
+                    <h2 class="h6 mb-3">Itens</h2>
+                    <div class="vstack gap-2">
+                        {% for item in venda.itens.all %}
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">{{ item.produto.nome }}</div>
+                                    <div class="small text-muted">{{ item.quantidade }} x R$ {{ item.preco_unitario|floatformat:2 }}</div>
+                                </div>
+                                <div class="fw-semibold">R$ {{ item.subtotal|floatformat:2 }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <hr class="my-4">
+                    <h2 class="h6 mb-3">Comprovante</h2>
+                    {% if venda.comprovante_pix %}
+                        <div class="alert alert-success d-flex justify-content-between align-items-center">
+                            <div>Comprovante Pix enviado.</div>
+                            <a href="{{ venda.comprovante_pix.url }}"
+                               class="btn btn-sm btn-primary"
+                               target="_blank">Abrir comprovante</a>
+                        </div>
+                    {% elif venda.comprovante_vale %}
+                        <div class="alert alert-success d-flex justify-content-between align-items-center">
+                            <div>Comprovante de Vale enviado.</div>
+                            <a href="{{ venda.comprovante_vale.url }}"
+                               class="btn btn-sm btn-primary"
+                               target="_blank">Abrir comprovante</a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">Nenhum comprovante anexado ainda.</div>
+                    {% endif %}
+                    <div class="mt-4">
+                        <a href="{% url 'minhas_compras' %}" class="btn btn-outline-secondary">← Voltar para minhas compras</a>
+                    </div>
                 </div>
-              </div>
-              <div class="fw-semibold">
-                R$ {{ item.subtotal|floatformat:2 }}
-              </div>
             </div>
-          {% endfor %}
         </div>
-
-        <div class="mt-4">
-          <a href="{% url 'index' %}" class="btn btn-link px-0">← Voltar para a loja</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
+    </main>
 {% endblock %}
