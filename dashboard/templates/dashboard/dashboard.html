@@ -1,0 +1,310 @@
+{% extends "dashboard/base.html" %}
+{% block title %}
+    - Painel de Controle
+{% endblock title %}
+{% block header %}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-1">Visão geral</h1>
+            <div class="text-secondary small">Painel de administrativo.</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-primary" href="">
+                <i class="bi bi-plus-lg me-1"></i>Novo produto
+            </a>
+        </div>
+    </div>
+{% endblock header %}
+{% block content %}
+    <style>
+        .icon-badge-custom {
+            width: 34px;
+            height: 34px;
+            background: rgba(13, 110, 253, 0.12);
+        }
+    </style>
+    {% if alerta_email_notificacao %}
+        <div class="alert alert-warning d-flex align-items-center justify-content-between shadow-sm mb-3">
+            <div>
+                <strong>E-mail de notificações não configurado.</strong>
+                <div class="small">
+                    Cadastre um e-mail na propriedade para receber alertas de vacinação,
+                    reprodução e outros eventos importantes.
+                </div>
+            </div>
+            <a href="{% url 'dashboard:propriedade_update' propriedade.pk %}"
+               class="btn btn-sm btn-warning">
+                <i class="bi bi-envelope"></i> Configurar e-mail
+            </a>
+        </div>
+    {% endif %}
+    <!-- KPIs -->
+    <div class="row g-3">
+        <!-- Total Animais -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <a href="" class="kpi-link text-decoration-none">
+                <div class="card kpi h-100 border-0 shadow-sm">
+                    <div class="card-body d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-secondary small">Total de animais</div>
+                            <div class="h4 mb-1">{{ total_animais|default:"0" }}</div>
+                            <div class="small text-secondary">Rebanho cadastrado</div>
+                        </div>
+                        <div class="icon-badge bg-primary-subtle text-primary">
+                            <i class="bi bi-activity"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- Inseminações -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <a href="" class="kpi-link text-decoration-none">
+                <div class="card kpi h-100 border-0 shadow-sm">
+                    <div class="card-body d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-secondary small">Inseminações</div>
+                            <div class="h4 mb-1">{{ total_inseminacoes|default:"0" }}</div>
+                            <div class="small text-secondary">Total registradas</div>
+                        </div>
+                        <div class="icon-badge bg-danger-subtle text-danger">
+                            <i class="bi bi-heart-pulse"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- Prenhez Confirmada -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <a href="" class="kpi-link text-decoration-none">
+                <div class="card kpi h-100 border-0 shadow-sm">
+                    <div class="card-body d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-secondary small">Prenhez confirmada</div>
+                            <div class="h4 mb-1">{{ prenhez_confirmada|default:"0" }}</div>
+                            <div class="small text-secondary">Indicador de reprodução</div>
+                        </div>
+                        <div class="icon-badge bg-success-subtle text-success">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- Vacinas Vencidas -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <a href="" class="kpi-link text-decoration-none">
+                <div class="card kpi h-100 border-0 shadow-sm">
+                    <div class="card-body d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-secondary small">Vacinas vencidas</div>
+                            <div class="h4 mb-1">{{ vacinas_vencidas|default:"0" }}</div>
+                            <div class="small text-secondary">Indicador de saúde</div>
+                        </div>
+                        <div class="icon-badge bg-warning-subtle text-warning">
+                            <i class="bi bi-prescription2"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    <!-- KPIs extras -->
+    <div class="row g-3 mt-1">
+        <!-- Peso médio -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card kpi h-100 border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-secondary small">Peso médio (ativos)</div>
+                        <div class="h4 mb-1">
+                            {% if peso_medio %}
+                                {{ peso_medio|floatformat:1 }} kg
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                        <div class="small text-secondary">
+                            Min:
+                            {% if peso_min %}
+                                {{ peso_min|floatformat:1 }}
+                            {% else %}
+                                —
+                            {% endif %}
+                            • Max:
+                            {% if peso_max %}
+                                {{ peso_max|floatformat:1 }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="icon-badge bg-info-subtle text-info">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Idade média -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card kpi h-100 border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-secondary small">Idade média (ativos)</div>
+                        <div class="h4 mb-1">
+                            {% if idade_media_anos %}
+                                {{ idade_media_anos }} anos
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                        <div class="small text-secondary">
+                            {% if idade_media_dias %}
+                                {{ idade_media_dias }} dias
+                            {% else %}
+                                &nbsp;
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="icon-badge bg-secondary-subtle text-secondary">
+                        <i class="bi bi-calendar3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Categorias -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card kpi h-100 border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-secondary small">Categorias (ativos)</div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <span class="badge text-bg-light border">Bezerros: {{ por_categoria.BEZERRO|default:0 }}</span>
+                            <span class="badge text-bg-light border">Recria: {{ por_categoria.RECRIA|default:0 }}</span>
+                            <span class="badge text-bg-light border">Adultos: {{ por_categoria.ADULTO|default:0 }}</span>
+                        </div>
+                        <div class="small text-secondary mt-2">Distribuição do rebanho</div>
+                    </div>
+                    <div class="icon-badge bg-primary-subtle text-primary">
+                        <i class="bi bi-diagram-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Sexo -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card kpi h-100 border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-secondary small">Sexo (ativos)</div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <span class="badge text-bg-light border">Fêmeas: {{ por_sexo.F|default:0 }}</span>
+                            <span class="badge text-bg-light border">Machos: {{ por_sexo.M|default:0 }}</span>
+                        </div>
+                        <div class="small text-secondary mt-2">Composição do rebanho</div>
+                    </div>
+                    <div class="icon-badge bg-success-subtle text-success">
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+  // =========================
+  // Donut: rebanho por pasto
+  // =========================
+  {% if chart_labels and chart_values %}
+  const pastosCanvas = document.getElementById('rebanhoChart');
+  if (pastosCanvas) {
+    const pastosLabels = {{ chart_labels|safe }};
+    const pastosValues = {{ chart_values|safe }};
+
+    new Chart(pastosCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: pastosLabels,
+        datasets: [{ data: pastosValues }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+  {% endif %}
+
+
+  // =========================
+  // Linha: pesagens (30d)
+  // =========================
+  {% if pesagem_labels and pesagem_values %}
+  const pesagemCanvas = document.getElementById('pesagemChart');
+  if (pesagemCanvas) {
+    const pesagemLabels = {{ pesagem_labels|safe }};
+    const pesagemValues = {{ pesagem_values|safe }};
+
+    new Chart(pesagemCanvas, {
+      type: 'line',
+      data: {
+        labels: pesagemLabels,
+        datasets: [{
+          label: 'Pesagens (kg)',
+          data: pesagemValues,
+          tension: 0.35
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true }
+        },
+        scales: {
+          y: { beginAtZero: false }
+        }
+      }
+    });
+  }
+  {% endif %}
+
+
+  // =========================
+  // Linha: Arroba do Boi (30d)
+  // =========================
+  {% if boi_labels and boi_values %}
+  const boiCanvas = document.getElementById('boiChart');
+  if (boiCanvas) {
+    const boiLabels = {{ boi_labels|safe }};
+    const boiValues = {{ boi_values|safe }};
+
+    new Chart(boiCanvas, {
+      type: 'line',
+      data: {
+        labels: boiLabels,
+        datasets: [{
+          label: 'R$ por Arroba (@)',
+          data: boiValues,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true }
+        },
+        scales: {
+          y: { beginAtZero: false }
+        }
+      }
+    });
+  }
+  {% endif %}
+
+    </script>
+{% endblock content %}

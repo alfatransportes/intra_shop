@@ -1,10 +1,12 @@
 {% extends "website/base.html" %}
-{% block title %}Loja{% endblock %}
+{% block title %}
+    Loja
+{% endblock title %}
 {% block conteudo %}
     <div class="container py-4 mt-5">
         <!-- Top bar -->
         <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-            <div>
+            {% comment %} <div>
                 <h1 class="h4 mb-0">Produtos</h1>
                 <div class="text-muted small">
                     {{ total_produtos }} item(ns) encontrados
@@ -12,18 +14,14 @@
                         • Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
                     {% endif %}
                 </div>
-            </div>
+            </div> {% endcomment %}
             <!-- Botão filtros (agora aparece em TODAS as telas) -->
-            <div>
-                <button class="btn btn-outline-secondary"
-                        type="button"
-                        data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasFiltros"
-                        aria-controls="offcanvasFiltros">Filtros</button>
-            </div>
+            {% comment %} <div>
+                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasFiltros" aria-controls="offcanvasFiltros">Filtros</button>
+            </div> {% endcomment %}
         </div>
         <!-- Chips de categorias -->
-        <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="d-flex flex-wrap gap-2 justify-content-center mb-3 ">
             <a href="{% url 'index' %}"
                class="badge rounded-pill text-bg-{% if not categoria %}primary{% else %}light{% endif %} text-decoration-none px-3 py-2">
                 Todas
@@ -37,6 +35,18 @@
         </div>
         <!-- Linha: ordenar + busca -->
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <!-- Busca -->
+            <form method="get" class="d-flex align-items-center gap-2">
+                {% if categoria %}<input type="hidden" name="categoria" value="{{ categoria }}">{% endif %}
+                {% if ordenar %}<input type="hidden" name="ordenar" value="{{ ordenar }}">{% endif %}
+                <input type="search"
+                       name="q"
+                       value="{{ busca }}"
+                       class="form-control form-control-sm"
+                       style="width: min(420px, 70vw)"
+                       placeholder="Buscar por nome ou descrição...">
+                <button class="btn btn-primary btn-sm">Buscar</button>
+            </form>
             <!-- Ordenação -->
             <form method="get" class="d-flex align-items-center gap-2">
                 {% if busca %}<input type="hidden" name="q" value="{{ busca }}">{% endif %}
@@ -55,18 +65,6 @@
                 {% if filtros_ativos %}
                     <a class="btn btn-link btn-sm" href="{% url 'index' %}">Limpar</a>
                 {% endif %}
-            </form>
-            <!-- Busca -->
-            <form method="get" class="d-flex align-items-center gap-2">
-                {% if categoria %}<input type="hidden" name="categoria" value="{{ categoria }}">{% endif %}
-                {% if ordenar %}<input type="hidden" name="ordenar" value="{{ ordenar }}">{% endif %}
-                <input type="search"
-                       name="q"
-                       value="{{ busca }}"
-                       class="form-control form-control-sm"
-                       style="width: min(420px, 70vw)"
-                       placeholder="Buscar por nome ou descrição...">
-                <button class="btn btn-primary btn-sm">Buscar</button>
             </form>
         </div>
         <!-- Indicadores de filtros ativos -->
