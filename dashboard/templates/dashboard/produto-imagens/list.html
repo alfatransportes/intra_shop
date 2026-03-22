@@ -1,0 +1,88 @@
+{% extends "dashboard/base.html" %}
+{% block header %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            {% if produto_selecionado %}
+                <h1 class="h4 mb-1">Imagens de {{ produto_selecionado.nome }}</h1>
+                <div class="text-secondary small">Gerencie as imagens deste produto.</div>
+            {% else %}
+                <h1 class="h4 mb-1">Imagens dos produtos</h1>
+                <div class="text-secondary small">Gerencie as imagens cadastradas.</div>
+            {% endif %}
+        </div>
+        <a href="{% url 'dashboard_produto_imagem_create' %}{% if produto_atual %}?produto={{ produto_atual }}{% endif %}"
+           class="btn btn-primary">Nova imagem</a>
+    </div>
+{% endblock header %}
+{% block content %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="row g-2 mb-3">
+                <div class="col-md-10">
+                    <select name="produto" class="form-select">
+                        <option value="">Todos os produtos</option>
+                        {% for item in produtos %}
+                            <option value="{{ item.id }}"
+                                    {% if produto_atual == item.id|stringformat:"s" %}selected{% endif %}>
+                                {{ item.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-primary w-100">Filtrar</button>
+                </div>
+            </form>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Preview</th>
+                            <th>Produto</th>
+                            <th>Legenda</th>
+                            <th>Ordem</th>
+                            <th>Principal</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for imagem in imagens %}
+                            <tr>
+                                <td style="width: 90px;">
+                                    {% if imagem.imagem %}
+                                        <img src="{{ imagem.imagem.url }}"
+                                             alt="{{ imagem.legenda }}"
+                                             class="img-fluid rounded"
+                                             style="max-height: 60px">
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ imagem.produto.nome }}</td>
+                                <td>{{ imagem.legenda|default:"-" }}</td>
+                                <td>{{ imagem.ordem }}</td>
+                                <td>
+                                    {% if imagem.principal %}
+                                        <span class="badge text-bg-success">Sim</span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">Não</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'dashboard_produto_imagem_update' imagem.pk %}"
+                                       class="btn btn-sm btn-outline-primary">Editar</a>
+                                    <a href="{% url 'dashboard_produto_imagem_delete' imagem.pk %}"
+                                       class="btn btn-sm btn-outline-danger">Excluir</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-secondary py-4">Nenhuma imagem cadastrada.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

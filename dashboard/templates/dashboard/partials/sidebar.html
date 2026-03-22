@@ -1,33 +1,47 @@
 <aside class="sidebar sidebar-premium border-end d-none d-lg-flex flex-column">
-    {# ===== HEADER FIXO ===== #}
     <div class="sidebar-header px-3 py-3 border-bottom">
         <div class="d-flex align-items-center justify-content-between w-100">
             <span class="fw-semibold sidebar-title">Navegação</span>
-            <button class="btn btn-sm btn-outline-secondary sidebar-toggle"
-                    id="sidebarCollapse"
-                    type="button">
-                <i class="bi bi-layout-sidebar-inset"></i>
-            </button>
         </div>
     </div>
-    {# ===== BODY (SCROLL) ===== #}
     <div class="sidebar-body p-2 flex-grow-1">
-        {# ===== MENU ===== #}
         <div class="nav flex-column nav-pills gap-1 mt-2">
-            <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
-               href="">
-                <i class="bi bi-speedometer2"></i><span class="link-text">Visão Geral</span>
+            <a class="nav-link {% if request.resolver_match.url_name == 'painel_controle' %}active{% endif %}"
+               href="{% url 'painel_controle' %}">
+                <i class="bi bi-speedometer2 me-2"></i>Visão Geral
+            </a>
+            <a class="nav-link {% if 'dashboard_produto' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_produto_list' %}">
+                <i class="bi bi-box-seam me-2"></i>Produtos
+            </a>
+            <a class="nav-link {% if 'dashboard_venda' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_venda_list' %}">
+                <i class="bi bi-bag-check me-2"></i>Vendas
+            </a>
+            <a class="nav-link {% if 'dashboard_tipo' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_tipo_list' %}">
+                <i class="bi bi-tags me-2"></i>Tipos
+            </a>
+            <a class="nav-link {% if 'dashboard_unidade' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_unidade_list' %}">
+                <i class="bi bi-rulers me-2"></i>Unidades
+            </a>
+            <a class="nav-link {% if 'dashboard_nivel_avaria' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_nivel_avaria_list' %}">
+                <i class="bi bi-exclamation-triangle me-2"></i>Níveis de avaria
+            </a>
+            <a class="nav-link {% if 'dashboard_forma_pagamento' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_forma_pagamento_list' %}">
+                <i class="bi bi-credit-card me-2"></i>Formas de pagamento
+            </a>
+            <a class="nav-link {% if 'dashboard_regra_vale' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_regra_vale_list' %}">
+                <i class="bi bi-cash-coin me-2"></i>Parcelamento do vale
             </a>
         </div>
     </div>
-    {# ===== FOOTER FIXO ===== #}
     <div class="sidebar-footer p-3 border-top small text-secondary d-flex align-items-center justify-content-between">
         <span class="badge text-bg-secondary">v1.0</span>
-        {% if menu_propriedade_atual_id %}
-            <span class="small text-secondary text-truncate sidebar-max-width-200">
-                <i class="bi bi-pin-map me-1"></i>{{ menu_propriedade_atual_nome }}
-            </span>
-        {% endif %}
     </div>
 </aside>
 <!-- Mobile offcanvas -->
@@ -40,9 +54,37 @@
     </div>
     <div class="offcanvas-body p-2">
         <div class="nav flex-column nav-pills gap-1">
-            <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
-               href="">
-                <i class="bi bi-speedometer2 me-2"></i><span class="link-text">Visão Geral</span>
+            <a class="nav-link {% if request.resolver_match.url_name == 'painel_controle' %}active{% endif %}"
+               href="{% url 'painel_controle' %}">
+                <i class="bi bi-speedometer2 me-2"></i>Visão Geral
+            </a>
+            <a class="nav-link {% if 'dashboard_produto' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_produto_list' %}">
+                <i class="bi bi-box-seam me-2"></i>Produtos
+            </a>
+            <a class="nav-link {% if 'dashboard_venda' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_venda_list' %}">
+                <i class="bi bi-bag-check me-2"></i>Vendas
+            </a>
+            <a class="nav-link {% if 'dashboard_tipo' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_tipo_list' %}">
+                <i class="bi bi-tags me-2"></i>Tipos
+            </a>
+            <a class="nav-link {% if 'dashboard_unidade' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_unidade_list' %}">
+                <i class="bi bi-rulers me-2"></i>Unidades
+            </a>
+            <a class="nav-link {% if 'dashboard_nivel_avaria' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_nivel_avaria_list' %}">
+                <i class="bi bi-exclamation-triangle me-2"></i>Níveis de avaria
+            </a>
+            <a class="nav-link {% if 'dashboard_forma_pagamento' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_forma_pagamento_list' %}">
+                <i class="bi bi-credit-card me-2"></i>Formas de pagamento
+            </a>
+            <a class="nav-link {% if 'dashboard_regra_vale' in request.resolver_match.url_name %}active{% endif %}"
+               href="{% url 'dashboard_regra_vale_list' %}">
+                <i class="bi bi-cash-coin me-2"></i>Parcelamento do vale
             </a>
         </div>
     </div>

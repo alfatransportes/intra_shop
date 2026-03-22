@@ -1,0 +1,63 @@
+{% extends "dashboard/base.html" %}
+{% block header %}
+    <div class="mb-3">
+        <h1 class="h4 mb-1">Venda #{{ venda.id }}</h1>
+        <div class="text-secondary small">Detalhes e atualização de status.</div>
+    </div>
+{% endblock header %}
+{% block content %}
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Informações da venda</h2>
+                    <p>
+                        <strong>Usuário:</strong> {{ venda.usuario }}
+                    </p>
+                    <p>
+                        <strong>Forma de pagamento:</strong> {{ venda.forma_pagamento }}
+                    </p>
+                    <p>
+                        <strong>Total:</strong> R$ {{ venda.total }}
+                    </p>
+                    <p>
+                        <strong>Status:</strong> {{ venda.get_status_display }}
+                    </p>
+                    <p>
+                        <strong>Observação:</strong> {{ venda.observacao|default:"-" }}
+                    </p>
+                    <hr>
+                    <h3 class="h6">Itens</h3>
+                    <ul class="list-group">
+                        {% for item in venda.itens.all %}
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>{{ item.produto.nome }} x{{ item.quantidade }}</span>
+                                <strong>R$ {{ item.subtotal }}</strong>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Atualizar status</h2>
+                    <form method="post"
+                          enctype="multipart/form-data"
+                          action="{% url 'dashboard_venda_update_status' venda.pk %}">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="mb-3">
+                                <label class="form-label">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors }}</div>{% endif %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary">Salvar alterações</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

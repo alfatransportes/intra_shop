@@ -1,0 +1,65 @@
+{% extends "dashboard/base.html" %}
+{% block header %}
+    <div class="mb-3">
+        <h1 class="h4 mb-1">
+            {% if object %}
+                Editar forma de pagamento
+            {% else %}
+                Nova forma de pagamento
+            {% endif %}
+        </h1>
+    </div>
+{% endblock header %}
+{% block content %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    {% for field in form %}
+                        <div class="col-md-6">
+                            <label class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors }}</div>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                    <a href="{% url 'dashboard_forma_pagamento_list' %}"
+                       class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+		document.addEventListener("DOMContentLoaded", function () {
+			const codigo = document.getElementById("id_codigo");
+			const pixFields = [
+				"id_pix_chave",
+				"id_pix_nome",
+				"id_pix_cidade",
+				"id_pix_payload"
+			];
+
+			function togglePixFields() {
+				const isPix = codigo && codigo.value === "PIX";
+
+				pixFields.forEach(function (fieldId) {
+					const field = document.getElementById(fieldId);
+					if (!field) return;
+
+					const wrapper = field.closest(".col-md-6");
+					if (!wrapper) return;
+
+					wrapper.style.display = isPix ? "" : "none";
+				});
+			}
+
+			if (codigo) {
+				codigo.addEventListener("change", togglePixFields);
+				togglePixFields();
+			}
+		});
+    </script>
+{% endblock content %}

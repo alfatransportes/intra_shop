@@ -1,11 +1,61 @@
 from django.urls import path
 
-from . import views
+from .views import (FormaPagamentoCreateView, FormaPagamentoDeleteView,
+                    FormaPagamentoListView, FormaPagamentoUpdateView,
+                    NivelAvariaCreateView, NivelAvariaDeleteView,
+                    NivelAvariaListView, NivelAvariaUpdateView,
+                    PainelControleView, ProdutoCreateView, ProdutoDeleteView,
+                    ProdutoImagemCreateView, ProdutoImagemDeleteView,
+                    ProdutoImagemListView, ProdutoImagemUpdateView,
+                    ProdutoListView, ProdutoUpdateView,
+                    RegraParcelamentoValeCreateView,
+                    RegraParcelamentoValeDeleteView,
+                    RegraParcelamentoValeListView,
+                    RegraParcelamentoValeUpdateView, TipoCreateView,
+                    TipoDeleteView, TipoListView, TipoUpdateView,
+                    UnidadeCreateView, UnidadeDeleteView, UnidadeListView,
+                    UnidadeUpdateView, VendaDetailView, VendaListView,
+                    VendaUpdateStatusView)
 
 urlpatterns = [
+    path("painel-controle/", PainelControleView.as_view(), name="painel_controle"),
 
-    # -------------------------
-    # Home / produtos
-    # -------------------------
-    path("painel-controle/", views.painel_controle, name="painel_controle"),
+    path("painel-controle/produtos/", ProdutoListView.as_view(), name="dashboard_produto_list"),
+    path("painel-controle/produtos/novo/", ProdutoCreateView.as_view(), name="dashboard_produto_create"),
+    path("painel-controle/produtos/<int:pk>/editar/", ProdutoUpdateView.as_view(), name="dashboard_produto_update"),
+    path("painel-controle/produtos/<int:pk>/excluir/", ProdutoDeleteView.as_view(), name="dashboard_produto_delete"),
+
+    path("painel-controle/tipos/", TipoListView.as_view(), name="dashboard_tipo_list"),
+    path("painel-controle/tipos/novo/", TipoCreateView.as_view(), name="dashboard_tipo_create"),
+    path("painel-controle/tipos/<int:pk>/editar/", TipoUpdateView.as_view(), name="dashboard_tipo_update"),
+    path("painel-controle/tipos/<int:pk>/excluir/", TipoDeleteView.as_view(), name="dashboard_tipo_delete"),
+
+    path("painel-controle/unidades/", UnidadeListView.as_view(), name="dashboard_unidade_list"),
+    path("painel-controle/unidades/nova/", UnidadeCreateView.as_view(), name="dashboard_unidade_create"),
+    path("painel-controle/unidades/<int:pk>/editar/", UnidadeUpdateView.as_view(), name="dashboard_unidade_update"),
+    path("painel-controle/unidades/<int:pk>/excluir/", UnidadeDeleteView.as_view(), name="dashboard_unidade_delete"),
+
+    path("painel-controle/niveis-avaria/", NivelAvariaListView.as_view(), name="dashboard_nivel_avaria_list"),
+    path("painel-controle/niveis-avaria/novo/", NivelAvariaCreateView.as_view(), name="dashboard_nivel_avaria_create"),
+    path("painel-controle/niveis-avaria/<int:pk>/editar/", NivelAvariaUpdateView.as_view(), name="dashboard_nivel_avaria_update"),
+    path("painel-controle/niveis-avaria/<int:pk>/excluir/", NivelAvariaDeleteView.as_view(), name="dashboard_nivel_avaria_delete"),
+
+    path("painel-controle/vendas/", VendaListView.as_view(), name="dashboard_venda_list"),
+    path("painel-controle/vendas/<int:pk>/", VendaDetailView.as_view(), name="dashboard_venda_detail"),
+    path("painel-controle/vendas/<int:pk>/status/", VendaUpdateStatusView.as_view(), name="dashboard_venda_update_status"),
+
+        path("painel-controle/produto-imagens/", ProdutoImagemListView.as_view(), name="dashboard_produto_imagem_list"),
+    path("painel-controle/produto-imagens/nova/", ProdutoImagemCreateView.as_view(), name="dashboard_produto_imagem_create"),
+    path("painel-controle/produto-imagens/<int:pk>/editar/", ProdutoImagemUpdateView.as_view(), name="dashboard_produto_imagem_update"),
+    path("painel-controle/produto-imagens/<int:pk>/excluir/", ProdutoImagemDeleteView.as_view(), name="dashboard_produto_imagem_delete"),
+
+    path("painel-controle/formas-pagamento/", FormaPagamentoListView.as_view(), name="dashboard_forma_pagamento_list"),
+    path("painel-controle/formas-pagamento/nova/", FormaPagamentoCreateView.as_view(), name="dashboard_forma_pagamento_create"),
+    path("painel-controle/formas-pagamento/<int:pk>/editar/", FormaPagamentoUpdateView.as_view(), name="dashboard_forma_pagamento_update"),
+    path("painel-controle/formas-pagamento/<int:pk>/excluir/", FormaPagamentoDeleteView.as_view(), name="dashboard_forma_pagamento_delete"),
+
+    path("painel-controle/regras-vale/", RegraParcelamentoValeListView.as_view(), name="dashboard_regra_vale_list"),
+    path("painel-controle/regras-vale/nova/", RegraParcelamentoValeCreateView.as_view(), name="dashboard_regra_vale_create"),
+    path("painel-controle/regras-vale/<int:pk>/editar/", RegraParcelamentoValeUpdateView.as_view(), name="dashboard_regra_vale_update"),
+    path("painel-controle/regras-vale/<int:pk>/excluir/", RegraParcelamentoValeDeleteView.as_view(), name="dashboard_regra_vale_delete"),
 ]
