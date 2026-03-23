@@ -404,9 +404,21 @@ class FormaPagamentoDeleteView(DashboardPermissionMixin, DeleteView):
     template_name = "dashboard/confirm_delete.html"
     success_url = reverse_lazy("dashboard_forma_pagamento_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Forma de pagamento excluída com sucesso.")
-        return super().delete(request, *args, **kwargs)
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        if self.object.venda_set.exists():
+            self.object.ativa = False
+            self.object.save(update_fields=["ativa"])
+            messages.warning(
+                request,
+                "Forma de pagamento já utilizada em vendas. Ela foi inativada em vez de excluída."
+            )
+        else:
+            self.object.delete()
+            messages.success(request, "Forma de pagamento excluída com sucesso.")
+
+        return redirect(self.success_url)
     
 
 class RegraParcelamentoValeListView(DashboardPermissionMixin, ListView):

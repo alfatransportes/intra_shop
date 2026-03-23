@@ -1,0 +1,108 @@
+{% extends "website/base.html" %}
+{% load static %}
+
+{% block title %}
+    Meus favoritos
+{% endblock title %}
+
+{% block conteudo %}
+
+<main class="py-4 mt-5">
+    <div class="container mt-5">
+
+        <h1 class="h4 mb-4">Meus favoritos</h1>
+
+        {% if favoritos %}
+
+            <div class="row g-3">
+
+                {% for fav in favoritos %}
+                <div class="col-6 col-md-4 col-lg-3">
+
+                    <div class="card h-100 shadow-sm border-0">
+
+                        <a href="{% url 'detalhe_produto' fav.produto.id %}" class="text-decoration-none text-dark">
+
+                            <div class="ratio ratio-4x3 bg-light">
+
+                                {% with img=fav.produto.imagens.first %}
+                                    {% if img and img.imagem %}
+                                        <img src="{{ img.imagem.url }}"
+                                             alt="{{ fav.produto.nome }}"
+                                             style="object-fit:contain;width:100%;height:100%;">
+                                    {% else %}
+                                        <img src="{% static 'img/sem-imagem.png' %}"
+                                             alt="Sem imagem"
+                                             style="object-fit:contain;width:100%;height:100%;">
+                                    {% endif %}
+                                {% endwith %}
+
+                            </div>
+
+                            <div class="card-body">
+
+                                <div class="small text-muted mb-1">
+                                    {{ fav.produto.tipo_prod }}
+                                </div>
+
+                                <div class="fw-semibold mb-2" style="line-height:1.2;">
+                                    {{ fav.produto.nome }}
+                                </div>
+
+                                <div class="fw-bold">
+                                    R$ {{ fav.produto.valor_venda|floatformat:2 }}
+                                </div>
+
+                            </div>
+
+                        </a>
+
+                        <div class="card-footer bg-white border-0 pt-0">
+
+                            <div class="d-flex justify-content-between">
+
+                                <a href="{% url 'detalhe_produto' fav.produto.id %}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Ver produto
+                                </a>
+
+                                <a href="{% url 'favorito_toggle' fav.produto.id %}"
+                                   class="btn btn-sm btn-outline-danger">
+                                    ❤️ Remover
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="text-center py-5">
+
+                <div class="mb-3" style="font-size:48px;">♡</div>
+
+                <h5 class="mb-2">Você ainda não tem favoritos</h5>
+
+                <p class="text-muted">
+                    Clique no coração dos produtos para salvá-los aqui.
+                </p>
+
+                <a href="{% url 'index' %}" class="btn btn-primary">
+                    Ver produtos
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+</main>
+
+{% endblock conteudo %}

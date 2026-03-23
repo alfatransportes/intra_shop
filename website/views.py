@@ -2,13 +2,14 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import F, IntegerField, Q, Sum
 from django.db.models.functions import Coalesce
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from .models import RESERVA_HORAS, Produto, Tipo
+from .models import RESERVA_HORAS, Favorito, Produto, Tipo
 
 
 def index(request):
@@ -95,7 +96,6 @@ def detalhe_produto(request, pk):
         pk=pk,
     )
 
-    # cálculo seguro de economia (evita matemática no template)
     economia = Decimal("0.00")
     try:
         if produto.valor_nota and produto.valor_venda and produto.valor_nota > produto.valor_venda:
@@ -103,11 +103,55 @@ def detalhe_produto(request, pk):
     except Exception:
         economia = Decimal("0.00")
 
+    favoritado = False
+    if request.user.is_authenticated:
+        favoritado = Favorito.objects.filter(
+            usuario=request.user,
+            produto=produto
+        ).exists()
+
     return render(
         request,
         "website/detalhes_produto.html",
         {
             "produto": produto,
             "economia": economia,
+            "favoritado": favoritado,
+        },
+    )
+
+
+@login_required
+def favorito_toggle(request, produto_id):
+
+    produto = get_object_or_404(Produto, id=produto_id)
+
+    favorito, created = Favorito.objects.get_or_create(
+        usuario=request.user,
+        produto=produto
+    )
+
+    if not created:
+        favorito.delete()
+
+    return redirect(request.META.get("HTTP_REFERER", "index"))
+
+
+@login_required
+def meus_favoritos(request):
+
+    favoritos = (
+        Favorito.objects
+        .filter(usuario=request.user)
+        .select_related("produto")
+        .prefetch_related("produto__imagens")
+        .order_by("-criado_em")
+    )
+
+    return render(
+        request,
+        "website/favoritos.html",
+        {
+            "favoritos": favoritos
         },
     )

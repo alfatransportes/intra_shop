@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import DecimalField, F, Sum
+from django.db.models import DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from PIL import Image, ImageOps
@@ -314,7 +314,7 @@ class FormaPagamento(models.Model):
         DINHEIRO = "DINHEIRO", "Dinheiro em espécie"
         VALE = "VALE", "Vale no pagamento"
 
-    codigo = models.CharField(max_length=20, choices=Codigo.choices, unique=True)
+    codigo = models.CharField(max_length=20, choices=Codigo.choices)
     ativa = models.BooleanField(default=True)
 
     # Pix
@@ -323,8 +323,44 @@ class FormaPagamento(models.Model):
     pix_cidade = models.CharField(max_length=255, blank=True, default="")
     pix_payload = models.TextField(blank=True, default="")
 
+    def clean(self):
+        super().clean()
+
+        if self.codigo == self.Codigo.PIX and self.ativa:
+            qs = FormaPagamento.objects.filter(
+                codigo=self.Codigo.PIX,
+                ativa=True
+            ).exclude(pk=self.pk)
+
+            if qs.exists():
+                raise ValidationError({
+                    "ativa": "Já existe um Pix ativo. Desative o atual antes de ativar outro."
+                })
+
+        if self.codigo == self.Codigo.PIX:
+            if not self.pix_chave:
+                raise ValidationError({"pix_chave": "Informe a chave Pix."})
+            if not self.pix_nome:
+                raise ValidationError({"pix_nome": "Informe o nome do recebedor."})
+            if not self.pix_cidade:
+                raise ValidationError({"pix_cidade": "Informe a cidade."})
+        else:
+            self.pix_chave = ""
+            self.pix_nome = ""
+            self.pix_cidade = ""
+            self.pix_payload = ""
+
     def __str__(self):
         return self.get_codigo_display()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["codigo"],
+                condition=Q(codigo="PIX", ativa=True),
+                name="unique_pix_ativo",
+            )
+        ]
 
 
 class RegraParcelamentoVale(models.Model):
@@ -478,3 +514,25 @@ class VendaItem(models.Model):
 
     def __str__(self):
         return f"{self.produto} x{self.quantidade}"
+    
+
+class Favorito(models.Model):
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="favoritos"
+    )
+
+    produto = models.ForeignKey(
+        "Produto",
+        on_delete=models.CASCADE,
+        related_name="favoritado_por"
+    )
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("usuario", "produto")
+
+    def __str__(self):
+        return f"{self.usuario} ❤️ {self.produto}"

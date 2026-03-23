@@ -1,143 +1,132 @@
 {% load static %}
 {% load custom_tags %}
-<nav id="mainNav"
-     class="navbar navbar-expand-lg bg-white shadow-sm fixed-top border-top border-alfa border-5">
-    <div class="container">
-        <a class="navbar-brand fw-bold text-primary" href="{% url 'index' %}">
-            <img src="{{ config_website.logo.url }}"
-                 alt="{{ config_website.titulo }}"
-                 width="120" />
-        </a>
-        <button class="navbar-toggler border-0 bi bi-list"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#navbarAlfa"
-                aria-controls="navbarAlfa"
-                aria-expanded="false"
-                aria-label="Alternar navegação"></button>
-        <div class="collapse navbar-collapse" id="navbarAlfa">
-            <div class="d-lg-flex align-items-center w-100">
-                <!-- MENUS CENTRALIZADOS NO DESKTOP -->
-                <ul class="navbar-nav mb-2 mb-lg-0 nav-links flex-lg-grow-1 justify-content-lg-center">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'index' %}"><i class="bi bi-house"></i> Início</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'minhas_compras' %}"><i class="bi bi-basket2-fill"></i> Minhas compras</a>
-                    </li>
-                    {% comment %} <!-- Mega: Tipo produtos -->
-                                                                                {% if tipo_produtos %}
-                                                                                <li class="nav-item dropdown position-static">
-                                                                        <a class="nav-link dropdown-toggle"
-                                                                           href="#"
-                                                                           id="TiposProsDropdown"
-                                                                           role="button"
-                                                                           data-bs-toggle="dropdown"
-                                                                           aria-expanded="false"><i class="bi bi-card-list me-2"></i>Tipos de produtos</a>
-                                                                        <div class="dropdown-menu mega w-100 p-4"
-                                                                             aria-labelledby="TiposProsDropdown">
-                                                                            <div class="mega-close d-lg-none">
-                                                                    <button type="button" class="btn-close btn-close-mobile" aria-label="Fechar"></button>
-                                                    </div>
-                                                    <div class="container">
-                                                        <div class="row g-4">
-                                                            <div class="col-lg-4">
-                                                                <div class="card border-0 bg-transparent">
-                                                                    <div class="card-body px-0">
-                                                            <h5 class="fw-bold">Alfa Transportes</h5>
-                                                            <p class="text-muted mb-2">Logística eficiente com prazos ágeis e
-                                                    cobertura nacional.</p>
-                                                <a href="#"
-                                                   class="fw-semibold text-decoration-none"
-                                                   style="color:var(--alfa-red)">Conheça a Alfa
-                                                    →</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% for tipo in tipo_produtos %}
-                                        {% if forloop.first or forloop.counter0|divisibleby:6 %}
-                                        <div class="col-lg-2 mb-3">
-                                            <h6 class="fw-bold">Produtos</h6>
-                                            <ul class="list-unstyled mb-0">
-                                                {% endif %}
-                                               <li>
-                                                    <a class="dropdown-item" href="{% url 'index' %}?tipo={{ tipo.id }}">
-                                                        {{ tipo.nome }}
-                                                    </a>
-                                                </li>
-                                                {% if forloop.counter|divisibleby:6 or forloop.last %}
-                                            </ul>
-                                        </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                    </li>
-{% endif %} {% endcomment %}
-</ul>
-<!-- DIREITA -->
-<div class="d-flex align-items-center ms-lg-auto">
-    <div class="btn-group dropdown position-static"
-         id="clienteDropdown"
-         role="group"
-         aria-label="Acesso do cliente">
-        {% comment %} <a class="btn btn-alfa" href="#" rel="noopener">
-                            <i class="bi bi-building-up"></i> 1 - Caçador
-        </a> {% endcomment %}
-        <button type="button"
-                class="btn btn-alfa dropdown-toggle  bi bi-person"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-                aria-label="Mais opções do cliente">
-            <span class="visually-hidden">Abrir menu</span>{{ user.numero_cracha }}
-        </button>
-        <div class="dropdown-menu mega w-100 p-4">
-            <div class="mega-close d-lg-none">
-                <button type="button" class="btn-close btn-close-mobile" aria-label="Fechar"></button>
-            </div>
-            <div class="container">
-                <div class="row g-4">
-                    <div class="col-lg-4">
-                        <div class="card border-0 bg-transparent">
-                            <div class="card-body px-0">
-                                <h5 class="fw-bold">Intra Shop</h5>
-                                <p class="text-muted mb-2">Loja interna de itens avariados Alfa Transportes.</p>
-                                {% if request.user.is_authenticated %}
-                                    <div class="mb-2 small">
-                                        Olá, <strong>{{ request.user.email }}</strong>
-                                    </div>
-                                    <form method="post" action="{% url 'logout' %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit"
-                                                class="fw-semibold text-decoration-none btn btn-link p-0"
-                                                style="color:var(--alfa-red)">Sair ←</button>
-                                    </form>
-                                {% else %}
-                                    <a href="{% url 'login' %}"
-                                       class="fw-semibold text-decoration-none"
-                                       style="color:var(--alfa-red)">Entrar →</a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <h6 class="fw-bold">Acessos</h6>
-                        <ul class="list-unstyled mb-0">
-                            {% if request.user.is_staff %}
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'painel_controle' %}"><i class="bi bi-cup-hot-fill me-2"></i>Painel de Controle</a>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                    <div class="col-lg-4"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-</div>
-</div>
-</div>
+<nav id="mainNav" class="navbar navbar-expand-lg bg-white shadow-sm fixed-top border-top border-alfa border-5">
+	<div class="container">
+		<a class="navbar-brand fw-bold text-primary" href="{% url 'index' %}">
+			<img src="{{ config_website.logo.url }}" alt="{{ config_website.titulo }}" width="120" />
+		</a>
+		<button class="navbar-toggler border-0 bi bi-list" type="button" data-bs-toggle="collapse"
+			data-bs-target="#navbarAlfa" aria-controls="navbarAlfa" aria-expanded="false"
+			aria-label="Alternar navegação"></button>
+		<div class="collapse navbar-collapse" id="navbarAlfa">
+			<div class="d-lg-flex align-items-center w-100">
+				<!-- MENUS CENTRALIZADOS NO DESKTOP -->
+				<ul class="navbar-nav mb-2 mb-lg-0 nav-links flex-lg-grow-1 justify-content-lg-center">
+					<li class="nav-item">
+						<a class="nav-link" href="{% url 'index' %}"><i class="bi bi-house"></i> Início</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="{% url 'minhas_compras' %}"><i class="bi bi-basket2-fill"></i> Minhas
+							compras</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="{% url 'meus_favoritos' %}"><i
+								class="bi bi-bookmark-heart-fill"></i></i> Favoritos</a>
+					</li>
+					{% comment %} <!-- Mega: Tipo produtos -->
+					{% if tipo_produtos %}
+					<li class="nav-item dropdown position-static">
+						<a class="nav-link dropdown-toggle" href="#" id="TiposProsDropdown" role="button"
+							data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-card-list me-2"></i>Tipos de
+							produtos</a>
+						<div class="dropdown-menu mega w-100 p-4" aria-labelledby="TiposProsDropdown">
+							<div class="mega-close d-lg-none">
+								<button type="button" class="btn-close btn-close-mobile" aria-label="Fechar"></button>
+							</div>
+							<div class="container">
+								<div class="row g-4">
+									<div class="col-lg-4">
+										<div class="card border-0 bg-transparent">
+											<div class="card-body px-0">
+												<h5 class="fw-bold">Alfa Transportes</h5>
+												<p class="text-muted mb-2">Logística eficiente com prazos ágeis e
+													cobertura nacional.</p>
+												<a href="#" class="fw-semibold text-decoration-none"
+													style="color:var(--alfa-red)">Conheça a Alfa
+													→</a>
+											</div>
+										</div>
+									</div>
+									{% for tipo in tipo_produtos %}
+									{% if forloop.first or forloop.counter0|divisibleby:6 %}
+									<div class="col-lg-2 mb-3">
+										<h6 class="fw-bold">Produtos</h6>
+										<ul class="list-unstyled mb-0">
+											{% endif %}
+											<li>
+												<a class="dropdown-item" href="{% url 'index' %}?tipo={{ tipo.id }}">
+													{{ tipo.nome }}
+												</a>
+											</li>
+											{% if forloop.counter|divisibleby:6 or forloop.last %}
+										</ul>
+									</div>
+									{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+					</li>
+					{% endif %} {% endcomment %}
+				</ul>
+				<!-- DIREITA -->
+				<div class="d-flex align-items-center ms-lg-auto">
+					<div class="btn-group dropdown position-static" id="clienteDropdown" role="group"
+						aria-label="Acesso do cliente">
+						{% comment %} <a class="btn btn-alfa" href="#" rel="noopener">
+							<i class="bi bi-building-up"></i> 1 - Caçador
+						</a> {% endcomment %}
+						<button type="button" class="btn btn-alfa dropdown-toggle  bi bi-person"
+							data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mais opções do cliente">
+							<span class="visually-hidden">Abrir menu</span>{{ user.numero_cracha }}
+						</button>
+						<div class="dropdown-menu mega w-100 p-4">
+							<div class="mega-close d-lg-none">
+								<button type="button" class="btn-close btn-close-mobile" aria-label="Fechar"></button>
+							</div>
+							<div class="container">
+								<div class="row g-4">
+									<div class="col-lg-4">
+										<div class="card border-0 bg-transparent">
+											<div class="card-body px-0">
+												<h5 class="fw-bold">Intra Shop</h5>
+												<p class="text-muted mb-2">Loja interna de itens avariados Alfa
+													Transportes.</p>
+												{% if request.user.is_authenticated %}
+												<div class="mb-2 small">
+													Olá, <strong>{{ request.user.email }}</strong>
+												</div>
+												<form method="post" action="{% url 'logout' %}" class="d-inline">
+													{% csrf_token %}
+													<button type="submit"
+														class="fw-semibold text-decoration-none btn btn-link p-0"
+														style="color:var(--alfa-red)">Sair ←</button>
+												</form>
+												{% else %}
+												<a href="{% url 'login' %}" class="fw-semibold text-decoration-none"
+													style="color:var(--alfa-red)">Entrar →</a>
+												{% endif %}
+											</div>
+										</div>
+									</div>
+									<div class="col-lg-4">
+										<h6 class="fw-bold">Acessos</h6>
+										<ul class="list-unstyled mb-0">
+											{% if request.user.is_staff %}
+											<li>
+												<a class="dropdown-item" href="{% url 'painel_controle' %}"><i
+														class="bi bi-cup-hot-fill me-2"></i>Painel de Controle</a>
+											</li>
+											{% endif %}
+										</ul>
+									</div>
+									<div class="col-lg-4"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </nav>

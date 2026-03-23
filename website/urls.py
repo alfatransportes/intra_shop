@@ -47,4 +47,20 @@ urlpatterns = [
         views_checkout.venda_detalhe,
         name="venda_detalhe",
     ),
+
+
+    # -------------------------
+    # Favoritos
+    # -------------------------
+    path(
+        "favoritar/<int:produto_id>/",
+        views.favorito_toggle,
+        name="favorito_toggle"
+    ),
+
+    path(
+        "favoritos/",
+        views.meus_favoritos,
+        name="meus_favoritos"
+    ),
 ]

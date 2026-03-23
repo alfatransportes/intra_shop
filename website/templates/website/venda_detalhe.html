@@ -27,23 +27,55 @@
                         {% endfor %}
                     </div>
                     <hr class="my-4">
-                    <h2 class="h6 mb-3">Comprovante</h2>
-                    {% if venda.comprovante_pix %}
-                        <div class="alert alert-success d-flex justify-content-between align-items-center">
-                            <div>Comprovante Pix enviado.</div>
-                            <a href="{{ venda.comprovante_pix.url }}"
-                               class="btn btn-sm btn-primary"
-                               target="_blank">Abrir comprovante</a>
+                    <h2 class="h6 mb-3">Pagamento</h2>
+
+                    {% if venda.forma_pagamento.codigo == "DINHEIRO" %}
+
+                        <div class="alert alert-info">
+                            O pagamento será realizado em dinheiro no momento da retirada/entrega.
                         </div>
-                    {% elif venda.comprovante_vale %}
-                        <div class="alert alert-success d-flex justify-content-between align-items-center">
-                            <div>Comprovante de Vale enviado.</div>
-                            <a href="{{ venda.comprovante_vale.url }}"
-                               class="btn btn-sm btn-primary"
-                               target="_blank">Abrir comprovante</a>
-                        </div>
+
                     {% else %}
-                        <div class="alert alert-warning">Nenhum comprovante anexado ainda.</div>
+
+                        {% if venda.comprovante_pix %}
+                            <div class="alert alert-success d-flex justify-content-between align-items-center">
+                                <div>Comprovante Pix enviado.</div>
+                                <a href="{{ venda.comprovante_pix.url }}"
+                                class="btn btn-sm btn-primary"
+                                target="_blank">Abrir comprovante</a>
+                            </div>
+
+                        {% elif venda.comprovante_vale %}
+                            <div class="alert alert-success d-flex justify-content-between align-items-center">
+                                <div>Comprovante de Vale enviado.</div>
+                                <a href="{{ venda.comprovante_vale.url }}"
+                                class="btn btn-sm btn-primary"
+                                target="_blank">Abrir comprovante</a>
+                            </div>
+
+                        {% else %}
+                            <div class="alert alert-warning">
+                                Nenhum comprovante anexado ainda.
+                            </div>
+
+                            {% if venda.status == "PENDENTE" %}
+
+                                {% if venda.forma_pagamento.codigo == "PIX" %}
+                                    <a href="{% url 'pix_pagar' venda.id %}" class="btn btn-primary">
+                                        Continuar pagamento Pix
+                                    </a>
+                                {% endif %}
+
+                                {% if venda.forma_pagamento.codigo == "VALE" %}
+                                    <a href="{% url 'vale_pagar' venda.id %}" class="btn btn-primary">
+                                        Enviar comprovante do vale
+                                    </a>
+                                {% endif %}
+
+                            {% endif %}
+
+                        {% endif %}
+
                     {% endif %}
                     <div class="mt-4">
                         <a href="{% url 'minhas_compras' %}" class="btn btn-outline-secondary">← Voltar para minhas compras</a>
