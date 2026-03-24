@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -408,7 +408,6 @@ class Venda(models.Model):
     )
 
     total = models.DecimalField(max_digits=10, decimal_places=2)
-
     parcelas = models.PositiveIntegerField(default=1)
 
     status = models.CharField(
@@ -434,9 +433,15 @@ class Venda(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
-    def clean(self):
+    def repor_estoque(self):
 
-        # regra: VALE precisa de comprovante
+        for item in self.itens.select_related("produto").all():
+
+            produto = item.produto
+            produto.quantidade += item.quantidade
+            produto.save(update_fields=["quantidade"])
+
+    def clean(self):
         if (
             self.status == self.Status.APROVADA
             and self.forma_pagamento.codigo == "VALE"
@@ -446,7 +451,6 @@ class Venda(models.Model):
                 "Não é possível aprovar venda em VALE sem anexar o comprovante."
             )
 
-        # regra: PIX precisa comprovante
         if (
             self.status == self.Status.APROVADA
             and self.forma_pagamento.codigo == "PIX"
@@ -458,9 +462,18 @@ class Venda(models.Model):
 
     def save(self, *args, **kwargs):
 
-        self.full_clean()  # força validação
+        self.full_clean()
+
+        status_anterior = None
+
+        if self.pk:
+            status_anterior = Venda.objects.get(pk=self.pk).status
 
         super().save(*args, **kwargs)
+
+        # se mudou para CANCELADA → devolve estoque
+        if status_anterior != self.Status.CANCELADA and self.status == self.Status.CANCELADA:
+            self.repor_estoque()
 
     def __str__(self):
         return f"Venda #{self.id}"
@@ -514,7 +527,6 @@ class VendaItem(models.Model):
 
     def __str__(self):
         return f"{self.produto} x{self.quantidade}"
-    
 
 class Favorito(models.Model):
     usuario = models.ForeignKey(

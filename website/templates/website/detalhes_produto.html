@@ -4,10 +4,146 @@
     {{ produto.nome }}
 {% endblock title %}
 {% block conteudo %}
-    <main class="py-4">
-        <div class="container mt-2">
-            <!-- Breadcrumb + ações (desktop) -->
-            <div class="d-none d-lg-flex align-items-center justify-content-between mb-3">
+    <style>
+        .produto-page {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .produto-card,
+        .produto-info-card,
+        .produto-rel-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .5rem rgba(0, 0, 0, .06);
+            background: #fff;
+        }
+
+        .produto-breadcrumb a {
+            text-decoration: none;
+        }
+
+        .produto-titulo {
+            line-height: 1.2;
+            font-weight: 700;
+        }
+
+        .produto-favorito-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+        }
+
+        .produto-galeria-principal {
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+        }
+
+        .produto-galeria-principal img {
+            object-fit: contain;
+            width: 100%;
+            height: 100%;
+        }
+
+        .produto-thumb-btn {
+            width: 76px;
+            height: 76px;
+            overflow: hidden;
+            border-radius: .85rem;
+            transition: all .2s ease;
+        }
+
+        .produto-thumb-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--bs-primary) !important;
+        }
+
+        .produto-thumb-btn img {
+            width: 76px;
+            height: 76px;
+            object-fit: cover;
+        }
+
+        .produto-badge-pill {
+            border-radius: 999px;
+            padding: .45rem .85rem;
+        }
+
+        .produto-preco-atual {
+            font-size: clamp(2rem, 4vw, 2.6rem);
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .produto-box-suave {
+            background: #f8f9fa;
+            border-radius: .9rem;
+        }
+
+        .produto-acao-btn {
+            border-radius: .9rem;
+            font-weight: 600;
+        }
+
+        .produto-tab .nav-link {
+            border: 0;
+            border-radius: .8rem;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .produto-tab .nav-link.active {
+            background: var(--bs-primary);
+            color: #fff;
+        }
+
+        .produto-detalhe-item {
+            background: #f8f9fa;
+            border-radius: .85rem;
+            padding: .9rem;
+            height: 100%;
+        }
+
+        .produto-relacionado-card {
+            border: 0;
+            border-radius: .9rem;
+            overflow: hidden;
+            box-shadow: 0 .125rem .45rem rgba(0, 0, 0, .05);
+            transition: transform .2s ease, box-shadow .2s ease;
+            height: 100%;
+        }
+
+        .produto-relacionado-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 .45rem 1rem rgba(0, 0, 0, .10);
+        }
+
+        .produto-relacionado-img {
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+        }
+
+        .produto-relacionado-img img {
+            object-fit: contain;
+            width: 100%;
+            height: 100%;
+            padding: .5rem;
+        }
+
+        .produto-sticky {
+            position: sticky;
+            top: 96px;
+        }
+
+        @media (max-width: 991.98px) {
+            .produto-sticky {
+                position: static;
+                top: auto;
+            }
+        }
+    </style>
+    <main class="produto-page py-4 py-md-5">
+        <div class="container">
+            <!-- Breadcrumb + ações desktop -->
+            <div class="d-none d-lg-flex align-items-center justify-content-between mb-3 produto-breadcrumb">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
                         <li class="breadcrumb-item">
@@ -22,19 +158,14 @@
                 <div class="small"></div>
             </div>
             <div class="row g-4">
-                <!-- MOBILE: título/infos antes da galeria (ML) -->
+                <!-- MOBILE título -->
                 <div class="col-12 d-lg-none">
-                    <div class="small text-muted mb-1">
-                        Novo
-                        {# se futuramente tiver vendidos no contexto: {% if vendidos %}• +{{ vendidos }} vendidos{% endif %} #}
-                    </div>
+                    <div class="small text-muted mb-1">Novo</div>
                     <div class="d-flex align-items-start justify-content-between gap-2">
-                        <h1 class="h5 mb-2" style="line-height:1.2;">{{ produto.nome }}</h1>
+                        <h1 class="h4 mb-2 produto-titulo">{{ produto.nome }}</h1>
                         <a href="{% url 'favorito_toggle' produto.id %}"
-                           class="btn btn-light border rounded-circle d-inline-flex align-items-center justify-content-center"
-                           aria-label="Favoritar"
-                           style="width:40px;
-                                  height:40px">
+                           class="btn btn-light border d-inline-flex align-items-center justify-content-center produto-favorito-btn"
+                           aria-label="Favoritar">
                             {% if favoritado %}
                                 ❤️
                             {% else %}
@@ -42,10 +173,9 @@
                             {% endif %}
                         </a>
                     </div>
-                    {# avaliação opcional #}
                     {% if nota_media and total_avaliacoes %}
                         <div class="small text-muted mb-2">
-                            <span class="text-dark">{{ nota_media }}</span>
+                            <span class="text-dark fw-semibold">{{ nota_media }}</span>
                             <span class="text-warning">★★★★★</span>
                             <span>({{ total_avaliacoes }})</span>
                         </div>
@@ -53,38 +183,30 @@
                 </div>
                 <!-- GALERIA -->
                 <div class="col-12 col-lg-7">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body">
+                    <div class="card produto-card">
+                        <div class="card-body p-3 p-md-4">
                             {% with imgs=produto.imagens.all %}
                                 {% with total=imgs|length %}
                                     <div class="position-relative">
-                                        <!-- contador 1/N (ML) -->
                                         {% if total > 1 %}
-                                            <div class="position-absolute top-0 start-0 m-2">
-                                                <span class="badge text-bg-light border">1/{{ total }}</span>
+                                            <div class="position-absolute top-0 start-0 m-2" style="z-index: 2;">
+                                                <span class="badge text-bg-light border produto-badge-pill">1/{{ total }}</span>
                                             </div>
                                         {% endif %}
-                                        <div class="ratio ratio-4x3 bg-light rounded overflow-hidden border">
+                                        <div class="ratio ratio-4x3 produto-galeria-principal rounded-4 overflow-hidden border">
                                             {% with img_principal=imgs|first %}
                                                 {% if img_principal and img_principal.imagem %}
                                                     <img id="imgPrincipal"
                                                          src="{{ img_principal.imagem.url }}"
-                                                         alt="{{ produto.nome }}"
-                                                         style="object-fit:contain;
-                                                                width:100%;
-                                                                height:100%">
+                                                         alt="{{ produto.nome }}">
                                                 {% else %}
                                                     <img id="imgPrincipal"
                                                          src="{% static 'img/sem-imagem.png' %}"
-                                                         alt="Sem imagem"
-                                                         style="object-fit:contain;
-                                                                width:100%;
-                                                                height:100%">
+                                                         alt="Sem imagem">
                                                 {% endif %}
                                             {% endwith %}
                                         </div>
                                     </div>
-                                    <!-- dots (mobile) -->
                                     {% if total > 1 %}
                                         <div class="d-flex justify-content-center gap-2 mt-3 d-lg-none">
                                             {% for _ in imgs %}
@@ -98,23 +220,15 @@
                                             {% endfor %}
                                         </div>
                                     {% endif %}
-                                    <!-- thumbs (desktop) -->
                                     {% if produto.imagens.exists %}
                                         <div class="d-none d-lg-flex gap-2 mt-3 flex-wrap">
                                             {% for img in produto.imagens.all %}
                                                 {% if img.imagem %}
                                                     <button type="button"
-                                                            class="btn p-0 border rounded bg-white"
-                                                            style="width:72px;
-                                                                   height:72px;
-                                                                   overflow:hidden"
+                                                            class="btn p-0 border bg-white produto-thumb-btn"
                                                             onclick="trocarImagem('{{ img.imagem.url }}')"
                                                             aria-label="Ver imagem {{ forloop.counter }}">
-                                                        <img src="{{ img.imagem.url }}"
-                                                             alt="Imagem {{ forloop.counter }}"
-                                                             style="width:72px;
-                                                                    height:72px;
-                                                                    object-fit:cover">
+                                                        <img src="{{ img.imagem.url }}" alt="Imagem {{ forloop.counter }}">
                                                     </button>
                                                 {% endif %}
                                             {% endfor %}
@@ -125,19 +239,17 @@
                         </div>
                     </div>
                 </div>
-                <!-- COLUNA DIREITA (ML) -->
+                <!-- COLUNA DIREITA -->
                 <div class="col-12 col-lg-5">
-                    <div class="position-lg-sticky" style="top: 96px;">
-                        <!-- DESKTOP: título/infos na coluna direita (ML) -->
+                    <div class="produto-sticky">
+                        <!-- DESKTOP título -->
                         <div class="d-none d-lg-block mb-3">
                             <div class="small text-muted mb-1">Novo</div>
                             <div class="d-flex align-items-start justify-content-between gap-2">
-                                <h1 class="h5 mb-2" style="line-height:1.2;">{{ produto.nome }}</h1>
+                                <h1 class="h4 mb-2 produto-titulo">{{ produto.nome }}</h1>
                                 <a href="{% url 'favorito_toggle' produto.id %}"
-                                   class="btn btn-light border rounded-circle d-inline-flex align-items-center justify-content-center"
-                                   aria-label="Favoritar"
-                                   style="width:40px;
-                                          height:40px">
+                                   class="btn btn-light border d-inline-flex align-items-center justify-content-center produto-favorito-btn"
+                                   aria-label="Favoritar">
                                     {% if favoritado %}
                                         ❤️
                                     {% else %}
@@ -147,41 +259,40 @@
                             </div>
                             {% if nota_media and total_avaliacoes %}
                                 <div class="small text-muted">
-                                    <span class="text-dark">{{ nota_media }}</span>
+                                    <span class="text-dark fw-semibold">{{ nota_media }}</span>
                                     <span class="text-warning">★★★★★</span>
                                     <span>({{ total_avaliacoes }})</span>
                                 </div>
                             {% endif %}
                         </div>
                         <!-- CARD COMPRA -->
-                        <div class="card shadow-sm border-0">
-                            <div class="card-body">
-                                <!-- Desconto -->
-                                <div class="d-flex align-items-start justify-content-between gap-2">
+                        <div class="card produto-info-card">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
                                     {% if produto.porcen_desconto|default:0 > 0 %}
-                                        <div class="d-flex align-items-center gap-2 mb-2">
-                                            <span class="badge text-bg-success">{{ produto.porcen_desconto|floatformat }}% OFF</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge text-bg-success produto-badge-pill">{{ produto.porcen_desconto|floatformat }}% OFF</span>
                                         </div>
+                                    {% else %}
+                                        <div></div>
                                     {% endif %}
                                     <button id="btnCompartilhar"
-                                            class="btn btn-link p-0 text-decoration-none small">
+                                            class="btn btn-link p-0 text-decoration-none small fw-semibold">
                                         <i class="bi bi-share-fill me-2"></i>Compartilhar
                                     </button>
                                 </div>
-                                <!-- Preço -->
-                                <div class="mb-2">
+                                <div class="mb-3">
                                     {% if produto.porcen_desconto|default:0 > 0 %}
-                                        <div class="text-muted text-decoration-line-through">R$ {{ produto.valor_nota|floatformat:2 }}</div>
+                                        <div class="text-muted text-decoration-line-through mb-1">R$ {{ produto.valor_nota|floatformat:2 }}</div>
                                     {% endif %}
-                                    <div class="display-6 fw-bold lh-1">R$ {{ produto.valor_venda|floatformat:2 }}</div>
+                                    <div class="produto-preco-atual">R$ {{ produto.valor_venda|floatformat:2 }}</div>
                                     {% if economia|default:0 > 0 %}
-                                        <div class="small text-muted mt-1">
+                                        <div class="small text-muted mt-2">
                                             Você economiza <strong>R$ {{ economia|floatformat:2 }}</strong>
                                         </div>
                                     {% endif %}
                                 </div>
-                                <!-- Estoque -->
-                                <div class="mb-3">
+                                <div class="produto-box-suave p-3 mb-3">
                                     {% if produto.estoque_disponivel|default:0 > 0 %}
                                         <div class="fw-semibold text-success">Estoque disponível</div>
                                         <div class="small text-muted">
@@ -192,19 +303,19 @@
                                         <div class="small text-muted">Sem unidades disponíveis</div>
                                     {% endif %}
                                 </div>
-                                <!-- Botões (ML) -->
                                 <div class="d-grid gap-2">
                                     {% if produto.estoque_disponivel|default:0 > 0 %}
                                         <a href="{% url 'carrinho_add' produto.id %}"
-                                           class="btn btn-primary btn-lg">Comprar agora</a>
+                                           class="btn btn-primary btn-lg produto-acao-btn">Comprar agora</a>
                                         <a href="{% url 'carrinho_add' produto.id %}"
-                                           class="btn btn-outline-primary btn-lg">Adicionar ao carrinho</a>
+                                           class="btn btn-outline-primary btn-lg produto-acao-btn">
+                                            Adicionar ao carrinho
+                                        </a>
                                     {% else %}
-                                        <button class="btn btn-secondary btn-lg" disabled>Indisponível</button>
+                                        <button class="btn btn-secondary btn-lg produto-acao-btn" disabled>Indisponível</button>
                                     {% endif %}
                                 </div>
-                                <!-- Infos tipo ML (simples) -->
-                                <div class="mt-3 small text-muted">
+                                <div class="mt-4 small text-muted">
                                     <div class="d-flex gap-2">
                                         <span>↩️</span>
                                         <span>Devolução conforme regras internas.</span>
@@ -216,26 +327,34 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- card “detalhes rápidos” (ML) -->
-                        <div class="card shadow-sm border-0 mt-3">
-                            <div class="card-body">
-                                <div class="fw-semibold mb-2">Detalhes do produto</div>
+                        <!-- detalhes rápidos -->
+                        <div class="card produto-info-card mt-3">
+                            <div class="card-body p-4">
+                                <div class="fw-bold mb-3">Detalhes do produto</div>
                                 <div class="row g-2 small">
                                     <div class="col-6">
-                                        <div class="text-muted">Unidade</div>
-                                        <div class="fw-semibold">{{ produto.unidade_prod }}</div>
+                                        <div class="produto-detalhe-item">
+                                            <div class="text-muted mb-1">Unidade</div>
+                                            <div class="fw-semibold">{{ produto.unidade_prod }}</div>
+                                        </div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="text-muted">Tipo</div>
-                                        <div class="fw-semibold">{{ produto.tipo_prod }}</div>
+                                        <div class="produto-detalhe-item">
+                                            <div class="text-muted mb-1">Tipo</div>
+                                            <div class="fw-semibold">{{ produto.tipo_prod }}</div>
+                                        </div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="text-muted">Avaria</div>
-                                        <div class="fw-semibold">{{ produto.nivel_ava_prod }}</div>
+                                        <div class="produto-detalhe-item">
+                                            <div class="text-muted mb-1">Avaria</div>
+                                            <div class="fw-semibold">{{ produto.nivel_ava_prod }}</div>
+                                        </div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="text-muted">Disponível</div>
-                                        <div class="fw-semibold">{{ produto.estoque_disponivel }}</div>
+                                        <div class="produto-detalhe-item">
+                                            <div class="text-muted mb-1">Disponível</div>
+                                            <div class="fw-semibold">{{ produto.estoque_disponivel }}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -243,12 +362,12 @@
                     </div>
                 </div>
             </div>
-            <!-- ABAIXO: descrição e infos (ML) -->
+            <!-- ABAIXO -->
             <div class="row mt-4">
                 <div class="col-12 col-lg-7">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body">
-                            <ul class="nav nav-tabs" role="tablist">
+                    <div class="card produto-card">
+                        <div class="card-body p-4">
+                            <ul class="nav nav-tabs produto-tab border-0 gap-2" role="tablist">
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link active"
                                             data-bs-toggle="tab"
@@ -264,7 +383,7 @@
                                             role="tab">Informações</button>
                                 </li>
                             </ul>
-                            <div class="tab-content pt-3">
+                            <div class="tab-content pt-4">
                                 <div class="tab-pane fade show active" id="tab-desc" role="tabpanel">
                                     {% if produto.descricao %}
                                         <div style="white-space: pre-line;">{{ produto.descricao }}</div>
@@ -292,33 +411,27 @@
                         </div>
                     </div>
                 </div>
-                <!-- Coluna direita abaixo (placeholder de “relacionados” no desktop) -->
+                <!-- relacionados -->
                 <div class="col-12 col-lg-5 mt-3 mt-lg-0">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body">
-                            <div class="fw-semibold mb-2">Produtos relacionados</div>
+                    <div class="card produto-rel-card">
+                        <div class="card-body p-4">
+                            <div class="fw-bold mb-3">Produtos relacionados</div>
                             {% if relacionados %}
-                                <div class="row g-2">
+                                <div class="row g-3">
                                     {% for prod in relacionados %}
                                         <div class="col-6">
                                             <a href="{% url 'detalhe_produto' prod.id %}"
                                                class="text-decoration-none text-dark">
-                                                <div class="card h-100 border-0 shadow-sm">
-                                                    <div class="ratio ratio-1x1 bg-light">
+                                                <div class="card produto-relacionado-card">
+                                                    <div class="ratio ratio-1x1 produto-relacionado-img">
                                                         {% with img=prod.imagens.first %}
-                                                            {% if img and img.imagem %}
-                                                                <img src="{{ img.imagem.url }}"
-                                                                     alt="{{ prod.nome }}"
-                                                                     style="object-fit:contain;
-                                                                            width:100%;
-                                                                            height:100%">
-                                                            {% endif %}
+                                                            {% if img and img.imagem %}<img src="{{ img.imagem.url }}" alt="{{ prod.nome }}">{% endif %}
                                                         {% endwith %}
                                                     </div>
-                                                    <div class="card-body p-2">
+                                                    <div class="card-body p-2 p-md-3">
                                                         <div class="small text-muted">{{ prod.tipo_prod }}</div>
                                                         <div class="small fw-semibold" style="line-height:1.2;">{{ prod.nome|truncatechars:40 }}</div>
-                                                        <div class="fw-bold small mt-1">R$ {{ prod.valor_venda|floatformat:2 }}</div>
+                                                        <div class="fw-bold small mt-2 text-success">R$ {{ prod.valor_venda|floatformat:2 }}</div>
                                                     </div>
                                                 </div>
                                             </a>
@@ -335,41 +448,32 @@
         </div>
     </main>
     <script>
-  function trocarImagem(url) {
-    const el = document.getElementById("imgPrincipal");
-    if (!el) return;
-    el.src = url;
-  }
+      function trocarImagem(url) {
+        const el = document.getElementById("imgPrincipal");
+        if (!el) return;
+        el.src = url;
+      }
     </script>
     <script>
-document.getElementById("btnCompartilhar").addEventListener("click", function() {
+        document.getElementById("btnCompartilhar").addEventListener("click", function() {
+            const url = window.location.href
+            const titulo = document.title
 
-    const url = window.location.href
-    const titulo = document.title
+            if (navigator.share) {
+                navigator.share({
+                    title: titulo,
+                    url: url
+                })
+            } else {
+                const texto = `${titulo} - ${url}`
 
-    // Navegador suporta compartilhamento nativo (mobile)
-    if (navigator.share) {
+                navigator.clipboard.writeText(url)
 
-        navigator.share({
-            title: titulo,
-            url: url
+                alert("Link copiado! Agora você pode compartilhar.")
+
+                // opcional abrir WhatsApp direto
+                // window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank")
+            }
         })
-
-    } else {
-
-        // fallback desktop
-        const texto = `${titulo} - ${url}`
-
-        navigator.clipboard.writeText(url)
-
-        alert("Link copiado! Agora você pode compartilhar.")
-
-        // opcional abrir WhatsApp direto
-        // window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank")
-
-    }
-
-})
-
     </script>
 {% endblock conteudo %}

@@ -3,93 +3,214 @@
     Pagamento via Pix
 {% endblock title %}
 {% block conteudo %}
-    <div class="container py-4 mt-5">
-        <a href="{% url 'minhas_compras' %}"
-           class="text-decoration-none d-inline-block mb-3">← Voltar</a>
-        <div class="row g-3">
-            <div class="col-12 col-lg-7">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <h1 class="h4 mb-1">Pagamento via Pix</h1>
-                                <div class="text-muted">Pedido #{{ venda.id }}</div>
-                            </div>
-                            <div class="text-end">
-                                <div class="text-muted small">Total</div>
-                                <div class="h4 mb-0">R$ {{ venda.total|floatformat:2 }}</div>
-                            </div>
-                        </div>
-                        <hr>
-                        <div class="row g-3">
-                            <!-- QR -->
-                            <div class="col-12 col-md-6">
-                                <div class="border rounded p-3 h-100">
-                                    <div class="fw-semibold mb-2">QR Code Pix</div>
-                                    {% if qr_code_data_url %}
-                                        <div class="text-center">
-                                            <img src="{{ qr_code_data_url }}"
-                                                 alt="QR Code Pix"
-                                                 class="img-fluid"
-                                                 style="max-width: 260px">
-                                        </div>
-                                    {% else %}
-                                        <div class="text-muted small">Não foi possível gerar o QR Code. Use o “copia e cola” ao lado.</div>
-                                    {% endif %}
-                                    <div class="text-muted small mt-2">Aponte a câmera do banco para o QR Code.</div>
+    <style>
+        .pix-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .5rem rgba(0, 0, 0, .06);
+        }
+
+        .pix-section {
+            border: 1px solid rgba(0, 0, 0, .08);
+            border-radius: 1rem;
+            background: #fff;
+        }
+
+        .pix-total {
+            font-weight: 700;
+            color: var(--bs-success);
+        }
+
+        .pix-textarea {
+            resize: none;
+            font-size: .95rem;
+        }
+
+        .pix-qr-box {
+            min-height: 100%;
+        }
+
+        .pix-info-box {
+            background: #f8f9fa;
+            border-radius: .85rem;
+        }
+    </style>
+    <main class="py-4 py-md-5 bg-light min-vh-100">
+        <div class="container">
+            <a href="{% url 'minhas_compras' %}"
+               class="text-decoration-none d-inline-flex align-items-center mb-4">← Voltar</a>
+            <div class="row g-4">
+                <!-- Pagamento -->
+                <div class="col-12 col-lg-7">
+                    <div class="card pix-card overflow-hidden">
+                        <div class="card-body p-4 p-md-5">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+                                <div>
+                                    <p class="text-muted small mb-1">Finalize seu pagamento</p>
+                                    <h1 class="h3 fw-bold mb-1">Pagamento via Pix</h1>
+                                    <div class="text-muted">Pedido #{{ venda.id }}</div>
+                                </div>
+                                <div class="text-md-end">
+                                    <div class="text-muted small">Total do pedido</div>
+                                    <div class="h2 mb-0 pix-total">R$ {{ venda.total|floatformat:2 }}</div>
                                 </div>
                             </div>
-                            <!-- Copia e cola -->
-                            <div class="col-12 col-md-6">
-                                <div class="border rounded p-3 h-100">
-                                    <div class="fw-semibold mb-2">Pix copia e cola</div>
-                                    <textarea id="pixPayload" class="form-control" rows="8" readonly>{{ payload }}</textarea>
-                                    <div class="d-flex align-items-center justify-content-between mt-2">
-                                        <small class="text-muted">Copie e cole no app do banco.</small>
-                                        <button type="button" class="btn btn-primary btn-sm" onclick="copiarPix()">Copiar</button>
+                            <div class="row g-3">
+                                <!-- QR -->
+                                <div class="col-12 col-md-6">
+                                    <div class="pix-section p-3 p-md-4 h-100 pix-qr-box">
+                                        <div class="fw-bold mb-2">QR Code Pix</div>
+                                        {% if qr_code_data_url %}
+                                            <div class="text-center mb-3">
+                                                <img src="{{ qr_code_data_url }}"
+                                                     alt="QR Code Pix"
+                                                     class="img-fluid rounded-3 border"
+                                                     style="max-width: 260px">
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-warning border-0 rounded-4 mb-3">
+                                                Não foi possível gerar o QR Code. Use o Pix copia e cola.
+                                            </div>
+                                        {% endif %}
+                                        <div class="text-muted small">Aponte a câmera do aplicativo do seu banco para o QR Code acima.</div>
                                     </div>
-                                    <div class="alert alert-warning mt-3 mb-0">Se o QR não abrir no banco, use o “copia e cola”.</div>
                                 </div>
+                                <!-- Copia e cola -->
+                                <div class="col-12 col-md-6">
+                                    <div class="pix-section p-3 p-md-4 h-100">
+                                        <div class="fw-bold mb-2">Pix copia e cola</div>
+                                        <textarea id="pixPayload" class="form-control pix-textarea" rows="8" readonly>{{ payload }}</textarea>
+                                        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mt-3">
+                                            <small class="text-muted">Copie e cole no app do seu banco.</small>
+                                            <button type="button"
+                                                    id="btnCopiarPix"
+                                                    class="btn btn-primary rounded-pill px-4"
+                                                    onclick="copiarPix()">Copiar código</button>
+                                        </div>
+                                        <div class="alert alert-warning border-0 rounded-4 mt-3 mb-0">
+                                            Se o QR Code não funcionar no banco, use o código acima.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pix-info-box p-3 p-md-4 mt-4">
+                                <div class="fw-semibold mb-1">Importante</div>
+                                <div class="text-muted small mb-0">Depois de pagar, envie o comprovante para agilizar a confirmação do pedido.</div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <!-- Enviar comprovante -->
-            <div class="col-12 col-lg-5">
-                <div class="card">
-                    <div class="card-body">
-                        <h2 class="h5 mb-1">Enviar comprovante</h2>
-                        <div class="text-muted mb-3">Finalize enviando o arquivo do pagamento.</div>
-                        <hr>
-                        <div class="fw-semibold mb-2">Comprovante do Pix</div>
-                        <div class="text-muted small mb-3">Envie PDF, JPG ou PNG (máx. 5MB).</div>
-                        <a href="{% url 'enviar_comprovante_pix' venda.id %}"
-                           class="btn btn-outline-primary">Enviar comprovante</a>
-                        <a href="{% url 'minhas_compras' %}"
-                           class="btn btn-outline-success ms-2">Minhas compras</a>
-                        <div class="text-muted small mt-3">Após o envio, o administrador confirmará o pagamento e dará baixa.</div>
+                <!-- Ações -->
+                <div class="col-12 col-lg-5">
+                    <div class="card pix-card">
+                        <div class="card-body p-4">
+                            <h2 class="h4 fw-bold mb-1">Enviar comprovante</h2>
+                            <div class="text-muted mb-3">Finalize o processo anexando o comprovante do Pix.</div>
+                            <hr>
+                            <div class="mb-3">
+                                <div class="fw-semibold mb-1">Comprovante do pagamento</div>
+                                <div class="text-muted small">Envie PDF, JPG ou PNG com até 5MB.</div>
+                            </div>
+                            <div class="d-grid gap-2 d-sm-flex">
+                                <button type="button"
+                                        class="btn btn-primary rounded-pill px-4"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalComprovantePix">Enviar comprovante</button>
+                                <a href="{% url 'minhas_compras' %}"
+                                   class="btn btn-outline-success rounded-pill px-4">Minhas compras</a>
+                            </div>
+                            <div class="text-muted small mt-3">Após o envio, o administrador confirmará o pagamento e dará baixa no pedido.</div>
+                        </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Modal enviar comprovante -->
+    <div class="modal fade"
+         id="modalComprovantePix"
+         tabindex="-1"
+         aria-labelledby="modalComprovantePixLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h2 class="modal-title h5 fw-bold mb-1" id="modalComprovantePixLabel">Enviar comprovante Pix</h2>
+                        <div class="text-muted small">Pedido #{{ venda.id }}</div>
+                    </div>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <div class="mb-3">
+                        <strong>Total:</strong>
+                        R$ {{ venda.total|floatformat:2 }}
+                    </div>
+                    <form method="post"
+                          action="{% url 'enviar_comprovante_pix' venda.id %}"
+                          enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_comprovante_pix" class="form-label fw-semibold">Comprovante do pagamento</label>
+                            <input type="file"
+                                   name="comprovante_pix"
+                                   id="id_comprovante_pix"
+                                   class="form-control"
+                                   accept=".pdf,.jpg,.jpeg,.png"
+                                   required>
+                            <div class="form-text">Envie PDF, JPG ou PNG com no máximo 5MB.</div>
+                        </div>
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+                            <button class="btn btn-primary rounded-pill px-4" type="submit">Enviar comprovante</button>
+                            <button type="button"
+                                    class="btn btn-outline-secondary rounded-pill px-4"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                    </form>
+                    <div class="text-muted small mt-3">Após o envio, o administrador confirmará o pagamento.</div>
                 </div>
             </div>
         </div>
     </div>
     <script>
-function copiarPix() {
-  const el = document.getElementById("pixPayload");
-  if (!el) return;
+        function copiarPix() {
+            const el = document.getElementById("pixPayload");
+            const btn = document.getElementById("btnCopiarPix");
+            if (!el) return;
 
-  el.select();
-  el.setSelectionRange(0, 999999);
+            const texto = el.value || "";
 
-  try {
-    document.execCommand("copy");
-  } catch (e) {}
-
-  // tentativa moderna
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(el.value);
-  }
-}
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto).then(function () {
+                    if (btn) {
+                        const textoOriginal = btn.innerText;
+                        btn.innerText = "Copiado!";
+                        setTimeout(function () {
+                            btn.innerText = textoOriginal;
+                        }, 1800);
+                    }
+                }).catch(function () {
+                    el.select();
+                    el.setSelectionRange(0, 999999);
+                    try { document.execCommand("copy"); } catch (e) {}
+                });
+            } else {
+                el.select();
+                el.setSelectionRange(0, 999999);
+                try {
+                    document.execCommand("copy");
+                    if (btn) {
+                        const textoOriginal = btn.innerText;
+                        btn.innerText = "Copiado!";
+                        setTimeout(function () {
+                            btn.innerText = textoOriginal;
+                        }, 1800);
+                    }
+                } catch (e) {}
+            }
+        }
     </script>
 {% endblock conteudo %}

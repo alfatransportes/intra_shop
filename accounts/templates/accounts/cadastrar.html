@@ -1,76 +1,93 @@
 {% extends "accounts/base.html" %}
 {% load static %}
-
 {% block title %}Criar conta{% endblock %}
-
 {% block conteudo %}
-<main class="min-vh-100 d-flex align-items-center py-4">
-	<div class="container">
-		<div class="row shadow-lg rounded-4 overflow-hidden">
-
-			<!-- Lado da imagem -->
-			<div class="col-md-6 d-none d-md-block p-0">
-				<div class="h-100 w-100" style="
-					min-height: 520px;
-					background-image: url('{% static 'website/img/login.png' %}');
-					background-size: cover;
-					background-position: center;">
-				</div>
-			</div>
-
-			<!-- Lado do formulário -->
-			<div class="col-md-6 p-4 p-lg-5 bg-white">
-				{% if config_website.logo %}
-				<img src="{{ config_website.logo.url }}" alt="{{ config_website.titulo }}" width="150" class="mb-1">
-				{% endif %}
-
-				<h1 class="h4 mb-4 text-danger-alfa">Criar conta</h1>
-
-				<form method="post" class="vstack gap-3">
-					{% csrf_token %}
-					{{ form.non_field_errors }}
-
-					<div class="form-floating mb-1">
-						{{ form.email }}
-						<label for="{{ form.email.id_for_label }}">E-mail</label>
-						<div class="text-danger small">{{ form.email.errors }}</div>
-					</div>
-
-					<div class="form-floating mb-1">
-						{{ form.numero_cracha }}
-						<label for="{{ form.numero_cracha.id_for_label }}">Número do crachá</label>
-						<div class="text-danger small">{{ form.numero_cracha.errors }}</div>
-					</div>
-
-					<div class="form-floating mb-1">
-						{{ form.whatsapp }}
-						<label for="{{ form.whatsapp.id_for_label }}">WhatsApp</label>
-						<div class="text-danger small">{{ form.whatsapp.errors }}</div>
-					</div>
-
-					<div class="form-floating mb-1">
-						{{ form.password1 }}
-						<label for="{{ form.password1.id_for_label }}">Senha</label>
-						<div class="text-danger small">{{ form.password1.errors }}</div>
-					</div>
-
-					<div class="form-floating mb-1">
-						{{ form.password2 }}
-						<label for="{{ form.password2.id_for_label }}">Confirmar senha</label>
-						<div class="text-danger small">{{ form.password2.errors }}</div>
-					</div>
-
-					<button class="btn btn-alfa btn-lg w-100">Criar conta</button>
-
-					<div class="text-center">
-						<a class="btn btn-link text-danger-alfa" href="{% url 'login' %}">
-							Já tenho conta
-						</a>
-					</div>
-				</form>
-			</div>
-
-		</div>
-	</div>
-</main>
+    <style>
+	.register-side-image {
+		min-height: 620px;
+		background-image: url('{% static "website/img/login.png" %}');
+		background-size: cover;
+		background-position: center;
+		position: relative;
+	}
+    </style>
+    <main class="register-page d-flex align-items-center py-4 py-md-5">
+        <div class="container">
+            <div class="row g-0 register-shell">
+                <!-- Lado da imagem -->
+                <div class="col-md-6 d-none d-md-block p-0">
+                    <div class="h-100 w-100 register-side-image">
+                        <div class="register-side-content">
+                            <div class="small text-uppercase fw-bold mb-2">Intra Shop</div>
+                            <h2 class="h3 fw-bold mb-2">Crie sua conta e comece a comprar</h2>
+                            <p class="mb-0 text-white-50">Cadastre-se para acessar produtos, salvar favoritos e acompanhar seus pedidos.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Lado do formulário -->
+                <div class="col-md-6 p-4 p-lg-5 register-form-side d-flex align-items-center">
+                    <div class="register-form-card w-100">
+                        {% if config_website.logo %}
+                            <img src="{{ config_website.logo.url }}"
+                                 alt="{{ config_website.titulo }}"
+                                 width="150"
+                                 class="register-logo mb-4">
+                        {% endif %}
+                        <div class="register-kicker mb-2">Novo cadastro</div>
+                        <h1 class="h3 register-title text-danger-alfa mb-2">Criar conta</h1>
+                        <p class="register-subtitle mb-4">Preencha seus dados para acessar a plataforma.</p>
+                        <form method="post" class="vstack gap-3">
+                            {% csrf_token %}
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger border-0 rounded-4 register-error-box">{{ form.non_field_errors }}</div>
+                            {% endif %}
+                            <div>
+                                <div class="form-floating mb-1">
+                                    {{ form.email }}
+                                    <label for="{{ form.email.id_for_label }}">E-mail</label>
+                                </div>
+                                <div class="text-danger small ps-1">{{ form.email.errors }}</div>
+                            </div>
+                            <div>
+                                <div class="form-floating mb-1">
+                                    {{ form.numero_cracha }}
+                                    <label for="{{ form.numero_cracha.id_for_label }}">Número do crachá</label>
+                                </div>
+                                <div class="text-danger small ps-1">{{ form.numero_cracha.errors }}</div>
+                            </div>
+                            <div>
+                                <div class="form-floating mb-1">
+                                    {{ form.whatsapp }}
+                                    <label for="{{ form.whatsapp.id_for_label }}">WhatsApp</label>
+                                </div>
+                                <div class="text-danger small ps-1">{{ form.whatsapp.errors }}</div>
+                            </div>
+                            <div>
+                                <div class="form-floating mb-1">
+                                    {{ form.password1 }}
+                                    <label for="{{ form.password1.id_for_label }}">Senha</label>
+                                </div>
+                                <div class="text-danger small ps-1">{{ form.password1.errors }}</div>
+                            </div>
+                            <div>
+                                <div class="form-floating mb-1">
+                                    {{ form.password2 }}
+                                    <label for="{{ form.password2.id_for_label }}">Confirmar senha</label>
+                                </div>
+                                <div class="text-danger small ps-1">{{ form.password2.errors }}</div>
+                            </div>
+                            <div class="register-help-box small text-muted">
+                                Use um e-mail válido, informe seu número de crachá e crie uma senha segura para continuar.
+                            </div>
+                            <button class="btn btn-primario btn-lg w-100 btn-register">Criar conta</button>
+                            <div class="text-center pt-1">
+                                <a class="btn btn-link text-danger-alfa register-link"
+                                   href="{% url 'login' %}">Já tenho conta</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 {% endblock %}

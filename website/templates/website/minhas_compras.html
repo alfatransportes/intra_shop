@@ -3,74 +3,129 @@
     Minhas compras
 {% endblock title %}
 {% block conteudo %}
-    <div class="container py-4 mt-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h4 mb-0">Minhas compras</h1>
-            <a href="{% url 'index' %}" class="btn btn-outline-secondary btn-sm">Continuar comprando</a>
-        </div>
-        {% if vendas %}
-            <div class="row g-3">
-                {% for venda in vendas %}
-                    <div class="col-12">
-                        <div class="card shadow-sm border-0">
-                            <div class="card-body">
-                                <div class="row align-items-center">
-                                    <!-- pedido -->
-                                    <div class="col-md-2 mb-2 mb-md-0">
-                                        <div class="small text-muted">Pedido</div>
-                                        <div class="fw-semibold">#{{ venda.id }}</div>
-                                    </div>
-                                    <!-- pagamento -->
-                                    <div class="col-md-3 mb-2 mb-md-0">
-                                        <div class="small text-muted">Pagamento</div>
-                                        <div class="fw-semibold">
-                                            {% if venda.forma_pagamento.codigo == "PIX" %}
-                                                <span class="badge text-bg-primary">PIX</span>
-                                            {% elif venda.forma_pagamento.codigo == "VALE" %}
-                                                <span class="badge text-bg-warning text-dark">Vale</span>
-                                            {% else %}
-                                                <span class="badge text-bg-secondary">{{ venda.forma_pagamento.get_codigo_display }}</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <!-- total -->
-                                    <div class="col-md-2 mb-2 mb-md-0">
-                                        <div class="small text-muted">Total</div>
-                                        <div class="fw-bold">R$ {{ venda.total|floatformat:2 }}</div>
-                                    </div>
-                                    <!-- status -->
-                                    <div class="col-md-3 mb-2 mb-md-0">
-                                        <div class="small text-muted">Status</div>
-                                        {% if venda.status == "PENDENTE" %}
-                                            <span class="badge text-bg-warning">{{ venda.get_status_display }}</span>
-                                        {% elif venda.status == "APROVADA" %}
-                                            <span class="badge text-bg-success">{{ venda.get_status_display }}</span>
-                                        {% elif venda.status == "CANCELADA" %}
-                                            <span class="badge text-bg-danger">{{ venda.get_status_display }}</span>
-                                        {% else %}
-                                            <span class="badge text-bg-secondary">{{ venda.get_status_display }}</span>
-                                        {% endif %}
-                                    </div>
-                                    <!-- ação -->
-                                    <div class="col-md-2 text-md-end">
-                                        <a href="{% url 'venda_detalhe' venda.id %}"
-                                           class="btn btn-sm btn-primary">Ver pedido</a>
-                                    </div>
+    <main class="py-4 py-md-5 bg-light min-vh-100">
+        <div class="container">
+            <!-- Cabeçalho -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div>
+                    <p class="text-muted small mb-1">Área do cliente</p>
+                    <h1 class="h3 fw-bold mb-0">Minhas compras</h1>
+                </div>
+                <a href="{% url 'index' %}"
+                   class="btn btn-outline-secondary rounded-pill px-4">Continuar comprando</a>
+            </div>
+            {% if vendas %}
+                <!-- Resumo -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <div class="row g-3 text-center text-md-start">
+                            <div class="col-md-4">
+                                <div class="border rounded-4 p-3 h-100 bg-white">
+                                    <div class="small text-muted mb-1">Total de pedidos</div>
+                                    <div class="fw-bold fs-4">{{ vendas|length }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded-4 p-3 h-100 bg-white">
+                                    <div class="small text-muted mb-1">Acompanhe seus pedidos</div>
+                                    <div class="fw-semibold">Veja status, pagamento e detalhes</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded-4 p-3 h-100 bg-white">
+                                    <div class="small text-muted mb-1">Precisa revisar?</div>
+                                    <div class="fw-semibold">Abra qualquer pedido para mais informações</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="card shadow-sm border-0">
-                <div class="card-body text-center py-5">
-                    <div class="mb-3 fs-1">🛒</div>
-                    <h5 class="mb-2">Você ainda não realizou compras</h5>
-                    <p class="text-muted">Explore nossos produtos e faça seu primeiro pedido.</p>
-                    <a href="{% url 'index' %}" class="btn btn-primary">Ver produtos</a>
                 </div>
-            </div>
-        {% endif %}
-    </div>
+                <!-- Lista de pedidos -->
+                <div class="row g-4">
+                    {% for venda in vendas %}
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                <div class="card-body p-4">
+                                    <div class="row g-4 align-items-center">
+                                        <!-- Pedido -->
+                                        <div class="col-12 col-md-2">
+                                            <div class="small text-muted mb-1">Pedido</div>
+                                            <div class="fw-bold fs-5">#{{ venda.id }}</div>
+                                        </div>
+                                        <!-- Pagamento -->
+                                        <div class="col-12 col-md-3">
+                                            <div class="small text-muted mb-1">Pagamento</div>
+                                            <div class="fw-semibold">
+                                                {% if venda.forma_pagamento.codigo == "PIX" %}
+                                                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis px-3 py-2">PIX</span>
+                                                {% elif venda.forma_pagamento.codigo == "VALE" %}
+                                                    <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 py-2">Vale</span>
+                                                {% elif venda.forma_pagamento.codigo == "DINHEIRO" %}
+                                                    <span class="badge rounded-pill bg-success-subtle text-success-emphasis px-3 py-2">Dinheiro</span>
+                                                {% else %}
+                                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis px-3 py-2">
+                                                        {{ venda.forma_pagamento.get_codigo_display }}
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <!-- Total -->
+                                        <div class="col-12 col-md-2">
+                                            <div class="small text-muted mb-1">Total</div>
+                                            <div class="fw-bold fs-5 text-success">R$ {{ venda.total|floatformat:2 }}</div>
+                                        </div>
+                                        <!-- Status -->
+                                        <div class="col-12 col-md-3">
+                                            <div class="small text-muted mb-1">Status</div>
+                                            <div>
+                                                {% if venda.status == "PENDENTE" %}
+                                                    <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 py-2">
+                                                        {{ venda.get_status_display }}
+                                                    </span>
+                                                {% elif venda.status == "APROVADA" %}
+                                                    <span class="badge rounded-pill bg-success-subtle text-success-emphasis px-3 py-2">
+                                                        {{ venda.get_status_display }}
+                                                    </span>
+                                                {% elif venda.status == "CANCELADA" %}
+                                                    <span class="badge rounded-pill bg-danger-subtle text-danger-emphasis px-3 py-2">{{ venda.get_status_display }}</span>
+                                                {% else %}
+                                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis px-3 py-2">
+                                                        {{ venda.get_status_display }}
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <!-- Ação -->
+                                        <div class="col-12 col-md-2 text-md-end">
+                                            <a href="{% url 'venda_detalhe' venda.id %}"
+                                               class="btn btn-primary rounded-pill px-4 w-100 w-md-auto">Ver pedido</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Barra inferior opcional -->
+                                <div class="bg-light border-top px-4 py-3">
+                                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                                        <div class="small text-muted">Acompanhe as informações completas do pedido e do pagamento.</div>
+                                        <a href="{% url 'venda_detalhe' venda.id %}"
+                                           class="small fw-semibold text-decoration-none">Ver detalhes completos →</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- Estado vazio -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body text-center py-5 py-md-6 px-4">
+                        <div class="mb-3" style="font-size: 3rem;">🛒</div>
+                        <h2 class="h4 fw-bold mb-2">Você ainda não realizou compras</h2>
+                        <p class="text-muted mb-4">Explore nossos produtos e faça seu primeiro pedido com rapidez e segurança.</p>
+                        <a href="{% url 'index' %}"
+                           class="btn btn-primary btn-lg rounded-pill px-4">Ver produtos</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </main>
 {% endblock conteudo %}

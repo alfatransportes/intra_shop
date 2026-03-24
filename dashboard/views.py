@@ -287,11 +287,12 @@ class VendaUpdateStatusView(DashboardPermissionMixin, UpdateView):
     context_object_name = "venda"
 
     def get_success_url(self):
-        return reverse_lazy("dashboard_venda_detail", kwargs={"pk": self.object.pk})
+        return reverse_lazy("dashboard_venda_list")
 
     def form_valid(self, form):
+        self.object = form.save()
         messages.success(self.request, "Status da venda atualizado com sucesso.")
-        return super().form_valid(form)
+        return redirect(self.get_success_url())
     
 
 class ProdutoImagemListView(DashboardPermissionMixin, ListView):
