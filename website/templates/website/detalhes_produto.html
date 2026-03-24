@@ -33,10 +33,15 @@
                     <div class="d-flex align-items-start justify-content-between gap-2">
                         <h1 class="h5 mb-2" style="line-height:1.2;">{{ produto.nome }}</h1>
                         <a href="{% url 'favorito_toggle' produto.id %}"
-                        class="btn btn-light border rounded-circle d-inline-flex align-items-center justify-content-center"
-                        aria-label="Favoritar"
-                        style="width:40px; height:40px;">
-                            {% if favoritado %}❤️{% else %}♡{% endif %}
+                           class="btn btn-light border rounded-circle d-inline-flex align-items-center justify-content-center"
+                           aria-label="Favoritar"
+                           style="width:40px;
+                                  height:40px">
+                            {% if favoritado %}
+                                ❤️
+                            {% else %}
+                                ♡
+                            {% endif %}
                         </a>
                     </div>
                     {# avaliação opcional #}
@@ -131,10 +136,15 @@
                             <div class="d-flex align-items-start justify-content-between gap-2">
                                 <h1 class="h5 mb-2" style="line-height:1.2;">{{ produto.nome }}</h1>
                                 <a href="{% url 'favorito_toggle' produto.id %}"
-                                class="btn btn-light border rounded-circle d-inline-flex align-items-center justify-content-center"
-                                aria-label="Favoritar"
-                                style="width:40px; height:40px;">
-                                    {% if favoritado %}❤️{% else %}♡{% endif %}
+                                   class="btn btn-light border rounded-circle d-inline-flex align-items-center justify-content-center"
+                                   aria-label="Favoritar"
+                                   style="width:40px;
+                                          height:40px">
+                                    {% if favoritado %}
+                                        ❤️
+                                    {% else %}
+                                        ♡
+                                    {% endif %}
                                 </a>
                             </div>
                             {% if nota_media and total_avaliacoes %}
@@ -283,7 +293,37 @@
                     <div class="card shadow-sm border-0">
                         <div class="card-body">
                             <div class="fw-semibold mb-2">Produtos relacionados</div>
-                            <div class="text-muted small">(vamos plugar aqui depois por tipo_prod, com cards iguais aos da home)</div>
+                            {% if relacionados %}
+                                <div class="row g-2">
+                                    {% for prod in relacionados %}
+                                        <div class="col-6">
+                                            <a href="{% url 'detalhe_produto' prod.id %}"
+                                               class="text-decoration-none text-dark">
+                                                <div class="card h-100 border-0 shadow-sm">
+                                                    <div class="ratio ratio-1x1 bg-light">
+                                                        {% with img=prod.imagens.first %}
+                                                            {% if img and img.imagem %}
+                                                                <img src="{{ img.imagem.url }}"
+                                                                     alt="{{ prod.nome }}"
+                                                                     style="object-fit:contain;
+                                                                            width:100%;
+                                                                            height:100%">
+                                                            {% endif %}
+                                                        {% endwith %}
+                                                    </div>
+                                                    <div class="card-body p-2">
+                                                        <div class="small text-muted">{{ prod.tipo_prod }}</div>
+                                                        <div class="small fw-semibold" style="line-height:1.2;">{{ prod.nome|truncatechars:40 }}</div>
+                                                        <div class="fw-bold small mt-1">R$ {{ prod.valor_venda|floatformat:2 }}</div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-muted small">Nenhum produto relacionado encontrado.</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

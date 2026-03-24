@@ -1,25 +1,9 @@
 {% extends "website/base.html" %}
 {% block title %}
-    Loja
+    Intra Shop - Produtos
 {% endblock title %}
 {% block conteudo %}
     <div class="container py-4 mt-5">
-        <!-- Top bar -->
-        <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-            {% comment %} <div>
-                <h1 class="h4 mb-0">Produtos</h1>
-                <div class="text-muted small">
-                    {{ total_produtos }} item(ns) encontrados
-                    {% if page_obj.paginator.num_pages > 1 %}
-                        • Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-                    {% endif %}
-                </div>
-            </div> {% endcomment %}
-            <!-- Botão filtros (agora aparece em TODAS as telas) -->
-            {% comment %} <div>
-                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasFiltros" aria-controls="offcanvasFiltros">Filtros</button>
-            </div> {% endcomment %}
-        </div>
         <!-- Chips de categorias -->
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-3 ">
             <a href="{% url 'index' %}"

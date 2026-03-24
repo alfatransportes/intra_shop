@@ -110,6 +110,14 @@ def detalhe_produto(request, pk):
             produto=produto
         ).exists()
 
+    relacionados = (
+        Produto.objects
+        .filter(tipo_prod=produto.tipo_prod)
+        .exclude(pk=produto.pk)
+        .prefetch_related("imagens")
+        .order_by("?")[:4]
+    )
+
     return render(
         request,
         "website/detalhes_produto.html",
@@ -117,6 +125,7 @@ def detalhe_produto(request, pk):
             "produto": produto,
             "economia": economia,
             "favoritado": favoritado,
+            "relacionados": relacionados,
         },
     )
 
