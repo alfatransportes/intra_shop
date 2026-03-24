@@ -19,12 +19,7 @@
                         <li class="breadcrumb-item active fw-semibold" aria-current="page">{{ produto.nome }}</li>
                     </ol>
                 </nav>
-                <div class="small">
-                    <button id="btnCompartilhar"
-                            class="btn btn-link p-0 text-decoration-none small">
-                        <i class="bi bi-share-fill me-2"></i>Compartilhar
-                    </button>
-                </div>
+                <div class="small"></div>
             </div>
             <div class="row g-4">
                 <!-- MOBILE: título/infos antes da galeria (ML) -->
@@ -162,11 +157,17 @@
                         <div class="card shadow-sm border-0">
                             <div class="card-body">
                                 <!-- Desconto -->
-                                {% if produto.porcen_desconto|default:0 > 0 %}
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="badge text-bg-success">{{ produto.porcen_desconto|floatformat }}% OFF</span>
-                                    </div>
-                                {% endif %}
+                                <div class="d-flex align-items-start justify-content-between gap-2">
+                                    {% if produto.porcen_desconto|default:0 > 0 %}
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge text-bg-success">{{ produto.porcen_desconto|floatformat }}% OFF</span>
+                                        </div>
+                                    {% endif %}
+                                    <button id="btnCompartilhar"
+                                            class="btn btn-link p-0 text-decoration-none small">
+                                        <i class="bi bi-share-fill me-2"></i>Compartilhar
+                                    </button>
+                                </div>
                                 <!-- Preço -->
                                 <div class="mb-2">
                                     {% if produto.porcen_desconto|default:0 > 0 %}
