@@ -73,13 +73,19 @@
                                                         {% csrf_token %}
                                                         <label class="small text-muted mb-0">Qtd</label>
                                                         <input type="number"
-                                                               name="quantidade"
-                                                               value="{{ item.quantidade }}"
-                                                               min="0"
-                                                               MAX="{{ item.produto.quantidade }}"
-                                                               class="form-control quantidade-input">
+                                                            name="quantidade"
+                                                            value="{{ item.quantidade }}"
+                                                            min="0"
+                                                            max="{{ item.maximo_permitido }}"
+                                                            class="form-control quantidade-input">
                                                         <button class="btn btn-outline-secondary" type="submit">Atualizar</button>
                                                         <span class="text-muted small">(0 remove)</span>
+                                                        <div class="text-muted small mt-1">
+                                                            {% if item.produto.maximo_por_usuario > 0 %}
+                                                                Limite por usuário: {{ item.produto.maximo_por_usuario }} •
+                                                            {% endif %}
+                                                            Máximo permitido agora: {{ item.maximo_permitido }}
+                                                        </div>
                                                     </form>
                                                     <form method="post" action="{% url 'carrinho_remove' item.id %}">
                                                         {% csrf_token %}

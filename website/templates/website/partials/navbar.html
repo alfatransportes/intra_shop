@@ -95,14 +95,21 @@
                          id="clienteDropdown"
                          role="group"
                          aria-label="Acesso do cliente">
-                        <button type="button"
+						 {% if request.user.is_authenticated %}
+                        	<button type="button"
                                 class="btn btn-primario btn-cliente dropdown-toggle"
                                 data-bs-toggle="dropdown"
                                 aria-expanded="false"
                                 aria-label="Mais opções do cliente">
-                            <i class="bi bi-person"></i>
-                            <span>{{ user.numero_cracha }}</span>
-                        </button>
+								<i class="bi bi-person me-2"></i>
+								{{ user.cpf|format_cpf }}
+							</button>
+						{% else %}
+							<a class="btn btn-primario btn-cliente dropdown-toggle fw-semibold text-decoration-none" href="{% url 'login' %}">
+								<i class="bi bi-box-arrow-in-right me-2"></i>
+									Acessar
+							</a>
+						{% endif %}
                         <div class="dropdown-menu mega w-100 p-4">
                             <div class="mega-close d-lg-none">
                                 <button type="button" class="btn-close btn-close-mobile" aria-label="Fechar"></button>

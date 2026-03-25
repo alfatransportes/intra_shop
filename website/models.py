@@ -68,13 +68,14 @@ class ConfigWebsite(models.Model):
 
 
 class Unidade(models.Model):
+    codigo = models.IntegerField(blank=True, null=True)
     nome = models.CharField(max_length=255)
 
     class Meta:
-        ordering = ["nome"]
+        ordering = ["codigo"]
 
     def __str__(self):
-        return self.nome
+        return f"{self.codigo} - {self.nome}"
 
 
 class Tipo(models.Model):
@@ -124,6 +125,11 @@ class Produto(models.Model):
         default=1,
         verbose_name="Quantidade",
         help_text="Quantidade em estoque (mínimo 1).",
+    )
+    maximo_por_usuario = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Quantidade máxima por usuário",
+        help_text="0 = sem limite por usuário.",
     )
 
     valor_nota = models.DecimalField(
@@ -179,6 +185,111 @@ class Produto(models.Model):
             ).aggregate(q=Coalesce(Sum("quantidade"), 0))["q"]
         )
         return max((self.quantidade or 0) - int(reservado or 0), 0)
+    
+    def quantidade_ja_solicitada_por_usuario(self, usuario) -> int:
+        if not usuario or not usuario.is_authenticated:
+            return 0
+
+        total = self.itens_venda.filter(
+            venda__usuario=usuario
+        ).exclude(
+            venda__status="CANCELADA"
+        ).aggregate(
+            total=Coalesce(Sum("quantidade"), 0)
+        )["total"]
+
+        return int(total or 0)
+
+
+    def quantidade_no_carrinho_aberto(self, usuario) -> int:
+        if not usuario or not usuario.is_authenticated:
+            return 0
+
+        total = self.itens_carrinho.filter(
+            carrinho__usuario=usuario,
+            carrinho__status="ABERTO",
+        ).aggregate(
+            total=Coalesce(Sum("quantidade"), 0)
+        )["total"]
+
+        return int(total or 0)
+
+
+    def pode_adicionar_para_usuario(self, usuario, quantidade_desejada: int) -> tuple[bool, str]:
+        limite = self.maximo_por_usuario or 0
+
+        if limite == 0:
+            return True, ""
+
+        ja_solicitada = self.quantidade_ja_solicitada_por_usuario(usuario)
+        no_carrinho = self.quantidade_no_carrinho_aberto(usuario)
+        total_apos_acao = ja_solicitada + no_carrinho + int(quantidade_desejada or 0)
+
+        if total_apos_acao > limite:
+            restante = max(limite - ja_solicitada - no_carrinho, 0)
+
+            if restante <= 0:
+                return False, f"Você já atingiu o limite máximo de {limite} unidade(s) para este produto."
+
+            return False, (
+                f"Você pode adicionar no máximo mais {restante} unidade(s) deste produto. "
+                f"Limite por usuário: {limite}."
+            )
+
+        return True, ""
+
+
+    def pode_finalizar_no_checkout(self, usuario, quantidade_no_carrinho: int) -> tuple[bool, str]:
+        limite = self.maximo_por_usuario or 0
+
+        if limite == 0:
+            return True, ""
+
+        ja_solicitada = self.quantidade_ja_solicitada_por_usuario(usuario)
+        total_final = ja_solicitada + int(quantidade_no_carrinho or 0)
+
+        if total_final > limite:
+            restante = max(limite - ja_solicitada, 0)
+
+            if restante <= 0:
+                return False, f"Você já atingiu o limite máximo de {limite} unidade(s) para este produto."
+
+            return False, (
+                f"Você pode finalizar no máximo mais {restante} unidade(s) deste produto. "
+                f"Limite por usuário: {limite}."
+            )
+
+        return True, ""
+    
+    def quantidade_maxima_no_carrinho_para_usuario(self, usuario, quantidade_atual_item: int = 0) -> int:
+        """
+        Retorna o máximo que o usuário pode deixar neste item do carrinho,
+        considerando ao mesmo tempo:
+        - estoque disponível
+        - o que já está reservado no próprio item
+        - limite máximo por usuário
+
+        quantidade_atual_item = quantidade já existente neste item específico do carrinho.
+        """
+        quantidade_atual_item = int(quantidade_atual_item or 0)
+
+        # Estoque disponível para este usuário editar este item:
+        # devolve temporariamente o que já está reservado no próprio item
+        max_por_estoque = max((self.estoque_disponivel or 0) + quantidade_atual_item, 0)
+
+        limite = self.maximo_por_usuario or 0
+        if limite == 0:
+            return max_por_estoque
+
+        ja_solicitada = self.quantidade_ja_solicitada_por_usuario(usuario)
+        no_carrinho = self.quantidade_no_carrinho_aberto(usuario)
+
+        # remove da conta o item atual, porque ele já está dentro de no_carrinho
+        no_carrinho_sem_item_atual = max(no_carrinho - quantidade_atual_item, 0)
+
+        max_por_limite = max(limite - ja_solicitada - no_carrinho_sem_item_atual, 0)
+
+        return max(min(max_por_estoque, max_por_limite), 0)
 
 
 class ProdutoImagem(models.Model):
@@ -388,7 +499,6 @@ class RegraParcelamentoVale(models.Model):
         if self.maximo is not None and self.maximo < self.minimo:
             raise ValidationError("O valor máximo não pode ser menor que o mínimo.")
 
-
 class Venda(models.Model):
 
     class Status(models.TextChoices):
@@ -434,38 +544,36 @@ class Venda(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
 
     def repor_estoque(self):
-
         for item in self.itens.select_related("produto").all():
-
             produto = item.produto
             produto.quantidade += item.quantidade
             produto.save(update_fields=["quantidade"])
 
     def clean(self):
+        super().clean()
+
         if (
             self.status == self.Status.APROVADA
             and self.forma_pagamento.codigo == "VALE"
             and not self.comprovante_vale
         ):
-            raise ValidationError(
-                "Não é possível aprovar venda em VALE sem anexar o comprovante."
-            )
+            raise ValidationError({
+                "comprovante_vale": "Para aprovar uma venda em VALE, anexe o comprovante primeiro."
+            })
 
         if (
             self.status == self.Status.APROVADA
             and self.forma_pagamento.codigo == "PIX"
             and not self.comprovante_pix
         ):
-            raise ValidationError(
-                "Não é possível aprovar venda PIX sem comprovante."
-            )
+            raise ValidationError({
+                "comprovante_pix": "Para aprovar uma venda Pix, o comprador deve anexar o comprovante primeiro."
+            })
 
     def save(self, *args, **kwargs):
-
         self.full_clean()
 
         status_anterior = None
-
         if self.pk:
             status_anterior = Venda.objects.get(pk=self.pk).status
 
@@ -516,7 +624,11 @@ class Pagamento(models.Model):
 
 class VendaItem(models.Model):
     venda = models.ForeignKey(Venda, on_delete=models.CASCADE, related_name="itens")
-    produto = models.ForeignKey(Produto, on_delete=models.PROTECT)
+    produto = models.ForeignKey(
+        Produto,
+        on_delete=models.PROTECT,
+        related_name="itens_venda"
+    )
     quantidade = models.PositiveIntegerField(default=1)
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"), editable=False)

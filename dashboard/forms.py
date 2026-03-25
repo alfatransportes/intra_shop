@@ -19,22 +19,6 @@ class BaseBootstrapForm(forms.ModelForm):
                 widget.attrs["class"] = "form-control"
 
 
-class ProdutoForm(BaseBootstrapForm):
-    class Meta:
-        model = Produto
-        fields = [
-            "numero_bo",
-            "unidade_prod",
-            "tipo_prod",
-            "nivel_ava_prod",
-            "nome",
-            "quantidade",
-            "valor_nota",
-            "porcen_desconto",
-            "descricao",
-        ]
-
-
 class TipoForm(BaseBootstrapForm):
     class Meta:
         model = Tipo
@@ -44,7 +28,7 @@ class TipoForm(BaseBootstrapForm):
 class UnidadeForm(BaseBootstrapForm):
     class Meta:
         model = Unidade
-        fields = ["nome"]
+        fields = ["codigo","nome"]
 
 
 class NivelAvariaForm(BaseBootstrapForm):
@@ -63,42 +47,39 @@ class VendaStatusForm(forms.ModelForm):
 
     class Meta:
         model = Venda
-        fields = ["status", "observacao", "comprovante_pix", "comprovante_vale"]
+        fields = ["status", "comprovante_pix", "comprovante_vale", "observacao",]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         venda = self.instance
 
-        if venda.forma_pagamento.codigo == "PIX":
+        if venda and venda.forma_pagamento.codigo == "PIX":
             self.fields.pop("comprovante_vale", None)
 
-        if venda.forma_pagamento.codigo == "VALE":
+        if venda and venda.forma_pagamento.codigo == "VALE":
             self.fields.pop("comprovante_pix", None)
-
-class ProdutoImagemForm(BaseBootstrapForm):
-    class Meta:
-        model = ProdutoImagem
-        fields = ["produto", "imagem", "legenda", "ordem", "principal"]
 
     def clean(self):
         cleaned_data = super().clean()
-        produto = cleaned_data.get("produto")
-        principal = cleaned_data.get("principal")
 
-        if produto and principal:
-            qs = ProdutoImagem.objects.filter(produto=produto, principal=True)
-            if self.instance.pk:
-                qs = qs.exclude(pk=self.instance.pk)
+        status = cleaned_data.get("status")
+        venda = self.instance
+        forma = venda.forma_pagamento if venda else None
 
-            if qs.exists():
-                self.add_error(
-                    "principal",
-                    "Já existe uma imagem principal para este produto."
-                )
+        if not venda or not forma:
+            return cleaned_data
+
+        comprovante_pix = cleaned_data.get("comprovante_pix") or venda.comprovante_pix
+        comprovante_vale = cleaned_data.get("comprovante_vale") or venda.comprovante_vale
+
+        if forma.codigo == "PIX" and status == Venda.Status.APROVADA and not comprovante_pix:
+            self.add_error("comprovante_pix", "Para aprovar uma venda Pix, o comprador deve anexar o comprovante primeiro.")
+
+        if forma.codigo == "VALE" and status == Venda.Status.APROVADA and not comprovante_vale:
+            self.add_error("comprovante_vale", "Para aprovar uma venda em vale, anexe o comprovante primeiro.")
 
         return cleaned_data
-
 
 class FormaPagamentoForm(BaseBootstrapForm):
     class Meta:
@@ -169,6 +150,7 @@ class ProdutoForm(BaseBootstrapForm):
             "nivel_ava_prod",
             "nome",
             "quantidade",
+            "maximo_por_usuario",
             "valor_nota",
             "porcen_desconto",
             "descricao",

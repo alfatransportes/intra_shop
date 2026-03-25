@@ -30,16 +30,15 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-    username = models.CharField(max_length=150, blank=True)
-    email = models.EmailField(unique=True)
+    cpf = models.CharField(max_length=11, blank=True, null=True, validators=[RegexValidator(r"^[0-9]+$", "Use apenas números no CPF.")])
+    email = models.EmailField(unique=True, blank=False, null=False)
 
-    # ✅ NOVO: unidade do usuário
     unidade = models.ForeignKey(
         Unidade,
         on_delete=models.PROTECT,
         related_name="usuarios",
-        null=True,           # importante pra não quebrar usuários antigos
-        blank=True,          # você pode tornar obrigatório depois
+        null=False,
+        blank=False,
         verbose_name="Unidade",
     )
 
@@ -48,6 +47,7 @@ class User(AbstractUser):
         unique=True,
         validators=[RegexValidator(r"^[0-9]+$", "Use apenas números no crachá.")],
         verbose_name="Número do crachá",
+        blank=True, null=True
     )
 
     whatsapp = models.CharField(
@@ -62,4 +62,4 @@ class User(AbstractUser):
     objects = UserManager()
 
     def __str__(self):
-        return f"{self.email} ({self.numero_cracha})"
+        return f"{self.email} ({self.cpf})"

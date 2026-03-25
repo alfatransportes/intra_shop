@@ -59,7 +59,6 @@ def _payload_fallback(forma: FormaPagamento, total: Decimal) -> str:
     partes.append(f"Valor: R$ {total_str}")
     return " | ".join(partes)
 
-
 @login_required
 @transaction.atomic
 def checkout(request):
@@ -94,15 +93,24 @@ def checkout(request):
             produtos_travados = Produto.objects.select_for_update().filter(id__in=produto_ids)
             mapa_produtos = {p.id: p for p in produtos_travados}
 
-            # valida estoque (no produto travado)
+            # valida estoque e limite por usuário
             for item in carrinho.itens.all():
                 produto_travado = mapa_produtos.get(item.produto_id)
+
                 if not produto_travado:
                     messages.error(request, "Produto do carrinho não encontrado. Tente novamente.")
                     return redirect("carrinho_detail")
 
                 if item.quantidade > (produto_travado.quantidade or 0):
                     messages.error(request, f"Estoque insuficiente para {produto_travado.nome}.")
+                    return redirect("carrinho_detail")
+
+                permitido, erro = produto_travado.pode_finalizar_no_checkout(
+                    request.user,
+                    item.quantidade
+                )
+                if not permitido:
+                    messages.error(request, erro)
                     return redirect("carrinho_detail")
 
             venda = Venda.objects.create(
@@ -116,7 +124,7 @@ def checkout(request):
 
             total = Decimal("0.00")
 
-            # cria itens + baixa estoque (usando instância travada)
+            # cria itens + baixa estoque
             for item in carrinho.itens.all():
                 produto_travado = mapa_produtos[item.produto_id]
 

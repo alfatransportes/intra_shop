@@ -25,10 +25,15 @@ class StyledAuthenticationForm(AuthenticationForm):
 class CadastroForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ("email", "numero_cracha", "whatsapp", "password1", "password2")
+        fields = ("cpf", "email", "numero_cracha", "whatsapp", "password1", "password2")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.fields["cpf"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Número do CPF",
+        })
 
         self.fields["email"].widget.attrs.update({
             "class": "form-control rounded-5",

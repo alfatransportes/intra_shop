@@ -11,7 +11,7 @@ class UserAdmin(DjangoUserAdmin):
     ordering = ("email",)
 
     list_display = (
-        "email",
+        "cpf","email",
         "numero_cracha",
         "whatsapp",
         "unidade",
@@ -20,7 +20,7 @@ class UserAdmin(DjangoUserAdmin):
     )
 
     search_fields = (
-        "email",
+        "cpf","email",
         "numero_cracha",
         "whatsapp",
         "unidade__nome",
@@ -36,7 +36,7 @@ class UserAdmin(DjangoUserAdmin):
     autocomplete_fields = ("unidade",)
 
     fieldsets = (
-        (None, {"fields": ("email", "password")}),
+        (None, {"fields": ("cpf","email", "password")}),
         ("Dados pessoais", {
             "fields": (
                 "numero_cracha",
@@ -65,7 +65,7 @@ class UserAdmin(DjangoUserAdmin):
         (None, {
             "classes": ("wide",),
             "fields": (
-                "email",
+                "cpf","email",
                 "numero_cracha",
                 "whatsapp",
                 "unidade",

@@ -13,13 +13,20 @@ from .services.carrinho import get_carrinho_aberto
 
 @login_required
 def carrinho_detail(request):
-    carrinho = get_carrinho_aberto(request.user)
+    carrinho_aberto = get_carrinho_aberto(request.user)
 
     carrinho = (
-        carrinho.__class__.objects
+        carrinho_aberto.__class__.objects
         .prefetch_related("itens__produto", "itens__produto__imagens")
-        .get(pk=carrinho.pk)
+        .get(pk=carrinho_aberto.pk)
     )
+
+    # calcula máximo permitido por item no carrinho
+    for item in carrinho.itens.all():
+        item.maximo_permitido = item.produto.quantidade_maxima_no_carrinho_para_usuario(
+            request.user,
+            item.quantidade
+        )
 
     # total para montar opções de parcelamento (VALE)
     total = getattr(carrinho, "total_valor", None)
@@ -63,6 +70,12 @@ def carrinho_add(request, pk):
         )
         nova_qtd = 1
         qtd_atual = 0
+
+    # valida limite por usuário
+    permitido, erro = produto.pode_adicionar_para_usuario(request.user, 1)
+    if not permitido:
+        messages.error(request, erro)
+        return redirect("detalhe_produto", pk=produto.pk)
 
     # disponível real + o que já é seu
     disponivel_para_voce = produto.estoque_disponivel + qtd_atual

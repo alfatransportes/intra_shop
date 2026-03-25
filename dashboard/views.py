@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db.models import (Count, DecimalField, ExpressionWrapper, F, Sum,
                               Value)
 from django.db.models.functions import Coalesce
@@ -463,13 +464,16 @@ class VendaUpdateStatusView(DashboardPermissionMixin, UpdateView):
     context_object_name = "venda"
 
     def get_success_url(self):
-        return reverse_lazy("dashboard_venda_list")
+        return reverse_lazy("dashboard_venda_detail", kwargs={"pk": self.object.pk})
 
     def form_valid(self, form):
         self.object = form.save()
         messages.success(self.request, "Status da venda atualizado com sucesso.")
         return redirect(self.get_success_url())
-    
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Não foi possível atualizar a venda. Verifique os campos abaixo.")
+        return self.render_to_response(self.get_context_data(form=form))
 
 # -------------------------
 # IMAGENS DE PRODUTOS
