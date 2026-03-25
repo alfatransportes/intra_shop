@@ -43,6 +43,13 @@
                             {% endif %}
                             <div>
                                 <div class="form-floating mb-1">
+                                    {{ form.cpf }}
+                                    <label for="{{ form.cpf.id_for_label }}">CPF</label>
+                                </div>
+                                <div class="text-danger small ps-1">{{ form.cpf.errors }}</div>
+                            </div>
+                            <div>
+                                <div class="form-floating mb-1">
                                     {{ form.email }}
                                     <label for="{{ form.email.id_for_label }}">E-mail</label>
                                 </div>
