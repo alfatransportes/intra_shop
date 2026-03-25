@@ -219,6 +219,17 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
 
     def post(self, request, *args, **kwargs):
         form = self.get_form(data=request.POST, files=request.FILES)
+
+        # cadastro
+        if not self.object:
+            if form.is_valid():
+                self.object = form.save()
+                messages.success(self.request, "Produto cadastrado com sucesso.")
+                return redirect("dashboard_produto_update", pk=self.object.pk)
+
+            return self.render_to_response(self.get_context_data(form=form, formset=self.get_formset()))
+
+        # edição
         formset = self.get_formset(data=request.POST, files=request.FILES)
 
         if form.is_valid() and formset.is_valid():
