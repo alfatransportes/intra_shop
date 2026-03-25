@@ -303,6 +303,23 @@
                                         <div class="small text-muted">Sem unidades disponíveis</div>
                                     {% endif %}
                                 </div>
+                                <div class="produto-box-suave p-3 mb-3">
+                                    {% if produto.maximo_por_usuario|default:0 > 0 %}
+                                        <div class="fw-semibold text-success">Máximo permitido por usuário</div>
+                                        <div class="small text-muted">
+                                            Limite total: <strong>{{ produto.maximo_por_usuario }}</strong> unidade(s)
+                                        </div>
+                                
+                                        {% if user.is_authenticated and restante_para_usuario is not None %}
+                                            <div class="small text-muted mt-1">
+                                                Você ainda pode solicitar:
+                                                <strong>{{ restante_para_usuario }}</strong> unidade(s)
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="fw-semibold text-success">Sem limite por usuário</div>
+                                    {% endif %}
+                                </div>
                                 <div class="d-grid gap-2">
                                     {% if produto.estoque_disponivel|default:0 > 0 %}
                                         <a href="{% url 'carrinho_add' produto.id %}"

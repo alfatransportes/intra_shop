@@ -118,6 +118,16 @@ def detalhe_produto(request, pk):
         .order_by("?")[:4]
     )
 
+    restante_para_usuario = None
+
+    if request.user.is_authenticated:
+        limite = produto.maximo_por_usuario or 0
+
+        if limite > 0:
+            ja_solicitada = produto.quantidade_ja_solicitada_por_usuario(request.user)
+            no_carrinho = produto.quantidade_no_carrinho_aberto(request.user)
+            restante_para_usuario = max(limite - ja_solicitada - no_carrinho, 0)
+
     return render(
         request,
         "website/detalhes_produto.html",
@@ -126,6 +136,7 @@ def detalhe_produto(request, pk):
             "economia": economia,
             "favoritado": favoritado,
             "relacionados": relacionados,
+            "restante_para_usuario": restante_para_usuario,
         },
     )
 
