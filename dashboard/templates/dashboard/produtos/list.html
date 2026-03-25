@@ -1,20 +1,166 @@
 {% extends "dashboard/base.html" %}
 {% block header %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h4 mb-1">Produtos</h1>
-            <div class="text-secondary small">Gerencie os produtos cadastrados.</div>
+    <style>
+        .dash-page-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-filter-card,
+        .dash-table-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .dash-filter-card .card-body,
+        .dash-table-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .dash-filter-form .form-control,
+        .dash-filter-form .form-select,
+        .dash-filter-form .btn {
+            border-radius: .85rem;
+        }
+
+        .dash-table thead th {
+            font-size: .8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: #6c757d;
+            background: #f8f9fa;
+            border-bottom-width: 1px;
+            white-space: nowrap;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .dash-table tbody td {
+            vertical-align: middle;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            border-color: rgba(0, 0, 0, .06);
+        }
+
+        .dash-table tbody tr:hover {
+            background: #fcfcfd;
+        }
+
+        .produto-thumb {
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: .85rem;
+        }
+
+        .produto-thumb-placeholder {
+            width: 56px;
+            height: 56px;
+            border-radius: .85rem;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .dash-name {
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .dash-muted {
+            color: #6c757d;
+        }
+
+        .dash-price {
+            font-weight: 700;
+            color: #198754;
+        }
+
+        .dash-stock-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: .4rem .75rem;
+            font-size: .78rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .dash-stock-ok {
+            background: rgba(25, 135, 84, .12);
+            color: #146c43;
+        }
+
+        .dash-stock-low {
+            background: rgba(255, 193, 7, .16);
+            color: #8a6400;
+        }
+
+        .dash-stock-zero {
+            background: rgba(220, 53, 69, .12);
+            color: #b02a37;
+        }
+
+        .dash-action-btn {
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .dash-empty-box {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .dash-empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            font-size: 1.5rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header {
+                padding: 1.1rem;
+            }
+
+            .dash-filter-card .card-body,
+            .dash-table-card .card-body {
+                padding: 1rem;
+            }
+        }
+    </style>
+    <div class="dash-page-header mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="text-secondary small mb-1">Catálogo administrativo</div>
+                <h1 class="h4 mb-1 fw-bold">Produtos</h1>
+                <div class="text-secondary small">Gerencie produtos e imagens em um só lugar.</div>
+            </div>
+            <a href="{% url 'dashboard_produto_create' %}"
+               class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-lg me-1"></i>Novo produto
+            </a>
         </div>
-        <a href="{% url 'dashboard_produto_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i>Novo produto
-        </a>
     </div>
 {% endblock header %}
 {% block content %}
-    <div class="card border-0 shadow-sm">
+    <div class="card dash-filter-card mb-3">
         <div class="card-body">
-            <form method="get" class="row g-2 mb-3">
+            <form method="get" class="row g-2 align-items-end dash-filter-form">
                 <div class="col-md-8">
+                    <label class="form-label fw-semibold">Buscar produto</label>
                     <input type="text"
                            name="q"
                            value="{{ q }}"
@@ -22,6 +168,7 @@
                            placeholder="Buscar por nome...">
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label fw-semibold">Tipo</label>
                     <select name="tipo" class="form-select">
                         <option value="">Todos os tipos</option>
                         {% for item in tipos %}
@@ -36,10 +183,15 @@
                     <button class="btn btn-outline-primary w-100">Filtrar</button>
                 </div>
             </form>
+        </div>
+    </div>
+    <div class="card dash-table-card">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle dash-table mb-0">
                     <thead>
                         <tr>
+                            <th>Imagem</th>
                             <th>Nome</th>
                             <th>Tipo</th>
                             <th>Unidade</th>
@@ -52,24 +204,53 @@
                     <tbody>
                         {% for produto in produtos %}
                             <tr>
-                                <td>{{ produto.nome }}</td>
+                                <td style="width: 72px;">
+                                    {% with imagem=produto.imagens.all|first %}
+                                        {% if imagem and imagem.imagem %}
+                                            <img src="{{ imagem.imagem.url }}"
+                                                 alt="{{ produto.nome }}"
+                                                 class="img-fluid border produto-thumb">
+                                        {% else %}
+                                            <div class="border d-flex align-items-center justify-content-center produto-thumb-placeholder">-</div>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    <div class="dash-name">{{ produto.nome }}</div>
+                                </td>
                                 <td>{{ produto.tipo_prod.nome }}</td>
                                 <td>{{ produto.unidade_prod.nome }}</td>
-                                <td>{{ produto.quantidade }}</td>
-                                <td>{{ produto.estoque_disponivel }}</td>
-                                <td>R$ {{ produto.valor_venda }}</td>
+                                <td class="fw-semibold">{{ produto.quantidade }}</td>
+                                <td>
+                                    {% if produto.estoque_disponivel > 5 %}
+                                        <span class="dash-stock-badge dash-stock-ok">{{ produto.estoque_disponivel }}</span>
+                                    {% elif produto.estoque_disponivel > 0 %}
+                                        <span class="dash-stock-badge dash-stock-low">{{ produto.estoque_disponivel }}</span>
+                                    {% else %}
+                                        <span class="dash-stock-badge dash-stock-zero">{{ produto.estoque_disponivel }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="dash-price">R$ {{ produto.valor_venda|floatformat:2 }}</span>
+                                </td>
                                 <td class="text-end">
-                                    <a href="{% url 'dashboard_produto_imagem_list' %}?produto={{ produto.pk }}"
-                                       class="btn btn-sm btn-outline-secondary">Imagens</a>
-                                    <a href="{% url 'dashboard_produto_update' produto.pk %}"
-                                       class="btn btn-sm btn-outline-primary">Editar</a>
-                                    <a href="{% url 'dashboard_produto_delete' produto.pk %}"
-                                       class="btn btn-sm btn-outline-danger">Excluir</a>
+                                    <div class="d-flex flex-wrap justify-content-end gap-2">
+                                        <a href="{% url 'dashboard_produto_update' produto.pk %}"
+                                           class="btn btn-sm btn-outline-primary dash-action-btn">Editar</a>
+                                        <a href="{% url 'dashboard_produto_delete' produto.pk %}"
+                                           class="btn btn-sm btn-outline-danger dash-action-btn">Excluir</a>
+                                    </div>
                                 </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="7" class="text-center text-secondary py-4">Nenhum produto encontrado.</td>
+                                <td colspan="8">
+                                    <div class="dash-empty-box">
+                                        <div class="dash-empty-icon">📦</div>
+                                        <div class="fw-semibold mb-1">Nenhum produto encontrado</div>
+                                        <div class="small">Ajuste os filtros ou cadastre um novo produto.</div>
+                                    </div>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>

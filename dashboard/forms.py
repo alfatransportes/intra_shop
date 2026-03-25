@@ -131,3 +131,71 @@ class RegraParcelamentoValeForm(BaseBootstrapForm):
     class Meta:
         model = RegraParcelamentoVale
         fields = ["minimo", "maximo", "max_parcelas", "ativo"]
+
+
+        from django import forms
+
+from django.forms import inlineformset_factory
+
+from website.models import Produto, ProdutoImagem
+
+
+class BaseBootstrapForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+            widget = field.widget
+            if isinstance(widget, forms.CheckboxInput):
+                widget.attrs["class"] = "form-check-input"
+            elif isinstance(widget, forms.FileInput):
+                widget.attrs["class"] = "form-control"
+            elif isinstance(widget, forms.Select):
+                widget.attrs["class"] = "form-select"
+            elif isinstance(widget, forms.Textarea):
+                widget.attrs["class"] = "form-control"
+                widget.attrs.setdefault("rows", 4)
+            else:
+                widget.attrs["class"] = "form-control"
+
+
+class ProdutoForm(BaseBootstrapForm):
+    class Meta:
+        model = Produto
+        fields = [
+            "numero_bo",
+            "unidade_prod",
+            "tipo_prod",
+            "nivel_ava_prod",
+            "nome",
+            "quantidade",
+            "valor_nota",
+            "porcen_desconto",
+            "descricao",
+        ]
+
+
+class ProdutoImagemForm(BaseBootstrapForm):
+    class Meta:
+        model = ProdutoImagem
+        fields = ["imagem", "legenda", "ordem", "principal"]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        principal = cleaned_data.get("principal")
+        imagem = cleaned_data.get("imagem")
+
+        if principal and not imagem and not self.instance.pk:
+            raise forms.ValidationError("Selecione uma imagem antes de marcar como principal.")
+
+        return cleaned_data
+
+
+ProdutoImagemFormSet = inlineformset_factory(
+    Produto,
+    ProdutoImagem,
+    form=ProdutoImagemForm,
+    fields=["imagem", "legenda", "ordem", "principal"],
+    extra=1,
+    can_delete=True,
+)

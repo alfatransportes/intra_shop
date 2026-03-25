@@ -78,12 +78,6 @@ class PainelControleView(DashboardPermissionMixin, TemplateView):
         return context
 
 
-from django.contrib import messages
-from django.shortcuts import redirect
-from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, ListView, UpdateView
-
-
 class DashboardBaseListView(DashboardPermissionMixin, ListView):
     template_name = "dashboard/crud/list.html"
     context_object_name = "items"
@@ -151,6 +145,18 @@ class DashboardBaseDeleteView(DashboardPermissionMixin, DeleteView):
 # -------------------------
 # PRODUTOS
 # -------------------------
+from django.contrib import messages
+from django.db import transaction
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import DeleteView, ListView, TemplateView
+
+from website.models import Produto, Tipo
+
+from .forms import ProdutoForm, ProdutoImagemFormSet
+from .mixins import DashboardPermissionMixin
+
+
 class ProdutoListView(DashboardPermissionMixin, ListView):
     model = Produto
     template_name = "dashboard/produtos/list.html"
@@ -184,26 +190,69 @@ class ProdutoListView(DashboardPermissionMixin, ListView):
         return context
 
 
-class ProdutoCreateView(DashboardPermissionMixin, CreateView):
-    model = Produto
-    form_class = ProdutoForm
+class ProdutoManageView(DashboardPermissionMixin, TemplateView):
     template_name = "dashboard/produtos/form.html"
-    success_url = reverse_lazy("dashboard_produto_list")
 
-    def form_valid(self, form):
-        messages.success(self.request, "Produto cadastrado com sucesso.")
-        return super().form_valid(form)
+    def dispatch(self, request, *args, **kwargs):
+        self.object = None
+        pk = kwargs.get("pk")
+        if pk:
+            self.object = Produto.objects.filter(pk=pk).first()
+        return super().dispatch(request, *args, **kwargs)
 
+    def get_form(self, data=None, files=None):
+        return ProdutoForm(data=data, files=files, instance=self.object)
 
-class ProdutoUpdateView(DashboardPermissionMixin, UpdateView):
-    model = Produto
-    form_class = ProdutoForm
-    template_name = "dashboard/produtos/form.html"
-    success_url = reverse_lazy("dashboard_produto_list")
+    def get_formset(self, data=None, files=None):
+        return ProdutoImagemFormSet(data=data, files=files, instance=self.object, prefix="imagens")
 
-    def form_valid(self, form):
-        messages.success(self.request, "Produto atualizado com sucesso.")
-        return super().form_valid(form)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["object"] = self.object
+        context["form"] = kwargs.get("form") or self.get_form()
+        context["formset"] = kwargs.get("formset") or self.get_formset()
+        return context
+
+    def get(self, request, *args, **kwargs):
+        return self.render_to_response(self.get_context_data())
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form(data=request.POST, files=request.FILES)
+        formset = self.get_formset(data=request.POST, files=request.FILES)
+
+        if form.is_valid() and formset.is_valid():
+            return self.forms_valid(form, formset)
+
+        return self.render_to_response(self.get_context_data(form=form, formset=formset))
+
+    def forms_valid(self, form, formset):
+        with transaction.atomic():
+            self.object = form.save()
+
+            formset.instance = self.object
+            imagens = formset.save()
+
+            principais = [
+                f for f in formset.forms
+                if not f.cleaned_data.get("DELETE", False) and f.cleaned_data.get("principal")
+            ]
+
+            if len(principais) > 1:
+                form.add_error(None, "Apenas uma imagem pode ser marcada como principal.")
+                return self.render_to_response(self.get_context_data(form=form, formset=formset))
+
+            if len(principais) == 1:
+                imagem_principal = principais[0].instance
+                self.object.imagens.exclude(pk=imagem_principal.pk).update(principal=False)
+            else:
+                self.object.imagens.update(principal=False)
+
+        if self.object.pk and self.kwargs.get("pk"):
+            messages.success(self.request, "Produto atualizado com sucesso.")
+        else:
+            messages.success(self.request, "Produto cadastrado com sucesso.")
+
+        return redirect("dashboard_produto_update", pk=self.object.pk)
 
 
 class ProdutoDeleteView(DashboardPermissionMixin, DeleteView):
