@@ -1,19 +1,79 @@
 {% extends "dashboard/base.html" %}
 {% block header %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h4 mb-1">Formas de pagamento</h1>
-            <div class="text-secondary small">Gerencie Pix, dinheiro e vale.</div>
+    <style>
+        .dash-page-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-table-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+        }
+
+        .dash-table-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .dash-table thead th {
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: #6c757d;
+            background: #f8f9fa;
+            white-space: nowrap;
+            border-bottom-width: 1px;
+        }
+
+        .dash-table tbody td {
+            vertical-align: middle;
+        }
+
+        .dash-pill {
+            border-radius: 999px;
+            padding: .45rem .8rem;
+            font-weight: 700;
+        }
+
+        .dash-action-btn {
+            border-radius: 999px;
+        }
+
+        .dash-empty {
+            color: #6c757d;
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header {
+                padding: 1.1rem;
+            }
+
+            .dash-table-card .card-body {
+                padding: 1rem;
+            }
+        }
+    </style>
+    <div class="dash-page-header mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="text-secondary small mb-1">Configuração administrativa</div>
+                <h1 class="h4 mb-1 fw-bold">Formas de pagamento</h1>
+                <div class="text-secondary small">Gerencie Pix, dinheiro e vale.</div>
+            </div>
+            <a href="{% url 'dashboard_forma_pagamento_create' %}"
+               class="btn btn-primary rounded-pill px-4">Nova forma</a>
         </div>
-        <a href="{% url 'dashboard_forma_pagamento_create' %}"
-           class="btn btn-primary">Nova forma</a>
     </div>
 {% endblock header %}
 {% block content %}
-    <div class="card border-0 shadow-sm">
+    <div class="card dash-table-card">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle dash-table mb-0">
                     <thead>
                         <tr>
                             <th>Código</th>
@@ -26,26 +86,28 @@
                     <tbody>
                         {% for forma in formas_pagamento %}
                             <tr>
-                                <td>{{ forma.get_codigo_display }}</td>
+                                <td class="fw-semibold">{{ forma.get_codigo_display }}</td>
                                 <td>
                                     {% if forma.ativa %}
-                                        <span class="badge text-bg-success">Sim</span>
+                                        <span class="badge text-bg-success dash-pill">Sim</span>
                                     {% else %}
-                                        <span class="badge text-bg-secondary">Não</span>
+                                        <span class="badge text-bg-secondary dash-pill">Não</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ forma.pix_chave|default:"-" }}</td>
                                 <td>{{ forma.pix_nome|default:"-" }}</td>
                                 <td class="text-end">
-                                    <a href="{% url 'dashboard_forma_pagamento_update' forma.pk %}"
-                                       class="btn btn-sm btn-outline-primary">Editar</a>
-                                    <a href="{% url 'dashboard_forma_pagamento_delete' forma.pk %}"
-                                       class="btn btn-sm btn-outline-danger">Excluir</a>
+                                    <div class="d-flex flex-wrap justify-content-end gap-2">
+                                        <a href="{% url 'dashboard_forma_pagamento_update' forma.pk %}"
+                                           class="btn btn-sm btn-outline-primary dash-action-btn">Editar</a>
+                                        <a href="{% url 'dashboard_forma_pagamento_delete' forma.pk %}"
+                                           class="btn btn-sm btn-outline-danger dash-action-btn">Excluir</a>
+                                    </div>
                                 </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="5" class="text-center text-secondary py-4">Nenhuma forma cadastrada.</td>
+                                <td colspan="5" class="text-center dash-empty py-5">Nenhuma forma cadastrada.</td>
                             </tr>
                         {% endfor %}
                     </tbody>

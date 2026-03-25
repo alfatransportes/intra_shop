@@ -8,6 +8,9 @@ from django import template
 
 register = template.Library()
 
+@register.filter
+def get_attr(obj, attr_name):
+    return getattr(obj, attr_name, "")
 
 @register.filter(name='format_telefone')
 def format_telefone(value: str) -> str:
@@ -30,6 +33,7 @@ def format_telefone(value: str) -> str:
         return f"({ddd}) {meio}-{fim}"
 
     return value
+
 
 
 

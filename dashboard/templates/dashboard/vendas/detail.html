@@ -1,63 +1,372 @@
 {% extends "dashboard/base.html" %}
 {% block header %}
-    <div class="mb-3">
-        <h1 class="h4 mb-1">Venda #{{ venda.id }}</h1>
-        <div class="text-secondary small">Detalhes e atualização de status.</div>
+    <style>
+        .dash-page-header {
+            
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-detail-card,
+        .dash-form-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+            
+        }
+
+        .dash-detail-card .card-body,
+        .dash-form-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .dash-info-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .dash-info-box {
+           
+            border-radius: 1rem;
+            padding: 1rem;
+            height: 100%;
+        }
+
+        .dash-info-label {
+            font-size: .8rem;
+            color: #6c757d;
+            margin-bottom: .35rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            font-weight: 700;
+        }
+
+        .dash-info-value {
+            font-weight: 700;
+            
+        }
+
+        .dash-total-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #198754;
+            line-height: 1;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: .45rem .8rem;
+            font-size: .78rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .status-pendente {
+            background: rgba(255, 193, 7, .16);
+            color: #8a6400;
+        }
+
+        .status-aprovada {
+            background: rgba(25, 135, 84, .12);
+            color: #146c43;
+        }
+
+        .status-cancelada {
+            background: rgba(220, 53, 69, .12);
+            color: #b02a37;
+        }
+
+        .status-default {
+            background: rgba(108, 117, 125, .14);
+            color: #495057;
+        }
+
+        .dash-items-list .list-group-item {
+            border-radius: .9rem !important;
+            border: 1px solid rgba(0, 0, 0, .06);
+            margin-bottom: .75rem;
+            padding: 1rem;
+        }
+
+        .dash-form-label {
+            font-weight: 700;
+            margin-bottom: .5rem;
+        }
+
+        .dash-form-card input,
+        .dash-form-card select,
+        .dash-form-card textarea {
+            border-radius: .85rem;
+            min-height: 46px;
+            box-shadow: none !important;
+        }
+
+        .dash-save-btn {
+            border-radius: 999px;
+            font-weight: 600;
+            padding-inline: 1.25rem;
+        }
+
+        .dash-back-btn {
+            border-radius: 999px;
+            font-weight: 600;
+            padding-inline: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            .dash-info-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header,
+            .dash-detail-card .card-body,
+            .dash-form-card .card-body {
+                padding: 1.1rem;
+            }
+        }
+		.dash-field-block {
+   
+    border: 1px solid rgba(0, 0, 0, .06);
+    border-radius: 1rem;
+    padding: 1rem;
+    transition: all .2s ease;
+}
+
+.dash-field-block:hover {
+    border-color: rgba(13, 110, 253, .18);
+    box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .04);
+}
+
+.dash-form-label {
+    font-weight: 700;
+    
+}
+
+.dash-field-control select,
+.dash-field-control input[type="text"],
+.dash-field-control input[type="number"],
+.dash-field-control input[type="email"],
+.dash-field-control input[type="file"],
+.dash-field-control textarea {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid #dee2e6;
+    border-radius: .85rem;
+    padding: .75rem .95rem;
+    
+    box-shadow: none !important;
+}
+
+.dash-field-control input[type="file"] {
+    padding: .6rem .75rem;
+}
+
+.dash-field-control textarea {
+    min-height: 110px;
+}
+
+.dash-field-control select:focus,
+.dash-field-control input:focus,
+.dash-field-control textarea:focus {
+    border-color: rgba(13, 110, 253, .45);
+    box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .10) !important;
+}
+
+.dash-form-actions .btn {
+    border-radius: 999px;
+    font-weight: 700;
+    min-height: 48px;
+}
+    </style>
+    <div class="dash-page-header mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="text-secondary small mb-1">Gestão administrativa</div>
+                <h1 class="h4 mb-1 fw-bold">Venda #{{ venda.id }}</h1>
+                <div class="text-secondary small">Detalhes e atualização de status.</div>
+            </div>
+            <a href="{% url 'dashboard_venda_list' %}"
+               class="btn btn-outline-secondary dash-back-btn">Voltar</a>
+        </div>
     </div>
 {% endblock header %}
 {% block content %}
-    <div class="row g-3">
+    <div class="row g-4">
         <div class="col-lg-7">
-            <div class="card border-0 shadow-sm">
+            <div class="card dash-detail-card">
                 <div class="card-body">
-                    <h2 class="h5 mb-3">Informações da venda</h2>
-                    <p>
-                        <strong>Usuário:</strong> {{ venda.usuario }}
-                    </p>
-                    <p>
-                        <strong>Forma de pagamento:</strong> {{ venda.forma_pagamento }}
-                    </p>
-                    <p>
-                        <strong>Total:</strong> R$ {{ venda.total }}
-                    </p>
-                    <p>
-                        <strong>Status:</strong> {{ venda.get_status_display }}
-                    </p>
-                    <p>
-                        <strong>Observação:</strong> {{ venda.observacao|default:"-" }}
-                    </p>
+                    <h2 class="h5 fw-bold mb-4">Informações da venda</h2>
+                    <div class="dash-info-grid mb-4">
+                        <div class="dash-info-box">
+                            <div class="dash-info-label">Usuário</div>
+                            <div class="dash-info-value">{{ venda.usuario }}</div>
+                        </div>
+                        <div class="dash-info-box">
+                            <div class="dash-info-label">Forma de pagamento</div>
+                            <div class="dash-info-value">{{ venda.forma_pagamento }}</div>
+                        </div>
+                        <div class="dash-info-box">
+                            <div class="dash-info-label">Total</div>
+                            <div class="dash-total-value">R$ {{ venda.total }}</div>
+                        </div>
+                        <div class="dash-info-box">
+                            <div class="dash-info-label">Status</div>
+                            <div>
+                                {% if venda.status == "PENDENTE" %}
+                                    <span class="status-chip status-pendente">{{ venda.get_status_display }}</span>
+                                {% elif venda.status == "APROVADA" %}
+                                    <span class="status-chip status-aprovada">{{ venda.get_status_display }}</span>
+                                {% elif venda.status == "CANCELADA" %}
+                                    <span class="status-chip status-cancelada">{{ venda.get_status_display }}</span>
+                                {% else %}
+                                    <span class="status-chip status-default">{{ venda.get_status_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="dash-info-label">Observação</div>
+                        <div class="dash-info-box">{{ venda.observacao|default:"-" }}</div>
+                    </div>
                     <hr>
-                    <h3 class="h6">Itens</h3>
-                    <ul class="list-group">
+                    <h3 class="h6 fw-bold mb-3">Itens da venda</h3>
+                    <ul class="list-group dash-items-list">
                         {% for item in venda.itens.all %}
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>{{ item.produto.nome }} x{{ item.quantidade }}</span>
+                            <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                                <div>
+                                    <div class="fw-semibold">{{ item.produto.nome }}</div>
+                                    <div class="small text-secondary">Quantidade: {{ item.quantidade }}</div>
+                                </div>
                                 <strong>R$ {{ item.subtotal }}</strong>
                             </li>
+                        {% empty %}
+                            <li class="list-group-item text-center text-secondary">Nenhum item encontrado nesta venda.</li>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
+            {% if comprovante %}
+                <div class="card dash-form-card mb-4 mt-2">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                            <div>
+                                <h2 class="h5 fw-bold mb-1">Comprovante</h2>
+                                <div class="text-secondary small">Arquivo enviado pelo cliente para esta venda.</div>
+                            </div>
+                            <span class="badge  border rounded-pill px-3 py-2">
+                                {% if comprovante_is_pdf %}
+                                    PDF
+                                {% else %}
+                                    Imagem
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if comprovante_is_pdf %}
+                            <div class="border rounded-4 p-4 text-center ">
+                                <div class="mb-3" style="font-size: 2.5rem;">📄</div>
+                                <div class="fw-semibold mb-1">Comprovante em PDF</div>
+                                <div class="text-secondary small mb-3">Visualize ou baixe o arquivo para conferência.</div>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ comprovante_url }}"
+                                       target="_blank"
+                                       rel="noopener"
+                                       class="btn btn-primary rounded-pill">Abrir PDF</a>
+                                    <a href="{{ comprovante_url }}"
+                                       download
+                                       class="btn btn-outline-secondary rounded-pill">Baixar comprovante</a>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="mb-3">
+                                <button type="button"
+                                        class="btn btn-outline-primary rounded-pill"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#comprovanteModal">Ampliar imagem</button>
+                            </div>
+                            <div class="border rounded-4 p-2  text-center">
+                                <img src="{{ comprovante_url }}"
+                                     alt="Comprovante da venda #{{ venda.id }}"
+                                     class="img-fluid rounded-3"
+                                     style="max-height: 320px;
+                                            object-fit: contain">
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
         <div class="col-lg-5">
-            <div class="card border-0 shadow-sm">
+            <div class="card dash-form-card">
                 <div class="card-body">
-                    <h2 class="h5 mb-3">Atualizar status</h2>
+                    <div class="mb-4">
+                        <h2 class="h5 fw-bold mb-1">Atualizar venda</h2>
+                        <div class="text-secondary small">Altere o status e, quando necessário, anexe o comprovante correto.</div>
+                    </div>
                     <form method="post"
                           enctype="multipart/form-data"
                           action="{% url 'dashboard_venda_update_status' venda.pk %}">
                         {% csrf_token %}
                         {% for field in form %}
-                            <div class="mb-3">
-                                <label class="form-label">{{ field.label }}</label>
-                                {{ field }}
-                                {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors }}</div>{% endif %}
-                            </div>
+                            {% if field.name == "comprovante_pix" and venda.forma_pagamento.codigo != "PIX" %}
+                            {% elif field.name == "comprovante_vale" and venda.forma_pagamento.codigo != "VALE" %}
+                            {% else %}
+                                <div class="dash-field-block mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label dash-form-label mb-0">{{ field.label }}</label>
+                                        {% if field.field.required %}<span class="badge rounded-pill  border">Obrigatório</span>{% endif %}
+                                    </div>
+                                    <div class="dash-field-control">{{ field }}</div>
+                                    {% if field.help_text %}<div class="text-secondary small mt-2">{{ field.help_text }}</div>{% endif %}
+                                    {% if field.errors %}<div class="text-danger small mt-2">{{ field.errors }}</div>{% endif %}
+                                </div>
+                            {% endif %}
                         {% endfor %}
-                        <button type="submit" class="btn btn-primary">Salvar alterações</button>
+                        <div class="dash-form-actions pt-2">
+                            <button type="submit" class="btn btn-primary dash-save-btn w-100">Salvar alterações</button>
+                        </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+    {% if comprovante and comprovante_is_image %}
+        <div class="modal fade"
+             id="comprovanteModal"
+             tabindex="-1"
+             aria-labelledby="comprovanteModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
+                <div class="modal-content border-0 rounded-4 shadow">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="comprovanteModalLabel">Comprovante da venda #{{ venda.id }}</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body text-center p-4 ">
+                        <img src="{{ comprovante_url }}"
+                             alt="Comprovante da venda #{{ venda.id }}"
+                             class="img-fluid rounded-4 border">
+                    </div>
+                    <div class="modal-footer">
+                        <a href="{{ comprovante_url }}"
+                           target="_blank"
+                           rel="noopener"
+                           class="btn btn-outline-primary rounded-pill px-4">Abrir em nova aba</a>
+                        <button type="button"
+                                class="btn btn-outline-secondary rounded-pill px-4"
+                                data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 {% endblock content %}

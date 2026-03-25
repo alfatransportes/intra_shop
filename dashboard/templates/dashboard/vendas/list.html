@@ -1,17 +1,136 @@
 {% extends "dashboard/base.html" %}
 {% block header %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h4 mb-1">Vendas</h1>
-            <div class="text-secondary small">Gerencie as vendas realizadas.</div>
+    <style>
+        .dash-page-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-filter-card,
+        .dash-table-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .dash-filter-card .card-body,
+        .dash-table-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .dash-table thead th {
+            font-size: .8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: #6c757d;
+            background: #f8f9fa;
+            border-bottom-width: 1px;
+            white-space: nowrap;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .dash-table tbody td {
+            vertical-align: middle;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            border-color: rgba(0, 0, 0, .06);
+        }
+
+        .dash-table tbody tr:hover {
+            background: #fcfcfd;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: .45rem .8rem;
+            font-size: .78rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .status-pendente {
+            background: rgba(255, 193, 7, .16);
+            color: #8a6400;
+        }
+
+        .status-aprovada {
+            background: rgba(25, 135, 84, .12);
+            color: #146c43;
+        }
+
+        .status-cancelada {
+            background: rgba(220, 53, 69, .12);
+            color: #b02a37;
+        }
+
+        .status-default {
+            background: rgba(108, 117, 125, .14);
+            color: #495057;
+        }
+
+        .dash-filter-form .form-select,
+        .dash-filter-form .btn {
+            border-radius: .85rem;
+        }
+
+        .dash-empty-box {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .dash-empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            font-size: 1.5rem;
+        }
+
+        .dash-action-btn {
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header {
+                padding: 1.1rem;
+            }
+
+            .dash-filter-card .card-body,
+            .dash-table-card .card-body {
+                padding: 1rem;
+            }
+        }
+    </style>
+    <div class="dash-page-header mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="text-secondary small mb-1">Gestão administrativa</div>
+                <h1 class="h4 mb-1 fw-bold">Vendas</h1>
+                <div class="text-secondary small">Gerencie as vendas realizadas.</div>
+            </div>
         </div>
     </div>
 {% endblock header %}
 {% block content %}
-    <div class="card border-0 shadow-sm">
+    <div class="card dash-filter-card mb-3">
         <div class="card-body">
-            <form method="get" class="row g-2 mb-3">
+            <form method="get" class="row g-2 align-items-end dash-filter-form">
                 <div class="col-md-4">
+                    <label class="form-label fw-semibold">Filtrar por status</label>
                     <select name="status" class="form-select">
                         <option value="">Todos os status</option>
                         <option value="PENDENTE"
@@ -25,9 +144,19 @@
                 <div class="col-md-2">
                     <button class="btn btn-outline-primary w-100">Filtrar</button>
                 </div>
+                {% if status_atual %}
+                    <div class="col-md-2">
+                        <a href="{% url 'dashboard_venda_list' %}"
+                           class="btn btn-outline-secondary w-100">Limpar</a>
+                    </div>
+                {% endif %}
             </form>
+        </div>
+    </div>
+    <div class="card dash-table-card">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle dash-table mb-0">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -42,25 +171,74 @@
                     <tbody>
                         {% for venda in vendas %}
                             <tr>
-                                <td>{{ venda.id }}</td>
+                                <td class="fw-bold">#{{ venda.id }}</td>
                                 <td>{{ venda.usuario }}</td>
                                 <td>{{ venda.forma_pagamento }}</td>
-                                <td>R$ {{ venda.total }}</td>
-                                <td>{{ venda.get_status_display }}</td>
+                                <td class="fw-semibold">R$ {{ venda.total }}</td>
+                                <td>
+                                    {% if venda.status == "PENDENTE" %}
+                                        <span class="status-chip status-pendente">{{ venda.get_status_display }}</span>
+                                    {% elif venda.status == "APROVADA" %}
+                                        <span class="status-chip status-aprovada">{{ venda.get_status_display }}</span>
+                                    {% elif venda.status == "CANCELADA" %}
+                                        <span class="status-chip status-cancelada">{{ venda.get_status_display }}</span>
+                                    {% else %}
+                                        <span class="status-chip status-default">{{ venda.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ venda.criado_em|date:"d/m/Y H:i" }}</td>
                                 <td class="text-end">
                                     <a href="{% url 'dashboard_venda_detail' venda.pk %}"
-                                       class="btn btn-sm btn-outline-primary">Detalhes</a>
+                                       class="btn btn-sm btn-outline-primary dash-action-btn">Detalhes</a>
                                 </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="7" class="text-center text-secondary py-4">Nenhuma venda encontrada.</td>
+                                <td colspan="7">
+                                    <div class="dash-empty-box">
+                                        <div class="dash-empty-icon">🧾</div>
+                                        <div class="fw-semibold mb-1">Nenhuma venda encontrada</div>
+                                        <div class="small">Não há vendas cadastradas para o filtro atual.</div>
+                                    </div>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {% if is_paginated %}
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ page_obj.previous_page_number }}{% if status_atual %}&status={{ status_atual }}{% endif %}">
+                                    Anterior
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Anterior</span>
+                            </li>
+                        {% endif %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ page_obj.next_page_number }}{% if status_atual %}&status={{ status_atual }}{% endif %}">
+                                    Próxima
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Próxima</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
         </div>
     </div>
 {% endblock content %}

@@ -1,30 +1,80 @@
 {% extends "dashboard/base.html" %}
+{% load custom_tags %}
 {% block header %}
-    <div class="mb-3">
-        <h1 class="h4 mb-1">
-            {% if object %}
-                Editar nível de avaria
-            {% else %}
-                Novo nível de avaria
-            {% endif %}
-        </h1>
-        <div class="text-secondary small">Preencha os dados do nível de avaria.</div>
+    <style>
+        .dash-page-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-form-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+        }
+
+        .dash-form-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .dash-form-label {
+            font-weight: 600;
+            margin-bottom: .5rem;
+        }
+
+        .dash-form-card input,
+        .dash-form-card select,
+        .dash-form-card textarea {
+            border-radius: .85rem;
+            min-height: 46px;
+        }
+
+        .dash-form-actions .btn {
+            border-radius: 999px;
+            padding-inline: 1.25rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header {
+                padding: 1.1rem;
+            }
+
+            .dash-form-card .card-body {
+                padding: 1.1rem;
+            }
+        }
+    </style>
+    <div class="dash-page-header mb-4">
+        <div>
+            <div class="text-secondary small mb-1">Configuração administrativa</div>
+            <h1 class="h4 mb-1 fw-bold">
+                {% if object %}
+                    Editar nível de avaria
+                {% else %}
+                    Novo nível de avaria
+                {% endif %}
+            </h1>
+            <div class="text-secondary small">Preencha os dados do nível de avaria.</div>
+        </div>
     </div>
 {% endblock header %}
 {% block content %}
-    <div class="card border-0 shadow-sm">
+    <div class="card dash-form-card">
         <div class="card-body">
             <form method="post">
                 {% csrf_token %}
                 {% for field in form %}
                     <div class="mb-3">
-                        <label class="form-label">{{ field.label }}</label>
+                        <label class="form-label dash-form-label">{{ field.label }}</label>
                         {{ field }}
                         {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors }}</div>{% endif %}
                         {% if field.help_text %}<div class="text-secondary small mt-1">{{ field.help_text }}</div>{% endif %}
                     </div>
                 {% endfor %}
-                <div class="mt-4 d-flex gap-2">
+                <div class="mt-4 d-flex flex-wrap gap-2 dash-form-actions">
                     <a href="{% url 'dashboard_nivel_avaria_list' %}"
                        class="btn btn-outline-secondary">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Salvar</button>

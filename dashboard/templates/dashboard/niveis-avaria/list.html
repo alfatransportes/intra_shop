@@ -1,19 +1,73 @@
 {% extends "dashboard/base.html" %}
 {% block header %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h4 mb-1">Níveis de avaria</h1>
-            <div class="text-secondary small">Gerencie os níveis de avaria cadastrados.</div>
+    <style>
+        .dash-page-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-table-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+        }
+
+        .dash-table-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .dash-table thead th {
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: #6c757d;
+            background: #f8f9fa;
+            white-space: nowrap;
+            border-bottom-width: 1px;
+        }
+
+        .dash-table tbody td {
+            vertical-align: middle;
+        }
+
+        .dash-action-btn {
+            border-radius: 999px;
+        }
+
+        .dash-empty {
+            color: #6c757d;
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header {
+                padding: 1.1rem;
+            }
+
+            .dash-table-card .card-body {
+                padding: 1rem;
+            }
+        }
+    </style>
+    <div class="dash-page-header mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="text-secondary small mb-1">Configuração administrativa</div>
+                <h1 class="h4 mb-1 fw-bold">Níveis de avaria</h1>
+                <div class="text-secondary small">Gerencie os níveis de avaria cadastrados.</div>
+            </div>
+            <a href="{% url 'dashboard_nivel_avaria_create' %}"
+               class="btn btn-primary rounded-pill px-4">Novo nível</a>
         </div>
-        <a href="{% url 'dashboard_nivel_avaria_create' %}"
-           class="btn btn-primary">Novo nível</a>
     </div>
 {% endblock header %}
 {% block content %}
-    <div class="card border-0 shadow-sm">
+    <div class="card dash-table-card">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle dash-table mb-0">
                     <thead>
                         <tr>
                             <th>Nome</th>
@@ -23,17 +77,19 @@
                     <tbody>
                         {% for nivel in niveis %}
                             <tr>
-                                <td>{{ nivel.nome }}</td>
+                                <td class="fw-semibold">{{ nivel.nome }}</td>
                                 <td class="text-end">
-                                    <a href="{% url 'dashboard_nivel_avaria_update' nivel.pk %}"
-                                       class="btn btn-sm btn-outline-primary">Editar</a>
-                                    <a href="{% url 'dashboard_nivel_avaria_delete' nivel.pk %}"
-                                       class="btn btn-sm btn-outline-danger">Excluir</a>
+                                    <div class="d-flex flex-wrap justify-content-end gap-2">
+                                        <a href="{% url 'dashboard_nivel_avaria_update' nivel.pk %}"
+                                           class="btn btn-sm btn-outline-primary dash-action-btn">Editar</a>
+                                        <a href="{% url 'dashboard_nivel_avaria_delete' nivel.pk %}"
+                                           class="btn btn-sm btn-outline-danger dash-action-btn">Excluir</a>
+                                    </div>
                                 </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="2" class="text-center text-secondary py-4">Nenhum nível de avaria cadastrado.</td>
+                                <td colspan="2" class="text-center dash-empty py-5">Nenhum nível de avaria cadastrado.</td>
                             </tr>
                         {% endfor %}
                     </tbody>

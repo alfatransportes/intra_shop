@@ -1,7 +1,8 @@
 from decimal import Decimal
 
 from django.contrib import messages
-from django.db.models import Count, DecimalField, Sum, Value
+from django.db.models import (Count, DecimalField, ExpressionWrapper, F, Sum,
+                              Value)
 from django.db.models.functions import Coalesce
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -10,7 +11,7 @@ from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
 
 from website.models import (Carrinho, FormaPagamento, NivelAvaria, Produto,
                             ProdutoImagem, RegraParcelamentoVale, Tipo,
-                            Unidade, Venda)
+                            Unidade, Venda, VendaItem)
 
 from .forms import (FormaPagamentoForm, NivelAvariaForm, ProdutoForm,
                     ProdutoImagemForm, RegraParcelamentoValeForm, TipoForm,
@@ -23,17 +24,128 @@ class PainelControleView(DashboardPermissionMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        pedidos = Venda.objects.all()
+        vendas_pendentes_qs = pedidos.filter(status=Venda.Status.PENDENTE)
+        vendas_aprovadas_qs = pedidos.filter(status=Venda.Status.APROVADA)
+        vendas_canceladas_qs = pedidos.filter(status=Venda.Status.CANCELADA)
+
         context["total_produtos"] = Produto.objects.count()
-        context["total_vendas"] = Venda.objects.count()
-        context["vendas_pendentes"] = Venda.objects.filter(status="PENDENTE").count()
-        context["vendas_aprovadas"] = Venda.objects.filter(status="APROVADA").count()
-        context["vendas_canceladas"] = Venda.objects.filter(status="CANCELADA").count()
-        context["carrinhos_abertos"] = Carrinho.objects.filter(status="ABERTO").count()
-        context["valor_total_vendido"] = (
-            Venda.objects.filter(status="APROVADA").aggregate(total=Sum("total"))["total"]
-            or Decimal("0.00")
+        context["total_pedidos"] = pedidos.count()
+        context["vendas_pendentes"] = vendas_pendentes_qs.count()
+        context["vendas_aprovadas"] = vendas_aprovadas_qs.count()
+        context["vendas_canceladas"] = vendas_canceladas_qs.count()
+        context["carrinhos_abertos"] = Carrinho.objects.filter(status=Carrinho.Status.ABERTO).count()
+
+        context["valor_total_geral"] = (
+            pedidos.aggregate(total=Sum("total"))["total"] or Decimal("0.00")
         )
+
+        context["valor_total_aprovado"] = (
+            vendas_aprovadas_qs.aggregate(total=Sum("total"))["total"] or Decimal("0.00")
+        )
+
+        context["valor_total_pendente"] = (
+            vendas_pendentes_qs.aggregate(total=Sum("total"))["total"] or Decimal("0.00")
+        )
+
+        context["valor_total_cancelado"] = (
+            vendas_canceladas_qs.aggregate(total=Sum("total"))["total"] or Decimal("0.00")
+        )
+
+        valor_mercadoria = Produto.objects.aggregate(
+            total=Coalesce(
+                Sum(
+                    ExpressionWrapper(
+                        F("quantidade") * F("valor_venda"),
+                        output_field=DecimalField(max_digits=14, decimal_places=2),
+                    )
+                ),
+                Decimal("0.00"),
+            )
+        )["total"]
+
+        context["valor_total_mercadoria"] = valor_mercadoria or Decimal("0.00")
+
+        context["produtos_sem_estoque"] = Produto.objects.filter(quantidade=0).count()
+        context["produtos_com_estoque"] = Produto.objects.filter(quantidade__gt=0).count()
+
+        context["ultimas_vendas"] = (
+            pedidos.select_related("usuario", "forma_pagamento")
+            .order_by("-criado_em")[:5]
+        )
+
         return context
+
+
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
+
+
+class DashboardBaseListView(DashboardPermissionMixin, ListView):
+    template_name = "dashboard/crud/list.html"
+    context_object_name = "items"
+    paginate_by = 20
+    ordering = ["nome"]
+
+    page_title = ""
+    page_subtitle = ""
+    create_url_name = ""
+    empty_message = "Nenhum item cadastrado."
+
+    columns = []  # ex: [{"label": "Nome", "field": "nome"}]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = self.page_title
+        context["page_subtitle"] = self.page_subtitle
+        context["create_url_name"] = self.create_url_name
+        context["empty_message"] = self.empty_message
+        context["columns"] = self.columns
+        return context
+
+
+class DashboardBaseFormViewMixin(DashboardPermissionMixin):
+    template_name = "dashboard/crud/form.html"
+    page_title_create = ""
+    page_title_update = ""
+    page_subtitle = ""
+    cancel_url_name = ""
+    success_message = ""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = (
+            self.page_title_update if getattr(self, "object", None) else self.page_title_create
+        )
+        context["page_subtitle"] = self.page_subtitle
+        context["cancel_url_name"] = self.cancel_url_name
+        return context
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.success_message:
+            messages.success(self.request, self.success_message)
+        return response
+
+
+class DashboardBaseCreateView(DashboardBaseFormViewMixin, CreateView):
+    pass
+
+
+class DashboardBaseUpdateView(DashboardBaseFormViewMixin, UpdateView):
+    pass
+
+
+class DashboardBaseDeleteView(DashboardPermissionMixin, DeleteView):
+    template_name = "dashboard/confirm_delete.html"
+    success_message = ""
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(self.request, self.success_message)
+        return super().delete(request, *args, **kwargs)
 
 
 # -------------------------
@@ -107,130 +219,130 @@ class ProdutoDeleteView(DashboardPermissionMixin, DeleteView):
 # -------------------------
 # TIPOS
 # -------------------------
-class TipoListView(DashboardPermissionMixin, ListView):
+class TipoListView(DashboardBaseListView):
     model = Tipo
-    template_name = "dashboard/tipos/list.html"
-    context_object_name = "tipos"
-    paginate_by = 20
     ordering = ["nome"]
+    page_title = "Tipos"
+    page_subtitle = "Gerencie os tipos cadastrados."
+    create_url_name = "dashboard_tipo_create"
+    empty_message = "Nenhum tipo cadastrado."
+    columns = [
+        {"label": "Nome", "field": "nome"},
+    ]
 
 
-class TipoCreateView(DashboardPermissionMixin, CreateView):
+class TipoCreateView(DashboardBaseCreateView):
     model = Tipo
     form_class = TipoForm
-    template_name = "dashboard/tipos/form.html"
     success_url = reverse_lazy("dashboard_tipo_list")
+    page_title_create = "Novo tipo"
+    page_title_update = "Editar tipo"
+    page_subtitle = "Preencha os dados do tipo."
+    cancel_url_name = "dashboard_tipo_list"
+    success_message = "Tipo cadastrado com sucesso."
 
-    def form_valid(self, form):
-        messages.success(self.request, "Tipo cadastrado com sucesso.")
-        return super().form_valid(form)
 
-
-class TipoUpdateView(DashboardPermissionMixin, UpdateView):
+class TipoUpdateView(DashboardBaseUpdateView):
     model = Tipo
     form_class = TipoForm
-    template_name = "dashboard/tipos/form.html"
     success_url = reverse_lazy("dashboard_tipo_list")
+    page_title_create = "Novo tipo"
+    page_title_update = "Editar tipo"
+    page_subtitle = "Preencha os dados do tipo."
+    cancel_url_name = "dashboard_tipo_list"
+    success_message = "Tipo atualizado com sucesso."
 
-    def form_valid(self, form):
-        messages.success(self.request, "Tipo atualizado com sucesso.")
-        return super().form_valid(form)
 
-
-class TipoDeleteView(DashboardPermissionMixin, DeleteView):
+class TipoDeleteView(DashboardBaseDeleteView):
     model = Tipo
-    template_name = "dashboard/confirm_delete.html"
     success_url = reverse_lazy("dashboard_tipo_list")
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Tipo excluído com sucesso.")
-        return super().delete(request, *args, **kwargs)
-
+    success_message = "Tipo excluído com sucesso."
 
 # -------------------------
 # UNIDADES
 # -------------------------
-class UnidadeListView(DashboardPermissionMixin, ListView):
+class UnidadeListView(DashboardBaseListView):
     model = Unidade
-    template_name = "dashboard/unidades/list.html"
-    context_object_name = "unidades"
-    paginate_by = 20
     ordering = ["nome"]
+    page_title = "Unidades"
+    page_subtitle = "Gerencie as unidades cadastradas."
+    create_url_name = "dashboard_unidade_create"
+    empty_message = "Nenhuma unidade cadastrada."
+    columns = [
+        {"label": "Nome", "field": "nome"},
+    ]
 
 
-class UnidadeCreateView(DashboardPermissionMixin, CreateView):
+class UnidadeCreateView(DashboardBaseCreateView):
     model = Unidade
     form_class = UnidadeForm
-    template_name = "dashboard/unidades/form.html"
     success_url = reverse_lazy("dashboard_unidade_list")
+    page_title_create = "Nova unidade"
+    page_title_update = "Editar unidade"
+    page_subtitle = "Preencha os dados da unidade."
+    cancel_url_name = "dashboard_unidade_list"
+    success_message = "Unidade cadastrada com sucesso."
 
-    def form_valid(self, form):
-        messages.success(self.request, "Unidade cadastrada com sucesso.")
-        return super().form_valid(form)
 
-
-class UnidadeUpdateView(DashboardPermissionMixin, UpdateView):
+class UnidadeUpdateView(DashboardBaseUpdateView):
     model = Unidade
     form_class = UnidadeForm
-    template_name = "dashboard/unidades/form.html"
     success_url = reverse_lazy("dashboard_unidade_list")
+    page_title_create = "Nova unidade"
+    page_title_update = "Editar unidade"
+    page_subtitle = "Preencha os dados da unidade."
+    cancel_url_name = "dashboard_unidade_list"
+    success_message = "Unidade atualizada com sucesso."
 
-    def form_valid(self, form):
-        messages.success(self.request, "Unidade atualizada com sucesso.")
-        return super().form_valid(form)
 
-
-class UnidadeDeleteView(DashboardPermissionMixin, DeleteView):
+class UnidadeDeleteView(DashboardBaseDeleteView):
     model = Unidade
-    template_name = "dashboard/confirm_delete.html"
     success_url = reverse_lazy("dashboard_unidade_list")
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Unidade excluída com sucesso.")
-        return super().delete(request, *args, **kwargs)
+    success_message = "Unidade excluída com sucesso."
 
 
 # -------------------------
 # NÍVEIS DE AVARIA
 # -------------------------
-class NivelAvariaListView(DashboardPermissionMixin, ListView):
+class NivelAvariaListView(DashboardBaseListView):
     model = NivelAvaria
-    template_name = "dashboard/niveis-avaria/list.html"
-    context_object_name = "niveis"
-    paginate_by = 20
     ordering = ["nome"]
+    page_title = "Níveis de avaria"
+    page_subtitle = "Gerencie os níveis de avaria cadastrados."
+    create_url_name = "dashboard_nivel_avaria_create"
+    empty_message = "Nenhum nível de avaria cadastrado."
+    columns = [
+        {"label": "Nome", "field": "nome"},
+    ]
 
 
-class NivelAvariaCreateView(DashboardPermissionMixin, CreateView):
+class NivelAvariaCreateView(DashboardBaseCreateView):
     model = NivelAvaria
     form_class = NivelAvariaForm
-    template_name = "dashboard/niveis-avaria/form.html"
     success_url = reverse_lazy("dashboard_nivel_avaria_list")
+    page_title_create = "Novo nível de avaria"
+    page_title_update = "Editar nível de avaria"
+    page_subtitle = "Preencha os dados do nível de avaria."
+    cancel_url_name = "dashboard_nivel_avaria_list"
+    success_message = "Nível de avaria cadastrado com sucesso."
 
-    def form_valid(self, form):
-        messages.success(self.request, "Nível de avaria cadastrado com sucesso.")
-        return super().form_valid(form)
 
-
-class NivelAvariaUpdateView(DashboardPermissionMixin, UpdateView):
+class NivelAvariaUpdateView(DashboardBaseUpdateView):
     model = NivelAvaria
     form_class = NivelAvariaForm
-    template_name = "dashboard/niveis-avaria/form.html"
     success_url = reverse_lazy("dashboard_nivel_avaria_list")
+    page_title_create = "Novo nível de avaria"
+    page_title_update = "Editar nível de avaria"
+    page_subtitle = "Preencha os dados do nível de avaria."
+    cancel_url_name = "dashboard_nivel_avaria_list"
+    success_message = "Nível de avaria atualizado com sucesso."
 
-    def form_valid(self, form):
-        messages.success(self.request, "Nível de avaria atualizado com sucesso.")
-        return super().form_valid(form)
 
-
-class NivelAvariaDeleteView(DashboardPermissionMixin, DeleteView):
+class NivelAvariaDeleteView(DashboardBaseDeleteView):
     model = NivelAvaria
-    template_name = "dashboard/confirm_delete.html"
     success_url = reverse_lazy("dashboard_nivel_avaria_list")
+    success_message = "Nível de avaria excluído com sucesso."
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Nível de avaria excluído com sucesso.")
-        return super().delete(request, *args, **kwargs)
 
 
 # -------------------------
@@ -259,6 +371,7 @@ class VendaListView(DashboardPermissionMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["status_atual"] = self.request.GET.get("status", "")
+        context["status_choices"] = Venda._meta.get_field("status").choices
         return context
 
 
@@ -277,6 +390,20 @@ class VendaDetailView(DashboardPermissionMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form"] = VendaStatusForm(instance=self.object)
+
+        comprovante = None
+        if self.object.forma_pagamento and self.object.forma_pagamento.codigo == "PIX":
+            comprovante = self.object.comprovante_pix
+        elif self.object.forma_pagamento and self.object.forma_pagamento.codigo == "VALE":
+            comprovante = self.object.comprovante_vale
+
+        comprovante_url = comprovante.url if comprovante else ""
+        comprovante_nome = str(comprovante).lower() if comprovante else ""
+
+        context["comprovante"] = comprovante
+        context["comprovante_url"] = comprovante_url
+        context["comprovante_is_pdf"] = comprovante_nome.endswith(".pdf")
+        context["comprovante_is_image"] = comprovante_nome.endswith((".png", ".jpg", ".jpeg", ".webp"))
         return context
 
 
@@ -294,6 +421,10 @@ class VendaUpdateStatusView(DashboardPermissionMixin, UpdateView):
         messages.success(self.request, "Status da venda atualizado com sucesso.")
         return redirect(self.get_success_url())
     
+
+# -------------------------
+# IMAGENS DE PRODUTOS
+# -------------------------
 
 class ProdutoImagemListView(DashboardPermissionMixin, ListView):
     model = ProdutoImagem
@@ -369,7 +500,9 @@ class ProdutoImagemDeleteView(DashboardPermissionMixin, DeleteView):
         messages.success(self.request, "Imagem excluída com sucesso.")
         return super().delete(request, *args, **kwargs)
     
-
+# -------------------------
+# FORMAS DE PAGAMENTO
+# -------------------------
 class FormaPagamentoListView(DashboardPermissionMixin, ListView):
     model = FormaPagamento
     template_name = "dashboard/formas-pagamento/list.html"
@@ -421,42 +554,46 @@ class FormaPagamentoDeleteView(DashboardPermissionMixin, DeleteView):
 
         return redirect(self.success_url)
     
-
-class RegraParcelamentoValeListView(DashboardPermissionMixin, ListView):
+# -------------------------
+# REGRAS DE PARCELAMENTO DO VALE
+# -------------------------
+class RegraParcelamentoValeListView(DashboardBaseListView):
     model = RegraParcelamentoVale
-    template_name = "dashboard/regras-vale/list.html"
-    context_object_name = "regras"
-    paginate_by = 20
     ordering = ["minimo"]
+    page_title = "Regras de parcelamento"
+    page_subtitle = "Gerencie as regras de parcelamento do vale."
+    create_url_name = "dashboard_regra_vale_create"
+    empty_message = "Nenhuma regra cadastrada."
+    columns = [
+        {"label": "Mínimo", "field": "minimo"},
+        {"label": "Máximo", "field": "maximo"},
+        {"label": "Parcelas", "field": "parcelas"},
+    ]
 
 
-class RegraParcelamentoValeCreateView(DashboardPermissionMixin, CreateView):
+class RegraParcelamentoValeCreateView(DashboardBaseCreateView):
     model = RegraParcelamentoVale
     form_class = RegraParcelamentoValeForm
-    template_name = "dashboard/regras-vale/form.html"
     success_url = reverse_lazy("dashboard_regra_vale_list")
+    page_title_create = "Nova regra de parcelamento"
+    page_title_update = "Editar regra de parcelamento"
+    page_subtitle = "Preencha os dados da regra."
+    cancel_url_name = "dashboard_regra_vale_list"
+    success_message = "Regra de parcelamento cadastrada com sucesso."
 
-    def form_valid(self, form):
-        messages.success(self.request, "Regra de parcelamento cadastrada com sucesso.")
-        return super().form_valid(form)
 
-
-class RegraParcelamentoValeUpdateView(DashboardPermissionMixin, UpdateView):
+class RegraParcelamentoValeUpdateView(DashboardBaseUpdateView):
     model = RegraParcelamentoVale
     form_class = RegraParcelamentoValeForm
-    template_name = "dashboard/regras-vale/form.html"
     success_url = reverse_lazy("dashboard_regra_vale_list")
+    page_title_create = "Nova regra de parcelamento"
+    page_title_update = "Editar regra de parcelamento"
+    page_subtitle = "Preencha os dados da regra."
+    cancel_url_name = "dashboard_regra_vale_list"
+    success_message = "Regra de parcelamento atualizada com sucesso."
 
-    def form_valid(self, form):
-        messages.success(self.request, "Regra de parcelamento atualizada com sucesso.")
-        return super().form_valid(form)
 
-
-class RegraParcelamentoValeDeleteView(DashboardPermissionMixin, DeleteView):
+class RegraParcelamentoValeDeleteView(DashboardBaseDeleteView):
     model = RegraParcelamentoVale
-    template_name = "dashboard/confirm_delete.html"
     success_url = reverse_lazy("dashboard_regra_vale_list")
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Regra de parcelamento excluída com sucesso.")
-        return super().delete(request, *args, **kwargs)
+    success_message = "Regra de parcelamento excluída com sucesso."

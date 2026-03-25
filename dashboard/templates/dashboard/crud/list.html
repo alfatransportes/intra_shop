@@ -1,0 +1,187 @@
+{% extends "dashboard/base.html" %}
+{% load custom_tags %}
+{% block header %}
+    <style>
+        .dash-page-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-table-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .dash-table-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .dash-toolbar-info {
+            max-width: 720px;
+        }
+
+        .dash-toolbar-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .45rem .8rem;
+            border-radius: 999px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: .85rem;
+            font-weight: 600;
+        }
+
+        .dash-table {
+            --bs-table-bg: transparent;
+        }
+
+        .dash-table thead th {
+            font-size: .8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: #6c757d;
+            background: #f8f9fa;
+            border-bottom-width: 1px;
+            white-space: nowrap;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .dash-table tbody td {
+            vertical-align: middle;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            border-color: rgba(0, 0, 0, .06);
+        }
+
+        .dash-table tbody tr {
+            transition: background-color .2s ease;
+        }
+
+        .dash-table tbody tr:hover {
+            background: #fcfcfd;
+        }
+
+        .dash-cell-primary {
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .dash-actions {
+            min-width: 180px;
+        }
+
+        .dash-action-btn {
+            border-radius: 999px;
+            font-weight: 600;
+            padding-inline: .9rem;
+        }
+
+        .dash-empty-box {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .dash-empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            font-size: 1.5rem;
+        }
+
+        .dash-count {
+            font-size: .85rem;
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header {
+                padding: 1.1rem;
+            }
+
+            .dash-table-card .card-body {
+                padding: 1rem;
+            }
+
+            .dash-actions {
+                min-width: auto;
+            }
+        }
+    </style>
+    <div class="dash-page-header mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="dash-toolbar-info">
+                <div class="text-secondary small mb-1">Configuração administrativa</div>
+                <h1 class="h4 mb-1 fw-bold">{{ page_title }}</h1>
+                <div class="text-secondary small mb-2">{{ page_subtitle }}</div>
+                {% if items %}
+                    <div class="dash-toolbar-badge">
+                        <span>Registros</span>
+                        <strong>{{ items|length }}</strong>
+                    </div>
+                {% endif %}
+            </div>
+            <a href="{% url create_url_name %}"
+               class="btn btn-primary rounded-pill px-4">Novo</a>
+        </div>
+    </div>
+{% endblock header %}
+{% block content %}
+    <div class="card dash-table-card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table align-middle dash-table mb-0">
+                    <thead>
+                        <tr>
+                            {% for col in columns %}
+                                <th {% if forloop.last %}class="text-end"{% endif %}>{{ col.label }}</th>
+                            {% endfor %}
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                            <tr>
+                                {% for col in columns %}
+                                    <td {% if forloop.first %}class="dash-cell-primary"{% endif %}>{{ item|get_attr:col.field }}</td>
+                                {% endfor %}
+                                <td class="text-end">
+                                    <div class="d-flex flex-wrap justify-content-end gap-2 dash-actions">
+                                        <a href="{{ request.path }}{{ item.pk }}/editar/"
+                                           class="btn btn-sm btn-outline-primary dash-action-btn">Editar</a>
+                                        <a href="{{ request.path }}{{ item.pk }}/excluir/"
+                                           class="btn btn-sm btn-outline-danger dash-action-btn">Excluir</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="{{ columns|length|add:1 }}">
+                                    <div class="dash-empty-box">
+                                        <div class="dash-empty-icon">📂</div>
+                                        <div class="fw-semibold mb-1">Nenhum registro encontrado</div>
+                                        <div class="small">{{ empty_message }}</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

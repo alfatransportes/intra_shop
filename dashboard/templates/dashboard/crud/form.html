@@ -1,0 +1,149 @@
+{% extends "dashboard/base.html" %}
+{% load custom_tags %}
+{% block header %}
+    <style>
+        .dash-page-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-form-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .dash-form-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .dash-form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .dash-form-group {
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, .06);
+            border-radius: 1rem;
+            padding: 1rem;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .dash-form-group:hover {
+            border-color: rgba(13, 110, 253, .18);
+            box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .04);
+        }
+
+        .dash-form-label {
+            font-weight: 700;
+            margin-bottom: .55rem;
+            color: #212529;
+        }
+
+        .dash-form-card input,
+        .dash-form-card select,
+        .dash-form-card textarea {
+            border-radius: .85rem;
+            min-height: 46px;
+            box-shadow: none !important;
+        }
+
+        .dash-form-card textarea {
+            min-height: 120px;
+        }
+
+        .dash-form-help {
+            color: #6c757d;
+            font-size: .85rem;
+            margin-top: .45rem;
+        }
+
+        .dash-form-error {
+            color: #dc3545;
+            font-size: .85rem;
+            margin-top: .45rem;
+        }
+
+        .dash-form-actions {
+            padding-top: .5rem;
+        }
+
+        .dash-form-actions .btn {
+            border-radius: 999px;
+            padding-inline: 1.25rem;
+            font-weight: 600;
+        }
+
+        .dash-form-top-note {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .45rem .8rem;
+            border-radius: 999px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: .85rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .dash-form-grid.cols-2 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header {
+                padding: 1.1rem;
+            }
+
+            .dash-form-card .card-body {
+                padding: 1rem;
+            }
+
+            .dash-form-group {
+                padding: .9rem;
+            }
+        }
+    </style>
+    <div class="dash-page-header mb-4">
+        <div>
+            <div class="text-secondary small mb-1">Configuração administrativa</div>
+            <h1 class="h4 mb-1 fw-bold">{{ page_title }}</h1>
+            <div class="text-secondary small">{{ page_subtitle }}</div>
+        </div>
+    </div>
+{% endblock header %}
+{% block content %}
+    <div class="card dash-form-card">
+        <div class="card-body">
+            <div class="dash-form-top-note">
+                <span>Preencha os campos abaixo para continuar</span>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="dash-form-grid">
+                    {% for field in form %}
+                        <div class="dash-form-group">
+                            <label class="form-label dash-form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="dash-form-error">{{ field.errors }}</div>{% endif %}
+                            {% if field.help_text %}<div class="dash-form-help">{{ field.help_text }}</div>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-4 d-flex flex-wrap gap-2 dash-form-actions">
+                    <a href="{% url cancel_url_name %}" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

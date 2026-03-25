@@ -53,11 +53,28 @@ class NivelAvariaForm(BaseBootstrapForm):
         fields = ["nome"]
 
 
-class VendaStatusForm(BaseBootstrapForm):
+# class VendaStatusForm(BaseBootstrapForm):
+#     class Meta:
+#         model = Venda
+#         fields = ["status", "observacao", "comprovante_pix", "comprovante_vale"]
+
+
+class VendaStatusForm(forms.ModelForm):
+
     class Meta:
         model = Venda
         fields = ["status", "observacao", "comprovante_pix", "comprovante_vale"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        venda = self.instance
+
+        if venda.forma_pagamento.codigo == "PIX":
+            self.fields.pop("comprovante_vale", None)
+
+        if venda.forma_pagamento.codigo == "VALE":
+            self.fields.pop("comprovante_pix", None)
 
 class ProdutoImagemForm(BaseBootstrapForm):
     class Meta:
