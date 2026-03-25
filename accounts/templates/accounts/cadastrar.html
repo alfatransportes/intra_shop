@@ -70,6 +70,11 @@
                                 <div class="text-danger small ps-1">{{ form.whatsapp.errors }}</div>
                             </div>
                             <div>
+                                <label class="form-label" for="{{ form.unidade.id_for_label }}">Unidade</label>
+                                {{ form.unidade }}
+                                <div class="text-danger small ps-1">{{ form.unidade.errors }}</div>
+                            </div>
+                            <div>
                                 <div class="form-floating mb-1">
                                     {{ form.password1 }}
                                     <label for="{{ form.password1.id_for_label }}">Senha</label>

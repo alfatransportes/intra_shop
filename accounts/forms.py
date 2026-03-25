@@ -22,10 +22,19 @@ class StyledAuthenticationForm(AuthenticationForm):
             "autocomplete": "current-password",
         })
 
+
 class CadastroForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ("cpf", "email", "numero_cracha", "whatsapp", "password1", "password2")
+        fields = (
+            "cpf",
+            "email",
+            "numero_cracha",
+            "whatsapp",
+            "unidade",
+            "password1",
+            "password2",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,6 +58,10 @@ class CadastroForm(UserCreationForm):
         self.fields["whatsapp"].widget.attrs.update({
             "class": "form-control rounded-5",
             "placeholder": "WhatsApp",
+        })
+
+        self.fields["unidade"].widget.attrs.update({
+            "class": "form-select rounded-5",
         })
 
         self.fields["password1"].widget.attrs.update({
