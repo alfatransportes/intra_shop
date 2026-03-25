@@ -38,56 +38,6 @@
                             <span>Favoritos</span>
                         </a>
                     </li>
-                    {% comment %}
-                    {% if tipo_produtos %}
-                    <li class="nav-item dropdown position-static">
-                        <a class="nav-link dropdown-toggle" href="#" id="TiposProsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-card-list me-2"></i>Tipos de produtos
-                        </a>
-
-                        <div class="dropdown-menu mega w-100 p-4" aria-labelledby="TiposProsDropdown">
-                            <div class="mega-close d-lg-none">
-                                <button type="button" class="btn-close btn-close-mobile" aria-label="Fechar"></button>
-                            </div>
-
-                            <div class="container">
-                                <div class="row g-4">
-                                    <div class="col-lg-4">
-                                        <div class="card border-0 bg-transparent">
-                                            <div class="card-body px-0">
-                                                <h5 class="fw-bold">Alfa Transportes</h5>
-                                                <p class="text-muted mb-2">
-                                                    Logística eficiente com prazos ágeis e cobertura nacional.
-                                                </p>
-                                                <a href="#" class="fw-semibold text-decoration-none" style="color:var(--alfa-red)">Conheça a Alfa →</a>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {% for tipo in tipo_produtos %}
-                                        {% if forloop.first or forloop.counter0|divisibleby:6 %}
-                                            <div class="col-lg-2 mb-3">
-                                                <h6 class="fw-bold">Produtos</h6>
-                                                <ul class="list-unstyled mb-0">
-                                        {% endif %}
-
-                                        <li>
-                                            <a class="dropdown-item" href="{% url 'index' %}?tipo={{ tipo.id }}">
-                                                {{ tipo.nome }}
-                                            </a>
-                                        </li>
-
-                                        {% if forloop.counter|divisibleby:6 or forloop.last %}
-                                                </ul>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                    </li>
-                    {% endif %}
-                    {% endcomment %}
                 </ul>
                 <!-- Direita -->
                 <div class="d-flex align-items-center ms-lg-auto btn-area-mobile">
@@ -138,19 +88,19 @@
                                             {% endif %}
                                         </div>
                                     </div>
+                                    {% if request.user.is_staff %}
                                     <div class="col-lg-4">
                                         <h6 class="fw-bold mb-3">Acessos</h6>
                                         <ul class="list-unstyled mb-0">
-                                            {% if request.user.is_staff %}
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'painel_controle' %}">
-                                                        <i class="bi bi-cup-hot-fill me-2"></i>
-                                                        Painel de Controle
-                                                    </a>
-                                                </li>
-                                            {% endif %}
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'painel_controle' %}">
+                                                    <i class="bi bi-cup-hot-fill me-2"></i>
+                                                    Painel de Controle
+                                                </a>
+                                            </li>
                                         </ul>
                                     </div>
+                                    {% endif %}
                                     <div class="col-lg-4"></div>
                                 </div>
                             </div>

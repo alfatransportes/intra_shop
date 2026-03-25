@@ -1,6 +1,7 @@
-# accounts/forms.py
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import (AuthenticationForm, PasswordChangeForm,
+                                       PasswordResetForm, SetPasswordForm,
+                                       UserCreationForm)
 
 from .models import User
 
@@ -9,7 +10,6 @@ class StyledAuthenticationForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Float label precisa de placeholder e form-control
         self.fields["username"].widget.attrs.update({
             "class": "form-control rounded-5",
             "placeholder": "E-mail",
@@ -79,10 +79,9 @@ class CadastroForm(UserCreationForm):
     def clean_email(self):
         email = self.cleaned_data["email"].lower().strip()
         return email
-    
+
     def save(self, commit=True):
         user = super().save(commit=False)
-
         user.email = self.cleaned_data["email"].lower().strip()
         user.username = user.email
 
@@ -90,3 +89,57 @@ class CadastroForm(UserCreationForm):
             user.save()
 
         return user
+
+
+class StyledPasswordResetForm(PasswordResetForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["email"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Seu e-mail",
+            "autocomplete": "email",
+        })
+
+    def clean_email(self):
+        return self.cleaned_data["email"].lower().strip()
+
+
+class StyledSetPasswordForm(SetPasswordForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["new_password1"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Nova senha",
+            "autocomplete": "new-password",
+        })
+
+        self.fields["new_password2"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Confirmar nova senha",
+            "autocomplete": "new-password",
+        })
+
+
+class StyledPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["old_password"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Senha atual",
+            "autocomplete": "current-password",
+        })
+
+        self.fields["new_password1"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Nova senha",
+            "autocomplete": "new-password",
+        })
+
+        self.fields["new_password2"].widget.attrs.update({
+            "class": "form-control rounded-5",
+            "placeholder": "Confirmar nova senha",
+            "autocomplete": "new-password",
+        })
