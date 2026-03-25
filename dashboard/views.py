@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from django.contrib import messages
@@ -5,10 +6,15 @@ from django.core.exceptions import ValidationError
 from django.db.models import (Count, DecimalField, ExpressionWrapper, F, Sum,
                               Value)
 from django.db.models.functions import Coalesce
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views import View
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   TemplateView, UpdateView)
+from openpyxl import Workbook
+from openpyxl.styles import Font
 
 from website.models import (Carrinho, FormaPagamento, NivelAvaria, Produto,
                             ProdutoImagem, RegraParcelamentoVale, Tipo,
@@ -409,6 +415,7 @@ class NivelAvariaDeleteView(DashboardBaseDeleteView):
 # -------------------------
 # VENDAS
 # -------------------------
+
 class VendaListView(DashboardPermissionMixin, ListView):
     model = Venda
     template_name = "dashboard/vendas/list.html"
@@ -424,15 +431,43 @@ class VendaListView(DashboardPermissionMixin, ListView):
         )
 
         status = self.request.GET.get("status")
+        mes = self.request.GET.get("mes")
+        ano = self.request.GET.get("ano")
+
         if status:
             queryset = queryset.filter(status=status)
+
+        if mes:
+            queryset = queryset.filter(criado_em__month=mes)
+
+        if ano:
+            queryset = queryset.filter(criado_em__year=ano)
 
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        ano_atual = timezone.now().year
         context["status_atual"] = self.request.GET.get("status", "")
+        context["mes_atual"] = self.request.GET.get("mes", "")
+        context["ano_atual"] = self.request.GET.get("ano", "")
         context["status_choices"] = Venda._meta.get_field("status").choices
+        context["meses"] = [
+            (1, "Janeiro"),
+            (2, "Fevereiro"),
+            (3, "Março"),
+            (4, "Abril"),
+            (5, "Maio"),
+            (6, "Junho"),
+            (7, "Julho"),
+            (8, "Agosto"),
+            (9, "Setembro"),
+            (10, "Outubro"),
+            (11, "Novembro"),
+            (12, "Dezembro"),
+        ]
+        context["anos"] = range(ano_atual - 1, ano_atual + 1)
         return context
 
 
@@ -485,6 +520,115 @@ class VendaUpdateStatusView(DashboardPermissionMixin, UpdateView):
     def form_invalid(self, form):
         messages.error(self.request, "Não foi possível atualizar a venda. Verifique os campos abaixo.")
         return self.render_to_response(self.get_context_data(form=form))
+    
+
+class VendaExportXlsxView(DashboardPermissionMixin, View):
+    def get_queryset(self):
+        queryset = (
+            Venda.objects
+            .select_related("usuario", "forma_pagamento")
+            .prefetch_related("itens__produto")
+            .order_by("-criado_em")
+        )
+
+        status = self.request.GET.get("status")
+        mes = self.request.GET.get("mes")
+        ano = self.request.GET.get("ano")
+
+        if status:
+            queryset = queryset.filter(status=status)
+
+        if mes:
+            queryset = queryset.filter(criado_em__month=mes)
+
+        if ano:
+            queryset = queryset.filter(criado_em__year=ano)
+
+        return queryset
+
+    def get(self, request, *args, **kwargs):
+        vendas = self.get_queryset()
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Vendas"
+
+        headers = [
+            "ID Venda",
+            "Data",
+            "Comprador",
+            "CPF",
+            "E-mail",
+            "Forma de Pagamento",
+            "Parcelas",
+            "Status",
+            "Valor Total",
+            "Observação",
+            "Itens",
+        ]
+
+        ws.append(headers)
+
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+
+        for venda in vendas:
+            usuario = venda.usuario
+
+            # Ajuste aqui conforme o nome real do campo no seu model de usuário
+            cpf = getattr(usuario, "cpf", "") or getattr(usuario, "username", "")
+
+            itens_str = ", ".join([
+                f"{item.produto.nome} (qtd: {item.quantidade}, unit: R$ {item.preco_unitario}, subtotal: R$ {item.subtotal})"
+                for item in venda.itens.all()
+            ])
+
+            ws.append([
+                venda.id,
+                venda.criado_em.strftime("%d/%m/%Y %H:%M"),
+                str(usuario),
+                cpf,
+                getattr(usuario, "email", ""),
+                str(venda.forma_pagamento),
+                venda.parcelas,
+                venda.get_status_display(),
+                float(venda.total or Decimal("0.00")),
+                venda.observacao or "",
+                itens_str,
+            ])
+
+        # Largura das colunas
+        widths = {
+            "A": 12,
+            "B": 20,
+            "C": 30,
+            "D": 20,
+            "E": 30,
+            "F": 20,
+            "G": 12,
+            "H": 15,
+            "I": 15,
+            "J": 40,
+            "K": 80,
+        }
+        for col, width in widths.items():
+            ws.column_dimensions[col].width = width
+
+        # Formata coluna de valor
+        for row in range(2, ws.max_row + 1):
+            ws[f"I{row}"].number_format = 'R$ #,##0.00'
+
+        mes = request.GET.get("mes") or "todos"
+        ano = request.GET.get("ano") or "todos"
+        filename = f"vendas_{mes}_{ano}.xlsx"
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
 
 # -------------------------
 # IMAGENS DE PRODUTOS
