@@ -1009,11 +1009,6 @@ text {
         z-index: 1030;
     }
 
-    #mainNav .navbar-brand img {
-        max-height: 52px;
-        width: auto;
-    }
-
     #mainNav .navbar-toggler {
         font-size: 1.7rem;
         box-shadow: none !important;
