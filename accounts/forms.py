@@ -83,8 +83,8 @@ class CadastroForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
 
-        # usa o CPF como username
-        user.username = self.cleaned_data["cpf"]
+        user.email = self.cleaned_data["email"].lower().strip()
+        user.username = user.email
 
         if commit:
             user.save()
