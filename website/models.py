@@ -100,7 +100,6 @@ class NivelAvaria(models.Model):
 
 
 class Produto(models.Model):
-    numero_bo = models.IntegerField(null=True, blank=True, verbose_name="Número do BO")
     unidade_prod = models.ForeignKey(
         Unidade,
         on_delete=models.PROTECT,
@@ -539,6 +538,7 @@ class Venda(models.Model):
         blank=True,
         null=True
     )
+    minuta = models.CharField(null=True, blank=True, verbose_name="Minuta de envio")
 
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

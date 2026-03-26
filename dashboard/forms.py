@@ -47,7 +47,7 @@ class VendaStatusForm(forms.ModelForm):
 
     class Meta:
         model = Venda
-        fields = ["status", "comprovante_pix", "comprovante_vale", "observacao",]
+        fields = ["status", "comprovante_pix", "comprovante_vale", "minuta", "observacao",]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -144,7 +144,6 @@ class ProdutoForm(BaseBootstrapForm):
     class Meta:
         model = Produto
         fields = [
-            "numero_bo",
             "unidade_prod",
             "tipo_prod",
             "nivel_ava_prod",

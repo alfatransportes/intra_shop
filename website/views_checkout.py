@@ -4,9 +4,11 @@ from decimal import Decimal
 from io import BytesIO
 
 import qrcode
+import requests
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from website.utils import inserir_ou_atualizar_valor
@@ -14,6 +16,7 @@ from website.utils import inserir_ou_atualizar_valor
 from .forms import CheckoutForm, ComprovantePixForm
 from .models import FormaPagamento, Produto, Venda, VendaItem
 from .services.carrinho import get_carrinho_aberto
+from .services.rastreamento import consultar_minuta
 
 
 def _calcular_total_carrinho(carrinho) -> Decimal:
@@ -203,6 +206,34 @@ def venda_detalhe(request, pk):
         usuario=request.user,
     )
     return render(request, "website/venda_detalhe.html", {"venda": venda})
+
+@login_required
+def rastrear_encomenda_json(request, pk):
+    venda = get_object_or_404(
+        Venda.objects.select_related("usuario"),
+        pk=pk,
+        usuario=request.user,
+    )
+
+    if not venda.minuta:
+        return JsonResponse(
+            {"ok": False, "erro": "Esta venda ainda não possui minuta de envio."},
+            status=400
+        )
+
+    try:
+        dados = consultar_minuta(venda.minuta)
+        return JsonResponse({"ok": True, "dados": dados})
+    except requests.RequestException:
+        return JsonResponse(
+            {"ok": False, "erro": "Não foi possível consultar o rastreamento no momento."},
+            status=502
+        )
+    except Exception:
+        return JsonResponse(
+            {"ok": False, "erro": "Ocorreu um erro inesperado ao consultar a minuta."},
+            status=500
+        )
 
 
 @login_required
