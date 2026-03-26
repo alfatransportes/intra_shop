@@ -49,7 +49,6 @@ class CadastroForm(UserCreationForm):
         self.fields["email"].widget.attrs.update({
             "class": "form-control rounded-5",
             "placeholder": "E-mail",
-            "autocomplete": "email",
         })
 
         self.fields["numero_cracha"].widget.attrs.update({
