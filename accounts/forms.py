@@ -1,9 +1,11 @@
+import requests
 from django import forms
 from django.contrib.auth.forms import (AuthenticationForm, PasswordChangeForm,
                                        PasswordResetForm, SetPasswordForm,
                                        UserCreationForm)
 
 from .models import User
+from .utils import consultar_usuario_liberado
 
 
 class StyledAuthenticationForm(AuthenticationForm):
@@ -78,7 +80,35 @@ class CadastroForm(UserCreationForm):
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower().strip()
+
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Já existe um usuário cadastrado com este e-mail.")
+
         return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        email = cleaned_data.get("email")
+        cpf = cleaned_data.get("cpf")
+
+        if not email or not cpf:
+            return cleaned_data
+
+        try:
+            usuario_liberado = consultar_usuario_liberado(email, cpf)
+
+            if not usuario_liberado:
+                raise forms.ValidationError(
+                    "Seu CPF e e-mail não possuem liberação para cadastro."
+                )
+
+        except requests.RequestException:
+            raise forms.ValidationError(
+                "Não foi possível validar sua liberação no momento."
+            )
+
+        return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
