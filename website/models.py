@@ -39,6 +39,10 @@ class ConfigWebsite(models.Model):
         upload_to="imagensConfiguracaoWebsite/",
         verbose_name="Favicon",
     )
+    image_auth = models.FileField(
+        upload_to="imagensConfiguracaoWebsite/",
+        verbose_name="Imagem de Autenticação",blank=True, null=True
+    )
     active = models.BooleanField(default=False)
 
     class Meta:
