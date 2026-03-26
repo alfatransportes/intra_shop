@@ -47,6 +47,7 @@ urlpatterns = [
         views_checkout.venda_detalhe,
         name="venda_detalhe",
     ),
+    path("pedido/<int:pk>/rastrear-json/", views_checkout.rastrear_encomenda_json, name="rastrear_encomenda_json"),
 
 
     # -------------------------
