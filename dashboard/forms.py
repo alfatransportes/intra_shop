@@ -42,12 +42,11 @@ class NivelAvariaForm(BaseBootstrapForm):
 #         model = Venda
 #         fields = ["status", "observacao", "comprovante_pix", "comprovante_vale"]
 
-
 class VendaStatusForm(forms.ModelForm):
 
     class Meta:
         model = Venda
-        fields = ["status", "comprovante_pix", "comprovante_vale", "minuta", "observacao",]
+        fields = ["status", "comprovante_pix", "comprovante_vale", "minuta", "observacao"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -64,6 +63,7 @@ class VendaStatusForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         status = cleaned_data.get("status")
+        minuta = (cleaned_data.get("minuta") or "").strip()
         venda = self.instance
         forma = venda.forma_pagamento if venda else None
 
@@ -74,10 +74,22 @@ class VendaStatusForm(forms.ModelForm):
         comprovante_vale = cleaned_data.get("comprovante_vale") or venda.comprovante_vale
 
         if forma.codigo == "PIX" and status == Venda.Status.APROVADA and not comprovante_pix:
-            self.add_error("comprovante_pix", "Para aprovar uma venda Pix, o comprador deve anexar o comprovante primeiro.")
+            self.add_error(
+                "comprovante_pix",
+                "Para aprovar uma venda Pix, o comprador deve anexar o comprovante primeiro."
+            )
 
         if forma.codigo == "VALE" and status == Venda.Status.APROVADA and not comprovante_vale:
-            self.add_error("comprovante_vale", "Para aprovar uma venda em vale, anexe o comprovante primeiro.")
+            self.add_error(
+                "comprovante_vale",
+                "Para aprovar uma venda em vale, anexe o comprovante primeiro."
+            )
+
+        if minuta and status != Venda.Status.APROVADA:
+            self.add_error(
+                "minuta",
+                "A minuta só pode ser informada quando a venda estiver com status Aprovada."
+            )
 
         return cleaned_data
 
