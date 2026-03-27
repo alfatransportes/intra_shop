@@ -172,6 +172,13 @@ class ProdutoImagemForm(BaseBootstrapForm):
     class Meta:
         model = ProdutoImagem
         fields = ["imagem", "legenda", "ordem", "principal"]
+        widgets = {
+            "imagem": forms.ClearableFileInput(attrs={
+                "accept": "image/*",
+                "capture": "environment",
+                "class": "form-control",
+            })
+        }
 
     def clean(self):
         cleaned_data = super().clean()
