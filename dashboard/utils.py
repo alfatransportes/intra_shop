@@ -30,7 +30,7 @@ def enviar_email_status_venda_cliente(venda):
         "meus_pedidos_url": f"{site_url}/compras/",
     }
 
-    if venda.status == venda.Status.APROVADA:
+    if venda.status in [venda.Status.APROVADA, venda.Status.CONCLUIDA]:
         subject = render_to_string(
             "dashboard/emails/venda_aprovada_subject.txt",
             context,

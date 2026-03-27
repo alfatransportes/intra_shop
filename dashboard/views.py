@@ -522,7 +522,7 @@ class VendaUpdateStatusView(DashboardPermissionMixin, UpdateView):
 
         if (
             status_anterior != novo_status
-            and novo_status in [Venda.Status.APROVADA, Venda.Status.CANCELADA]
+            and novo_status in [Venda.Status.APROVADA, Venda.Status.CANCELADA, Venda.Status.CONCLUIDA]
         ):
             transaction.on_commit(
                 lambda: enviar_email_status_venda_cliente(self.object)

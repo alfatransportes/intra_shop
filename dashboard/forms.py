@@ -85,10 +85,10 @@ class VendaStatusForm(forms.ModelForm):
                 "Para aprovar uma venda em vale, anexe o comprovante primeiro."
             )
 
-        if minuta and status != Venda.Status.APROVADA:
+        if minuta and status not in [Venda.Status.APROVADA, Venda.Status.CONCLUIDA]:
             self.add_error(
                 "minuta",
-                "A minuta só pode ser informada quando a venda estiver com status Aprovada."
+                "A minuta só pode ser informada quando a venda estiver com status Aprovada ou Concluída."
             )
 
         return cleaned_data

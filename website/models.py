@@ -507,6 +507,7 @@ class Venda(models.Model):
     class Status(models.TextChoices):
         PENDENTE = "PENDENTE", "Pendente"
         APROVADA = "APROVADA", "Aprovada"
+        CONCLUIDA = "CONCLUIDA", "Concluída"
         CANCELADA = "CANCELADA", "Cancelada"
 
     usuario = models.ForeignKey(

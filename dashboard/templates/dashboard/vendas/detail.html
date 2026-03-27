@@ -65,14 +65,19 @@
             line-height: 1;
         }
 
+        .status-concluida {
+            background: rgba(25, 135, 84, .12);
+            color: #146c43;
+        }
+
         .status-pendente {
             background: rgba(255, 193, 7, .16);
             color: #8a6400;
         }
 
         .status-aprovada {
-            background: rgba(25, 135, 84, .12);
-            color: #146c43;
+            background: rgba(13, 110, 253, .45);
+            color: #039be5;
         }
 
         .status-cancelada {
@@ -222,6 +227,8 @@
                                     <span class="status-chip status-pendente">{{ venda.get_status_display }}</span>
                                 {% elif venda.status == "APROVADA" %}
                                     <span class="status-chip status-aprovada">{{ venda.get_status_display }}</span>
+                                {% elif venda.status == "CONCLUIDA" %}
+                                    <span class="status-chip status-concluida">{{ venda.get_status_display }}</span>
                                 {% elif venda.status == "CANCELADA" %}
                                     <span class="status-chip status-cancelada">{{ venda.get_status_display }}</span>
                                 {% else %}
@@ -412,7 +419,7 @@
             if (!statusField || !minutaField || !minutaWrapper) return;
         
             function toggleMinutaField() {
-                if (statusField.value === "APROVADA") {
+                if (statusField.value === "APROVADA" || statusField.value === "CONCLUIDA") {
                     minutaWrapper.classList.remove("d-none");
                     minutaField.removeAttribute("disabled");
                 } else {
