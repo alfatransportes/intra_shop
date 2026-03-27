@@ -17,6 +17,7 @@ from .forms import CheckoutForm, ComprovantePixForm
 from .models import FormaPagamento, Produto, Venda, VendaItem
 from .services.carrinho import get_carrinho_aberto
 from .services.rastreamento import consultar_minuta
+from .utils import enviar_email_staff_nova_compra
 
 
 def _calcular_total_carrinho(carrinho) -> Decimal:
@@ -91,12 +92,10 @@ def checkout(request):
             if forma.codigo == FormaPagamento.Codigo.VALE:
                 parcelas = int(form.cleaned_data.get("parcelas") or 1)
 
-            # trava produtos
             produto_ids = list(carrinho.itens.values_list("produto_id", flat=True))
             produtos_travados = Produto.objects.select_for_update().filter(id__in=produto_ids)
             mapa_produtos = {p.id: p for p in produtos_travados}
 
-            # valida estoque e limite por usuário
             for item in carrinho.itens.all():
                 produto_travado = mapa_produtos.get(item.produto_id)
 
@@ -127,7 +126,6 @@ def checkout(request):
 
             total = Decimal("0.00")
 
-            # cria itens + baixa estoque
             for item in carrinho.itens.all():
                 produto_travado = mapa_produtos[item.produto_id]
 
@@ -146,10 +144,13 @@ def checkout(request):
             venda.total = total.quantize(Decimal("0.01"))
             venda.save(update_fields=["total", "parcelas"])
 
-            # fecha carrinho
             carrinho.status = "FECHADO"
             carrinho.save(update_fields=["status"])
             carrinho.itens.all().delete()
+
+            # envia email só se NÃO for PIX
+            if forma.codigo != FormaPagamento.Codigo.PIX:
+                transaction.on_commit(lambda: enviar_email_staff_nova_compra(venda))
 
             if forma.codigo == FormaPagamento.Codigo.PIX:
                 messages.info(request, "Agora faça o pagamento via Pix e envie o comprovante.")
@@ -285,7 +286,7 @@ def pix_pagar(request, pk):
 @transaction.atomic
 def enviar_comprovante_pix(request, pk):
     venda = get_object_or_404(
-        Venda.objects.select_related("forma_pagamento"),
+        Venda.objects.select_related("forma_pagamento", "usuario"),
         pk=pk,
         usuario=request.user,
     )
@@ -300,6 +301,11 @@ def enviar_comprovante_pix(request, pk):
         if form.is_valid():
             venda.comprovante_pix = form.cleaned_data["comprovante_pix"]
             venda.save(update_fields=["comprovante_pix"])
+
+            transaction.on_commit(
+                lambda: enviar_email_staff_nova_compra(venda, comprovante_enviado=True)
+            )
+
             messages.success(request, "Comprovante enviado! Aguarde a confirmação do administrador.")
             return redirect("minhas_compras")
     else:

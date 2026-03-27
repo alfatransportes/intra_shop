@@ -1,0 +1,1 @@
+Nova compra realizada - Pedido #{{ venda.pk }}

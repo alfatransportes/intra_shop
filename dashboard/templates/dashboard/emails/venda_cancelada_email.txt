@@ -1,0 +1,14 @@
+Olá, {{ cliente }}.
+
+Informamos que seu pedido #{{ venda.pk }} foi cancelado.
+
+Forma de pagamento: {{ venda.forma_pagamento }}
+Total: R$ {{ venda.total }}
+Status: {{ venda.get_status_display }}
+
+{% if venda.observacao %}
+Observação: {{ venda.observacao }}
+{% endif %}
+
+Acesse o site:
+{{ site_url }}

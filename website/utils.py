@@ -1,6 +1,82 @@
+import logging
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.db.models import Prefetch
+from django.template.loader import render_to_string
 
 from website.models import ConfigWebsite, Produto, ProdutoImagem, Tipo
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+
+def enviar_email_staff_nova_compra(venda, comprovante_enviado=False):
+    emails_staff = list(
+        User.objects.filter(is_staff=True, is_active=True)
+        .exclude(email="")
+        .values_list("email", flat=True)
+        .distinct()
+    )
+
+    if not emails_staff:
+        return
+
+    cliente = (
+        venda.usuario.get_full_name()
+        or venda.usuario.username
+        or venda.usuario.email
+        or "Cliente"
+    )
+
+    context = {
+        "venda": venda,
+        "usuario": venda.usuario,
+        "cliente": cliente,
+        "site_url": getattr(settings, "SITE_URL", "http://127.0.0.1:8000").rstrip("/"),
+        "site_name": "Intra Shop",
+        "comprovante_enviado": comprovante_enviado,
+    }
+
+    if comprovante_enviado:
+        subject = render_to_string(
+            "website/emails/pix_comprovante_subject.txt",
+            context,
+        ).strip()
+        body_text = render_to_string(
+            "website/emails/pix_comprovante_email.txt",
+            context,
+        )
+        body_html = render_to_string(
+            "website/emails/pix_comprovante_email.html",
+            context,
+        )
+    else:
+        subject = render_to_string(
+            "website/emails/nova_compra_subject.txt",
+            context,
+        ).strip()
+        body_text = render_to_string(
+            "website/emails/nova_compra_email.txt",
+            context,
+        )
+        body_html = render_to_string(
+            "website/emails/nova_compra_email.html",
+            context,
+        )
+
+    try:
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=body_text,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=emails_staff,
+        )
+        email.attach_alternative(body_html, "text/html")
+        email.send()
+    except Exception:
+        logger.exception("Falha ao enviar e-mail da venda %s", venda.pk)
 
 
 def get_config_website():

@@ -1,0 +1,1 @@
+Sua compra foi aprovada - Pedido #{{ venda.pk }}

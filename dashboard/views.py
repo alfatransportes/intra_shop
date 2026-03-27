@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import (Count, DecimalField, ExpressionWrapper, F, Sum,
                               Value)
 from django.db.models.functions import Coalesce
@@ -24,6 +25,7 @@ from .forms import (FormaPagamentoForm, NivelAvariaForm, ProdutoForm,
                     ProdutoImagemForm, RegraParcelamentoValeForm, TipoForm,
                     UnidadeForm, VendaStatusForm)
 from .mixins import DashboardPermissionMixin
+from .utils import enviar_email_status_venda_cliente
 
 
 class PainelControleView(DashboardPermissionMixin, TemplateView):
@@ -513,7 +515,19 @@ class VendaUpdateStatusView(DashboardPermissionMixin, UpdateView):
         return reverse_lazy("dashboard_venda_detail", kwargs={"pk": self.object.pk})
 
     def form_valid(self, form):
+        status_anterior = Venda.objects.get(pk=form.instance.pk).status
+
         self.object = form.save()
+        novo_status = self.object.status
+
+        if (
+            status_anterior != novo_status
+            and novo_status in [Venda.Status.APROVADA, Venda.Status.CANCELADA]
+        ):
+            transaction.on_commit(
+                lambda: enviar_email_status_venda_cliente(self.object)
+            )
+
         messages.success(self.request, "Status da venda atualizado com sucesso.")
         return redirect(self.get_success_url())
 

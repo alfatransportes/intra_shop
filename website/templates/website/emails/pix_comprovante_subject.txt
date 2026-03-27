@@ -1,0 +1,1 @@
+Comprovante PIX enviado - Pedido #{{ venda.pk }}

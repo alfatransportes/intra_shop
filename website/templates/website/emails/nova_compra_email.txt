@@ -1,0 +1,10 @@
+Uma nova compra foi realizada.
+
+Pedido: #{{ venda.pk }}
+Cliente: {{ cliente }}
+E-mail: {{ usuario.email }}
+Forma de pagamento: {{ venda.forma_pagamento }}
+Total: R$ {{ venda.total }}
+
+Acesse o painel:
+{{ site_url }}

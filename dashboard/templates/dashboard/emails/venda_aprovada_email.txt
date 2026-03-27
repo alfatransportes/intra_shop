@@ -1,0 +1,14 @@
+Olá, {{ cliente }}.
+
+Seu pedido #{{ venda.pk }} foi aprovado com sucesso.
+
+Forma de pagamento: {{ venda.forma_pagamento }}
+Total: R$ {{ venda.total }}
+Status: {{ venda.get_status_display }}
+
+{% if venda.minuta %}
+Minuta de envio: {{ venda.minuta }}
+{% endif %}
+
+Acompanhe seus pedidos:
+{{ meus_pedidos_url }}
