@@ -30,11 +30,14 @@ def enviar_email_staff_nova_compra(venda, comprovante_enviado=False):
         or "Cliente"
     )
 
+    site_url = getattr(settings, "SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+
     context = {
         "venda": venda,
         "usuario": venda.usuario,
         "cliente": cliente,
-        "site_url": getattr(settings, "SITE_URL", "http://127.0.0.1:8000").rstrip("/"),
+        "site_url": site_url,
+        "dashboard_venda_url": f"{site_url}/painel-controle/vendas/{venda.pk}/",
         "site_name": "Intra Shop",
         "comprovante_enviado": comprovante_enviado,
     }

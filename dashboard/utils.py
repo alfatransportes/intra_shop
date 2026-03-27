@@ -27,7 +27,7 @@ def enviar_email_status_venda_cliente(venda):
         "cliente": cliente,
         "site_url": site_url,
         "site_name": "Intra Shop",
-        "meus_pedidos_url": f"{site_url}/minhas_compras/",
+        "meus_pedidos_url": f"{site_url}/compras/",
     }
 
     if venda.status == venda.Status.APROVADA:
