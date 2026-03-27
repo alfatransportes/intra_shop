@@ -213,6 +213,11 @@ html {
 .carousel-btn:hover{ filter: brightness(.98); }
 .carousel-btn:active{ transform: translateY(-50%) scale(.98); }
 
+.btn {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+}
 
 .btn-primario {
   background: var(--alfa-red);
