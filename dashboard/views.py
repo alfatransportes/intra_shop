@@ -789,7 +789,7 @@ class RegraParcelamentoValeListView(DashboardBaseListView):
     columns = [
         {"label": "Mínimo", "field": "minimo"},
         {"label": "Máximo", "field": "maximo"},
-        {"label": "Parcelas", "field": "parcelas"},
+        {"label": "Parcelas", "field": "max_parcelas"},
     ]
 
 
