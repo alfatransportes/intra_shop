@@ -12,7 +12,7 @@ from .views import (FormaPagamentoCreateView, FormaPagamentoDeleteView,
                     TipoDeleteView, TipoListView, TipoUpdateView,
                     UnidadeCreateView, UnidadeDeleteView, UnidadeListView,
                     UnidadeUpdateView, VendaDetailView, VendaExportXlsxView,
-                    VendaListView, VendaUpdateStatusView)
+                    VendaListView, VendaUpdateStatusView, produto_qrcode_pdf)
 
 urlpatterns = [
     path("painel-controle/", PainelControleView.as_view(), name="painel_controle"),
@@ -21,6 +21,13 @@ urlpatterns = [
     path("painel-controle/produtos/novo/", ProdutoManageView.as_view(), name="dashboard_produto_create"),
     path("painel-controle/produtos/<int:pk>/editar/", ProdutoManageView.as_view(), name="dashboard_produto_update"),
     path("painel-controle/produtos/<int:pk>/excluir/", ProdutoDeleteView.as_view(), name="dashboard_produto_delete"),
+
+
+    path(
+        "dashboard/produtos/<int:pk>/qrcode/pdf/",
+        produto_qrcode_pdf,
+        name="dashboard_produto_qrcode_pdf",
+    ),
 
     path("painel-controle/tipos/", TipoListView.as_view(), name="dashboard_tipo_list"),
     path("painel-controle/tipos/novo/", TipoCreateView.as_view(), name="dashboard_tipo_create"),

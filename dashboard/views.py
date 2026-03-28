@@ -1,6 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
+from io import BytesIO
+from urllib.parse import quote
 
+import qrcode
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -8,14 +11,18 @@ from django.db.models import (Count, DecimalField, ExpressionWrapper, F, Sum,
                               Value)
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
-from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   TemplateView, UpdateView)
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfgen import canvas
 
 from website.models import (Carrinho, FormaPagamento, NivelAvaria, Produto,
                             ProdutoImagem, RegraParcelamentoVale, Tipo,
@@ -283,6 +290,116 @@ class ProdutoDeleteView(DashboardPermissionMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, "Produto excluído com sucesso.")
         return super().delete(request, *args, **kwargs)
+
+
+def produto_qrcode_pdf(request, pk):
+    produto = get_object_or_404(Produto, pk=pk)
+
+    url_detalhe = request.build_absolute_uri(
+        reverse("detalhe_produto", args=[produto.pk])
+    )
+
+    # Gera o QRCode em memória
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(url_detalhe)
+    qr.make(fit=True)
+
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    qr_buffer = BytesIO()
+    qr_img.save(qr_buffer, format="PNG")
+    qr_buffer.seek(0)
+
+    # PDF em memória
+    pdf_buffer = BytesIO()
+
+    # Tamanho da etiqueta / página
+    page_width = 80 * mm
+    page_height = 100 * mm
+
+    c = canvas.Canvas(pdf_buffer, pagesize=(page_width, page_height))
+
+    margem = 8 * mm
+    y_top = page_height - margem
+
+    # Título / nome do produto
+    nome = produto.nome or "Produto"
+    fonte_nome = "Helvetica-Bold"
+    tamanho_nome = 11
+
+    max_text_width = page_width - (2 * margem)
+
+    # quebra simples em até 2 linhas
+    palavras = nome.split()
+    linhas = []
+    linha_atual = ""
+
+    for palavra in palavras:
+        teste = f"{linha_atual} {palavra}".strip()
+        if stringWidth(teste, fonte_nome, tamanho_nome) <= max_text_width:
+            linha_atual = teste
+        else:
+            if linha_atual:
+                linhas.append(linha_atual)
+            linha_atual = palavra
+
+    if linha_atual:
+        linhas.append(linha_atual)
+
+    linhas = linhas[:2]
+    if len(linhas) == 2 and len(palavras) > 0:
+        # se sobrou conteúdo, corta discretamente
+        while stringWidth(linhas[-1] + "...", fonte_nome, tamanho_nome) > max_text_width and len(linhas[-1]) > 1:
+            linhas[-1] = linhas[-1][:-1]
+        if len(" ".join(palavras)) > len(" ".join(linhas)):
+            linhas[-1] += "..."
+
+    c.setFont(fonte_nome, tamanho_nome)
+    y = y_top
+
+    for linha in linhas:
+        text_width = stringWidth(linha, fonte_nome, tamanho_nome)
+        x = (page_width - text_width) / 2
+        c.drawString(x, y, linha)
+        y -= 5.5 * mm
+
+    y -= 2 * mm
+
+    # QR centralizado
+    qr_size = 48 * mm
+    qr_x = (page_width - qr_size) / 2
+    qr_y = y - qr_size
+
+    c.drawImage(
+        ImageReader(qr_buffer),
+        qr_x,
+        qr_y,
+        width=qr_size,
+        height=qr_size,
+        preserveAspectRatio=True,
+        mask='auto',
+    )
+
+    # legenda pequena
+    legenda = "Escaneie para ver detalhes"
+    c.setFont("Helvetica", 8)
+    legenda_width = stringWidth(legenda, "Helvetica", 8)
+    c.drawString((page_width - legenda_width) / 2, qr_y - 6 * mm, legenda)
+
+    c.showPage()
+    c.save()
+
+    pdf_buffer.seek(0)
+
+    filename = f"qrcode-produto-{produto.pk}.pdf"
+    safe_filename = quote(filename)
+
+    response = HttpResponse(pdf_buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{safe_filename}"'
+    return response
 
 
 # -------------------------
