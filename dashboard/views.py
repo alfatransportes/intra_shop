@@ -15,6 +15,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   TemplateView, UpdateView)
 from openpyxl import Workbook
@@ -291,7 +292,7 @@ class ProdutoDeleteView(DashboardPermissionMixin, DeleteView):
         messages.success(self.request, "Produto excluído com sucesso.")
         return super().delete(request, *args, **kwargs)
 
-
+@xframe_options_exempt
 def produto_qrcode_pdf(request, pk):
     produto = get_object_or_404(Produto, pk=pk)
 
@@ -321,7 +322,7 @@ def produto_qrcode_pdf(request, pk):
     page_height = 100 * mm
 
     c = canvas.Canvas(pdf_buffer, pagesize=(page_width, page_height))
-
+    c.setTitle(f"QR Code - {produto.nome}")
     margem = 8 * mm
     y_top = page_height - margem
 
