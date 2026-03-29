@@ -2,7 +2,6 @@
 {% block header %}
     <style>
         .dash-page-header {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border-radius: 1.25rem;
             padding: 1.5rem;
             box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
@@ -14,7 +13,6 @@
             border-radius: 1rem;
             box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
             overflow: hidden;
-            background: #fff;
         }
 
         .dash-filter-card .card-body,
@@ -28,7 +26,6 @@
             text-transform: uppercase;
             letter-spacing: .04em;
             color: #6c757d;
-            background: #f8f9fa;
             border-bottom-width: 1px;
             white-space: nowrap;
             padding-top: 1rem;
@@ -133,53 +130,47 @@
                     <label class="form-label fw-semibold">Status</label>
                     <select name="status" class="form-select">
                         <option value="">Todos os status</option>
-                        <option value="PENDENTE" {% if status_atual == "PENDENTE" %}selected{% endif %}>Pendente</option>
-                        <option value="APROVADA" {% if status_atual == "APROVADA" %}selected{% endif %}>Aprovada</option>
-                        <option value="CANCELADA" {% if status_atual == "CANCELADA" %}selected{% endif %}>Cancelada</option>
+                        <option value="PENDENTE"
+                                {% if status_atual == "PENDENTE" %}selected{% endif %}>Pendente</option>
+                        <option value="APROVADA"
+                                {% if status_atual == "APROVADA" %}selected{% endif %}>Aprovada</option>
+                        <option value="CANCELADA"
+                                {% if status_atual == "CANCELADA" %}selected{% endif %}>Cancelada</option>
                     </select>
                 </div>
-            
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Mês</label>
                     <select name="mes" class="form-select">
                         <option value="">Todos os meses</option>
                         {% for numero, nome in meses %}
-                            <option value="{{ numero }}" {% if mes_atual == numero|stringformat:"s" %}selected{% endif %}>
+                            <option value="{{ numero }}"
+                                    {% if mes_atual == numero|stringformat:"s" %}selected{% endif %}>
                                 {{ nome }}
                             </option>
                         {% endfor %}
                     </select>
                 </div>
-            
                 <div class="col-md-2">
                     <label class="form-label fw-semibold">Ano</label>
                     <select name="ano" class="form-select">
                         <option value="">Todos os anos</option>
                         {% for ano in anos %}
-                            <option value="{{ ano }}" {% if ano_atual == ano|stringformat:"s" %}selected{% endif %}>
-                                {{ ano }}
-                            </option>
+                            <option value="{{ ano }}"
+                                    {% if ano_atual == ano|stringformat:"s" %}selected{% endif %}>{{ ano }}</option>
                         {% endfor %}
                     </select>
                 </div>
-            
                 <div class="col-md-2">
                     <button class="btn btn-outline-primary w-100">Filtrar</button>
                 </div>
-            
                 <div class="col-md-2">
-                    <a
-                        href="{% url 'dashboard_venda_export_xlsx' %}?status={{ status_atual }}&mes={{ mes_atual }}&ano={{ ano_atual }}"
-                        class="btn btn-success w-100">
-                        Baixar Excel
-                    </a>
+                    <a href="{% url 'dashboard_venda_export_xlsx' %}?status={{ status_atual }}&mes={{ mes_atual }}&ano={{ ano_atual }}"
+                       class="btn btn-success w-100">Baixar Excel</a>
                 </div>
-            
                 {% if status_atual or mes_atual or ano_atual %}
                     <div class="col-md-2">
-                        <a href="{% url 'dashboard_venda_list' %}" class="btn btn-outline-secondary w-100">
-                            Limpar
-                        </a>
+                        <a href="{% url 'dashboard_venda_list' %}"
+                           class="btn btn-outline-secondary w-100">Limpar</a>
                     </div>
                 {% endif %}
             </form>
