@@ -292,6 +292,7 @@ class ProdutoDeleteView(DashboardPermissionMixin, DeleteView):
         messages.success(self.request, "Produto excluído com sucesso.")
         return super().delete(request, *args, **kwargs)
 
+
 @xframe_options_exempt
 def produto_qrcode_pdf(request, pk):
     produto = get_object_or_404(Produto, pk=pk)

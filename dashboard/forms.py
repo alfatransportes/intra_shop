@@ -1,4 +1,5 @@
 from django import forms
+from django.forms import inlineformset_factory
 
 from website.models import (FormaPagamento, NivelAvaria, Produto,
                             ProdutoImagem, RegraParcelamentoVale, Tipo,
@@ -128,11 +129,6 @@ class RegraParcelamentoValeForm(BaseBootstrapForm):
 
         from django import forms
 
-from django.forms import inlineformset_factory
-
-from website.models import Produto, ProdutoImagem
-
-
 class BaseBootstrapForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -165,6 +161,7 @@ class ProdutoForm(BaseBootstrapForm):
             "valor_nota",
             "porcen_desconto",
             "descricao",
+            "ativo",
         ]
 
 

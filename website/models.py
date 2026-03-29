@@ -160,6 +160,8 @@ class Produto(models.Model):
     )
     descricao = models.TextField(verbose_name="Descrição do produto")
 
+    ativo = models.BooleanField(default=False, verbose_name="Ativo para venda")
+
     class Meta:
         ordering = ["nome"]
 

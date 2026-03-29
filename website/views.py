@@ -44,7 +44,7 @@ def index(request):
             ),
             estoque_calc=F("quantidade") - F("reservado"),
         )
-        .filter(estoque_calc__gt=0)
+        .filter(estoque_calc__gt=0, ativo=True)
     )
 
     # busca

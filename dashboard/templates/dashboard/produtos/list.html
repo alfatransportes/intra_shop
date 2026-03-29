@@ -193,6 +193,7 @@
                         <tr>
                             <th>Imagem</th>
                             <th>Nome</th>
+                            <th>Status</th>
                             <th>Tipo</th>
                             <th>Unidade</th>
                             <th>Qtd</th>
@@ -217,6 +218,13 @@
                                 </td>
                                 <td>
                                     <div class="dash-name">{{ produto.nome }}</div>
+                                </td>
+                                <td>
+                                    {% if produto.ativo %}
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    {% else %}
+                                        <i class="bi bi-x-circle-fill text-danger"></i>
+                                    {% endif %}
                                 </td>
                                 <td>{{ produto.tipo_prod.nome }}</td>
                                 <td>{{ produto.unidade_prod.nome }}</td>
