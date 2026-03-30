@@ -179,14 +179,7 @@ class ProdutoForm(BaseBootstrapForm):
         cleaned_data = super().clean()
         ativo = cleaned_data.get("ativo")
 
-        if ativo and not self.instance.pk:
-            self.add_error(
-                "ativo",
-                "Para ativar o produto, salve primeiro e adicione ao menos uma imagem."
-            )
-            return cleaned_data
-
-        if ativo and self.instance.pk and not self.instance.imagens.exists():
+        if ativo and (not self.instance.pk or not self.instance.imagens.exists()):
             self.add_error(
                 "ativo",
                 "Para ativar o produto, adicione ao menos uma imagem."

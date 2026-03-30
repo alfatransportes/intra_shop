@@ -44,12 +44,35 @@
             margin-bottom: .5rem;
         }
 
-        .dash-section-card input,
+        .dash-section-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
         .dash-section-card select,
         .dash-section-card textarea {
             border-radius: .85rem;
             min-height: 46px;
             box-shadow: none !important;
+        }
+
+        .dash-section-card .form-check-input {
+            min-height: auto !important;
+            height: 1.1rem !important;
+            width: 1.1rem !important;
+            margin-top: 0;
+            border-radius: .25rem !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .dash-section-card .form-check {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            min-height: 46px;
+        }
+
+        .dash-section-card .form-check-label {
+            margin-bottom: 0;
+            font-weight: 600;
         }
 
         .dash-section-card textarea {
@@ -161,44 +184,50 @@
                             {% for field in form %}
                                 <div class="col-md-6 {% if field.name == 'descricao' %}col-12{% endif %}">
                                     <div class="dash-field-block">
-                                        <label class="form-label dash-form-label" for="{{ field.id_for_label }}">
-                                            {{ field.label }}
-                                        </label>
-
+                        
                                         {% if field.name == "ativo" %}
                                             {% if object and object.imagens.exists %}
                                                 <div class="form-check">
                                                     {{ field }}
                                                     <label class="form-check-label" for="{{ field.id_for_label }}">
-                                                        {{ field.label }}
+                                                        Ativo para venda
                                                     </label>
                                                 </div>
                                             {% else %}
-                                                <input type="hidden" name="{{ field.html_name }}" value="False">
                                                 <div class="form-check">
                                                     <input type="checkbox"
-                                                        class="form-check-input"
-                                                        id="{{ field.id_for_label }}"
-                                                        disabled>
+                                                           class="form-check-input"
+                                                           id="{{ field.id_for_label }}"
+                                                           disabled>
                                                     <label class="form-check-label text-muted" for="{{ field.id_for_label }}">
-                                                        {{ field.label }}
+                                                        Ativo para venda
                                                     </label>
                                                 </div>
                                                 <div class="dash-help-text">
                                                     O produto só pode ser ativado depois de ter pelo menos uma imagem cadastrada.
                                                 </div>
                                             {% endif %}
+                        
+                                            {% if field.errors %}
+                                                <div class="dash-error-text">{{ field.errors }}</div>
+                                            {% endif %}
+                        
                                         {% else %}
+                                            <label class="form-label dash-form-label" for="{{ field.id_for_label }}">
+                                                {{ field.label }}
+                                            </label>
+                        
                                             {{ field }}
+                        
+                                            {% if field.errors %}
+                                                <div class="dash-error-text">{{ field.errors }}</div>
+                                            {% endif %}
+                        
+                                            {% if field.help_text %}
+                                                <div class="dash-help-text">{{ field.help_text }}</div>
+                                            {% endif %}
                                         {% endif %}
-
-                                        {% if field.errors %}
-                                            <div class="dash-error-text">{{ field.errors }}</div>
-                                        {% endif %}
-
-                                        {% if field.help_text and field.name != "ativo" %}
-                                            <div class="dash-help-text">{{ field.help_text }}</div>
-                                        {% endif %}
+                        
                                     </div>
                                 </div>
                             {% endfor %}
@@ -210,23 +239,24 @@
             <div class="col-12 col-xl-5">
                 <div class="card dash-section-card h-100">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3 dash-images-toolbar">
-                            <div>
-                                <h2 class="dash-section-title mb-1">Imagens do produto</h2>
-                                <div class="text-secondary small">Adicione, organize e marque a imagem principal.</div>
-                            </div>
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-primary"
-                                    id="add-image-form">
-                                + Adicionar imagem
-                            </button>
-                        </div>
+                        
 
                         {% if not object %}
                             <div class="alert alert-info border-0 rounded-4 mb-0 dash-note-box">
                                 Salve o produto para começar a gerenciar imagens.
                             </div>
                         {% else %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 dash-images-toolbar">
+                                <div>
+                                    <h2 class="dash-section-title mb-1">Imagens do produto</h2>
+                                    <div class="text-secondary small">Adicione, organize e marque a imagem principal.</div>
+                                </div>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        id="add-image-form">
+                                    + Adicionar imagem
+                                </button>
+                            </div>
                             {{ formset.management_form }}
 
                             {% if formset.non_form_errors %}
