@@ -129,21 +129,32 @@ class RegraParcelamentoValeForm(BaseBootstrapForm):
 
         from django import forms
 
+
 class BaseBootstrapForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         for field in self.fields.values():
             widget = field.widget
+
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = "form-check-input"
-            elif isinstance(widget, forms.FileInput):
-                widget.attrs["class"] = "form-control"
+
             elif isinstance(widget, forms.Select):
                 widget.attrs["class"] = "form-select"
+
             elif isinstance(widget, forms.Textarea):
                 widget.attrs["class"] = "form-control"
                 widget.attrs.setdefault("rows", 4)
+
+            elif isinstance(widget, forms.FileInput):
+                existing_class = widget.attrs.get("class", "")
+                widget.attrs["class"] = f"{existing_class} form-control".strip()
+
+                # No mobile, deixe o template decidir entre câmera e galeria
+                widget.attrs.setdefault("accept", "image/*")
+                widget.attrs.pop("capture", None)
+
             else:
                 widget.attrs["class"] = "form-control"
 
@@ -172,18 +183,24 @@ class ProdutoImagemForm(BaseBootstrapForm):
         widgets = {
             "imagem": forms.ClearableFileInput(attrs={
                 "accept": "image/*",
-                "capture": "environment",
                 "class": "form-control",
-            })
+            }),
         }
 
     def clean(self):
         cleaned_data = super().clean()
+
         principal = cleaned_data.get("principal")
         imagem = cleaned_data.get("imagem")
 
-        if principal and not imagem and not self.instance.pk:
-            raise forms.ValidationError("Selecione uma imagem antes de marcar como principal.")
+        # Em edição, se já existir imagem salva, não deve exigir novo upload
+        imagem_existente = bool(self.instance and self.instance.pk and self.instance.imagem)
+
+        if principal and not imagem and not imagem_existente:
+            self.add_error(
+                "imagem",
+                "Selecione uma imagem antes de marcar como principal."
+            )
 
         return cleaned_data
 
