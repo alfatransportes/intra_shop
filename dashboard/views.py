@@ -283,14 +283,30 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
         return redirect("dashboard_produto_update", pk=self.object.pk)
 
 
-class ProdutoDeleteView(DashboardPermissionMixin, DeleteView):
+class ProdutoDeleteView(DeleteView):
     model = Produto
     template_name = "dashboard/confirm_delete.html"
     success_url = reverse_lazy("dashboard_produto_list")
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Produto excluído com sucesso.")
-        return super().delete(request, *args, **kwargs)
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        possui_venda = self.object.itens_venda.exists()
+        possui_carrinho = self.object.itens_carrinho.exists()
+
+        if possui_venda or possui_carrinho:
+            self.object.ativo = False
+            self.object.save(update_fields=["ativo"])
+            messages.warning(
+                request,
+                "O produto já está vinculado a registros e não pode ser excluído. "
+                "Ele foi apenas desativado."
+            )
+        else:
+            self.object.delete()
+            messages.success(request, "Produto excluído com sucesso.")
+
+        return redirect(self.success_url)
 
 
 @xframe_options_exempt
