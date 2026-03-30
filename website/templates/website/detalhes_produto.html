@@ -133,6 +133,20 @@
             top: 96px;
         }
 
+        .galeria-dot {
+            appearance: none;
+            cursor: pointer;
+        }
+        
+        .galeria-dot.active {
+            background: #0d6efd !important;
+            border-color: #0d6efd !important;
+        }
+        
+        .produto-thumb-btn.border-primary {
+            border-width: 2px !important;
+        }
+
         @media (max-width: 991.98px) {
             .produto-sticky {
                 position: static;
@@ -189,45 +203,74 @@
                                 {% with total=imgs|length %}
                                     <div class="position-relative">
                                         {% if total > 1 %}
-                                            <div class="position-absolute top-0 start-0 m-2" style="z-index: 2;">
-                                                <span class="badge text-bg-light border produto-badge-pill">1/{{ total }}</span>
+                                            <div class="position-absolute top-0 start-0 m-2" style="z-index: 3;">
+                                                <span id="galeriaContador" class="badge text-bg-light border produto-badge-pill">
+                                                    1/{{ total }}
+                                                </span>
                                             </div>
                                         {% endif %}
+                
+                                        {% if total > 1 %}
+                                            <button type="button"
+                                                    class="btn btn-light border position-absolute top-50 start-0 translate-middle-y ms-2 d-flex align-items-center justify-content-center"
+                                                    style="z-index: 3; width: 42px; height: 42px; border-radius: 999px;"
+                                                    onclick="mudarImagem(-1)"
+                                                    aria-label="Imagem anterior">
+                                                ‹
+                                            </button>
+                
+                                            <button type="button"
+                                                    class="btn btn-light border position-absolute top-50 end-0 translate-middle-y me-2 d-flex align-items-center justify-content-center"
+                                                    style="z-index: 3; width: 42px; height: 42px; border-radius: 999px;"
+                                                    onclick="mudarImagem(1)"
+                                                    aria-label="Próxima imagem">
+                                                ›
+                                            </button>
+                                        {% endif %}
+                
                                         <div class="ratio ratio-4x3 produto-galeria-principal rounded-4 overflow-hidden border">
-                                            {% with img_principal=imgs|first %}
-                                                {% if img_principal and img_principal.imagem %}
-                                                    <img id="imgPrincipal"
-                                                         src="{{ img_principal.imagem.url }}"
-                                                         alt="{{ produto.nome }}">
-                                                {% else %}
-                                                    <img id="imgPrincipal"
-                                                         src="{% static 'img/sem-imagem.png' %}"
-                                                         alt="Sem imagem">
-                                                {% endif %}
-                                            {% endwith %}
+                                            {% if total > 0 %}
+                                                {% for img in imgs %}
+                                                    {% if img.imagem %}
+                                                        <img class="produto-galeria-img {% if not forloop.first %}d-none{% endif %}"
+                                                             src="{{ img.imagem.url }}"
+                                                             alt="{{ produto.nome }} - imagem {{ forloop.counter }}"
+                                                             data-index="{{ forloop.counter0 }}">
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <img class="produto-galeria-img"
+                                                     src="{% static 'img/sem-imagem.png' %}"
+                                                     alt="Sem imagem"
+                                                     data-index="0">
+                                            {% endif %}
                                         </div>
                                     </div>
+                
                                     {% if total > 1 %}
-                                        <div class="d-flex justify-content-center gap-2 mt-3 d-lg-none">
-                                            {% for _ in imgs %}
-                                                <span class="rounded-circle border"
-                                                      style="width:8px;
-                                                             height:8px;
-                                                             display:inline-block;
-                                                             {% if forloop.first %}background:#0d6efd;
-                                                             border-color:#0d6efd;
-                                                             {% endif %}"></span>
+                                        <div class="d-flex justify-content-center gap-2 mt-3 d-lg-none" id="galeriaDots">
+                                            {% for img in imgs %}
+                                                {% if img.imagem %}
+                                                    <button type="button"
+                                                            class="border rounded-circle p-0 galeria-dot {% if forloop.first %}active{% endif %}"
+                                                            style="width:10px; height:10px; background:{% if forloop.first %}#0d6efd{% else %}transparent{% endif %}; border-color:{% if forloop.first %}#0d6efd{% else %}#ced4da{% endif %};"
+                                                            onclick="irParaImagem({{ forloop.counter0 }})"
+                                                            aria-label="Ir para imagem {{ forloop.counter }}">
+                                                    </button>
+                                                {% endif %}
                                             {% endfor %}
                                         </div>
                                     {% endif %}
-                                    {% if produto.imagens.exists %}
-                                        <div class="d-none d-lg-flex gap-2 mt-3 flex-wrap">
-                                            {% for img in produto.imagens.all %}
+                
+                                    {% if total > 1 %}
+                                        <div class="d-none d-lg-flex gap-2 mt-3 flex-wrap" id="galeriaThumbs">
+                                            {% for img in imgs %}
                                                 {% if img.imagem %}
                                                     <button type="button"
-                                                            class="btn p-0 border bg-white produto-thumb-btn"
-                                                            onclick="trocarImagem('{{ img.imagem.url }}')"
-                                                            aria-label="Ver imagem {{ forloop.counter }}">
+                                                            class="btn p-0 border bg-white produto-thumb-btn {% if forloop.first %}border-primary{% endif %}"
+                                                            onclick="irParaImagem({{ forloop.counter0 }})"
+                                                            aria-label="Ver imagem {{ forloop.counter }}"
+                                                            data-thumb-index="{{ forloop.counter0 }}">
                                                         <img src="{{ img.imagem.url }}" alt="Imagem {{ forloop.counter }}">
                                                     </button>
                                                 {% endif %}
@@ -465,11 +508,97 @@
         </div>
     </main>
     <script>
-      function trocarImagem(url) {
-        const el = document.getElementById("imgPrincipal");
-        if (!el) return;
-        el.src = url;
-      }
+        let imagemAtual = 0;
+    
+        function getGaleriaImagens() {
+            return Array.from(document.querySelectorAll(".produto-galeria-img"));
+        }
+    
+        function getGaleriaThumbs() {
+            return Array.from(document.querySelectorAll("[data-thumb-index]"));
+        }
+    
+        function getGaleriaDots() {
+            return Array.from(document.querySelectorAll(".galeria-dot"));
+        }
+    
+        function atualizarGaleria(index) {
+            const imagens = getGaleriaImagens();
+            const thumbs = getGaleriaThumbs();
+            const dots = getGaleriaDots();
+            const contador = document.getElementById("galeriaContador");
+    
+            if (!imagens.length) return;
+    
+            if (index < 0) {
+                index = imagens.length - 1;
+            }
+    
+            if (index >= imagens.length) {
+                index = 0;
+            }
+    
+            imagemAtual = index;
+    
+            imagens.forEach((img, i) => {
+                img.classList.toggle("d-none", i !== imagemAtual);
+            });
+    
+            thumbs.forEach((thumb, i) => {
+                thumb.classList.toggle("border-primary", i === imagemAtual);
+            });
+    
+            dots.forEach((dot, i) => {
+                if (i === imagemAtual) {
+                    dot.classList.add("active");
+                    dot.style.background = "#0d6efd";
+                    dot.style.borderColor = "#0d6efd";
+                } else {
+                    dot.classList.remove("active");
+                    dot.style.background = "transparent";
+                    dot.style.borderColor = "#ced4da";
+                }
+            });
+    
+            if (contador) {
+                contador.textContent = `${imagemAtual + 1}/${imagens.length}`;
+            }
+        }
+    
+        function irParaImagem(index) {
+            atualizarGaleria(index);
+        }
+    
+        function mudarImagem(direcao) {
+            atualizarGaleria(imagemAtual + direcao);
+        }
+    
+        document.addEventListener("DOMContentLoaded", function () {
+            atualizarGaleria(0);
+    
+            const galeriaPrincipal = document.querySelector(".produto-galeria-principal");
+            if (!galeriaPrincipal) return;
+    
+            let touchStartX = 0;
+            let touchEndX = 0;
+    
+            galeriaPrincipal.addEventListener("touchstart", function (e) {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+    
+            galeriaPrincipal.addEventListener("touchend", function (e) {
+                touchEndX = e.changedTouches[0].screenX;
+                const diff = touchEndX - touchStartX;
+    
+                if (Math.abs(diff) < 40) return;
+    
+                if (diff < 0) {
+                    mudarImagem(1);
+                } else {
+                    mudarImagem(-1);
+                }
+            }, { passive: true });
+        });
     </script>
     <script>
         document.getElementById("btnCompartilhar").addEventListener("click", function() {
