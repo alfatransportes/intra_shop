@@ -52,7 +52,7 @@ class PainelControleView(DashboardPermissionMixin, TemplateView):
         context["vendas_pendentes"] = vendas_pendentes_qs.count()
         context["vendas_aprovadas"] = vendas_aprovadas_qs.count()
         context["vendas_canceladas"] = vendas_canceladas_qs.count()
-        context["carrinhos_abertos"] = Carrinho.objects.filter(status=Carrinho.Status.ABERTO).count()
+        context["carrinhos_fechados"] = Carrinho.objects.filter(status=Carrinho.Status.FECHADO).count()
 
         context["valor_total_geral"] = (
             pedidos.aggregate(total=Sum("total"))["total"] or Decimal("0.00")
