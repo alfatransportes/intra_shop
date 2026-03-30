@@ -331,6 +331,7 @@
                             const input = document.getElementById(inputId);
                             if (!input) return;
 
+                            input.value = "";
                             input.setAttribute("capture", "environment");
                             input.click();
                         });
@@ -345,6 +346,7 @@
                             const input = document.getElementById(inputId);
                             if (!input) return;
 
+                            input.value = "";
                             input.removeAttribute("capture");
                             input.click();
                         });

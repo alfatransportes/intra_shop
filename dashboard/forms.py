@@ -210,6 +210,6 @@ ProdutoImagemFormSet = inlineformset_factory(
     ProdutoImagem,
     form=ProdutoImagemForm,
     fields=["imagem", "legenda", "ordem", "principal"],
-    extra=1,
+    extra=0,
     can_delete=True,
 )
