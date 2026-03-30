@@ -384,6 +384,7 @@ class Carrinho(models.Model):
                     output_field=DecimalField(max_digits=12, decimal_places=2),
                 ),
                 Decimal("0.00"),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
             )
         )
         return (agg["total"] or Decimal("0.00")).quantize(Decimal("0.01"))

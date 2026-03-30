@@ -1,6 +1,8 @@
 # website/admin.py
+from decimal import Decimal
+
 from django.contrib import admin
-from django.db.models import F, Sum
+from django.db.models import DecimalField, F, Sum
 from django.db.models.functions import Coalesce
 
 from .models import (Carrinho, CarrinhoItem, ConfigWebsite, FormaPagamento,
@@ -105,10 +107,20 @@ class CarrinhoAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        # agrega total de itens e valor para evitar N+1 no admin
+
         return qs.annotate(
-            _total_itens=Coalesce(Sum("itens__quantidade"), 0),
-            _total_valor=Coalesce(Sum(F("itens__quantidade") * F("itens__preco_unitario")), 0),
+            _total_itens=Coalesce(
+                Sum("itens__quantidade"),
+                0
+            ),
+            _total_valor=Coalesce(
+                Sum(
+                    F("itens__quantidade") * F("itens__preco_unitario"),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                ),
+                Decimal("0.00"),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
         )
 
     @admin.display(description="Itens")
