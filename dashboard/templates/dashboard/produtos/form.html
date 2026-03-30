@@ -164,11 +164,24 @@
                                         <label class="form-label dash-form-label" for="{{ field.id_for_label }}">
                                             {{ field.label }}
                                         </label>
-                                        {{ field }}
+
+                                        {% if field.name == "ativo" and not object %}
+                                            <input type="checkbox"
+                                                class="form-check-input"
+                                                id="{{ field.id_for_label }}"
+                                                disabled>
+                                            <div class="dash-help-text">
+                                                O produto só pode ser ativado depois de salvo e com pelo menos uma imagem.
+                                            </div>
+                                        {% else %}
+                                            {{ field }}
+                                        {% endif %}
+
                                         {% if field.errors %}
                                             <div class="dash-error-text">{{ field.errors }}</div>
                                         {% endif %}
-                                        {% if field.help_text %}
+
+                                        {% if field.help_text and not field.name == "ativo" %}
                                             <div class="dash-help-text">{{ field.help_text }}</div>
                                         {% endif %}
                                     </div>

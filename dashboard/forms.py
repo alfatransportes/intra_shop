@@ -175,6 +175,25 @@ class ProdutoForm(BaseBootstrapForm):
             "ativo",
         ]
 
+    def clean(self):
+        cleaned_data = super().clean()
+        ativo = cleaned_data.get("ativo")
+
+        if ativo and not self.instance.pk:
+            self.add_error(
+                "ativo",
+                "Para ativar o produto, salve primeiro e adicione ao menos uma imagem."
+            )
+            return cleaned_data
+
+        if ativo and self.instance.pk and not self.instance.imagens.exists():
+            self.add_error(
+                "ativo",
+                "Para ativar o produto, adicione ao menos uma imagem."
+            )
+
+        return cleaned_data
+
 
 class ProdutoImagemForm(BaseBootstrapForm):
     class Meta:

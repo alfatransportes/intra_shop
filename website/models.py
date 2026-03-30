@@ -174,7 +174,13 @@ class Produto(models.Model):
             Decimal("0.01"),
             rounding=ROUND_HALF_UP,
         )
+
         super().save(*args, **kwargs)
+
+        # Se estiver ativo mas sem imagens, desativa automaticamente
+        if self.ativo and not self.imagens.exists():
+            self.ativo = False
+            super().save(update_fields=["ativo"])
 
     @property
     def estoque_disponivel(self) -> int:
