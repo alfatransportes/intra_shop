@@ -26,6 +26,7 @@
                             <span>Início</span>
                         </a>
                     </li>
+                    {% if request.user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'minhas_compras' %}">
                             <i class="bi bi-basket2-fill"></i>
@@ -38,6 +39,7 @@
                             <span>Favoritos</span>
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
                 <!-- Direita -->
                 <div class="d-flex align-items-center ms-lg-auto btn-area-mobile">
