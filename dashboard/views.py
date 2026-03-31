@@ -30,8 +30,9 @@ from website.models import (Carrinho, FormaPagamento, NivelAvaria, Produto,
                             Unidade, Venda, VendaItem)
 
 from .forms import (FormaPagamentoForm, NivelAvariaForm, ProdutoForm,
-                    ProdutoImagemForm, RegraParcelamentoValeForm, TipoForm,
-                    UnidadeForm, VendaStatusForm)
+                    ProdutoImagemForm, ProdutoImagemFormSet,
+                    RegraParcelamentoValeForm, TipoForm, UnidadeForm,
+                    VendaStatusForm)
 from .mixins import DashboardPermissionMixin
 from .utils import enviar_email_status_venda_cliente
 
@@ -162,17 +163,6 @@ class DashboardBaseDeleteView(DashboardPermissionMixin, DeleteView):
 # -------------------------
 # PRODUTOS
 # -------------------------
-from django.contrib import messages
-from django.db import transaction
-from django.shortcuts import redirect
-from django.urls import reverse_lazy
-from django.views.generic import DeleteView, ListView, TemplateView
-
-from website.models import Produto, Tipo
-
-from .forms import ProdutoForm, ProdutoImagemFormSet
-from .mixins import DashboardPermissionMixin
-
 
 class ProdutoListView(DashboardPermissionMixin, ListView):
     model = Produto
@@ -221,66 +211,103 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
         return ProdutoForm(data=data, files=files, instance=self.object)
 
     def get_formset(self, data=None, files=None):
-        return ProdutoImagemFormSet(data=data, files=files, instance=self.object, prefix="imagens")
+        if not self.object:
+            return ProdutoImagemFormSet(prefix="imagens")
+        return ProdutoImagemFormSet(
+            data=data,
+            files=files,
+            instance=self.object,
+            prefix="imagens",
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["object"] = self.object
         context["form"] = kwargs.get("form") or self.get_form()
         context["formset"] = kwargs.get("formset") or self.get_formset()
+        context["open_images_modal"] = kwargs.get("open_images_modal", False)
         return context
 
     def get(self, request, *args, **kwargs):
         return self.render_to_response(self.get_context_data())
 
     def post(self, request, *args, **kwargs):
-        form = self.get_form(data=request.POST, files=request.FILES)
+        form_type = request.POST.get("form_type", "produto")
 
-        # cadastro
+        # Cadastro novo: só salva dados do produto
         if not self.object:
+            form = self.get_form(data=request.POST, files=request.FILES)
+
             if form.is_valid():
                 self.object = form.save()
-                messages.success(self.request, "Produto cadastrado com sucesso.")
+                messages.success(request, "Produto cadastrado com sucesso.")
                 return redirect("dashboard_produto_update", pk=self.object.pk)
 
-            return self.render_to_response(self.get_context_data(form=form, formset=self.get_formset()))
+            return self.render_to_response(
+                self.get_context_data(form=form, formset=self.get_formset())
+            )
 
-        # edição
-        formset = self.get_formset(data=request.POST, files=request.FILES)
+        # Edição: submit separado por tipo
+        if form_type == "imagens":
+            return self.handle_images_form(request)
 
-        if form.is_valid() and formset.is_valid():
-            return self.forms_valid(form, formset)
+        return self.handle_product_form(request)
 
-        return self.render_to_response(self.get_context_data(form=form, formset=formset))
+    def handle_product_form(self, request):
+        form = self.get_form(data=request.POST, files=request.FILES)
+        formset = self.get_formset()
 
-    def forms_valid(self, form, formset):
-        with transaction.atomic():
+        if form.is_valid():
             self.object = form.save()
 
-            formset.instance = self.object
-            imagens = formset.save()
+            # Segurança extra: se ficou sem imagens, não deixa ativo
+            if self.object.ativo and not self.object.imagens.exists():
+                self.object.ativo = False
+                self.object.save(update_fields=["ativo"])
 
-            principais = [
-                f for f in formset.forms
-                if not f.cleaned_data.get("DELETE", False) and f.cleaned_data.get("principal")
-            ]
+            messages.success(request, "Dados do produto salvos com sucesso.")
+            return redirect("dashboard_produto_update", pk=self.object.pk)
 
-            if len(principais) > 1:
-                form.add_error(None, "Apenas uma imagem pode ser marcada como principal.")
-                return self.render_to_response(self.get_context_data(form=form, formset=formset))
+        messages.error(request, "Corrija os erros no formulário do produto.")
+        return self.render_to_response(
+            self.get_context_data(form=form, formset=formset)
+        )
 
-            if len(principais) == 1:
-                imagem_principal = principais[0].instance
-                self.object.imagens.exclude(pk=imagem_principal.pk).update(principal=False)
-            else:
-                self.object.imagens.update(principal=False)
+    def handle_images_form(self, request):
+        form = self.get_form()
+        formset = self.get_formset(data=request.POST, files=request.FILES)
 
-        if self.object.pk and self.kwargs.get("pk"):
-            messages.success(self.request, "Produto atualizado com sucesso.")
-        else:
-            messages.success(self.request, "Produto cadastrado com sucesso.")
+        if formset.is_valid():
+            with transaction.atomic():
+                formset.save()
 
-        return redirect("dashboard_produto_update", pk=self.object.pk)
+                principais = [
+                    f for f in formset.forms
+                    if getattr(f, "cleaned_data", None)
+                    and not f.cleaned_data.get("DELETE", False)
+                    and f.cleaned_data.get("principal")
+                ]
+
+                if len(principais) == 1:
+                    imagem_principal = principais[0].instance
+                    self.object.imagens.exclude(pk=imagem_principal.pk).update(principal=False)
+
+                # Se não houver nenhuma imagem restante, força produto inativo
+                if not self.object.imagens.exists() and self.object.ativo:
+                    self.object.ativo = False
+                    self.object.save(update_fields=["ativo"])
+
+            messages.success(request, "Imagens salvas com sucesso.")
+            return redirect("dashboard_produto_update", pk=self.object.pk)
+
+        messages.error(request, "Corrija os erros no formulário de imagens.")
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                formset=formset,
+                open_images_modal=True,
+            )
+        )
 
 
 class ProdutoDeleteView(DeleteView):

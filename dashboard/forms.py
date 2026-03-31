@@ -129,6 +129,11 @@ class RegraParcelamentoValeForm(BaseBootstrapForm):
 
         from django import forms
 
+from django import forms
+from django.forms import inlineformset_factory
+
+from website.models import Produto, ProdutoImagem
+
 
 class BaseBootstrapForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -150,8 +155,6 @@ class BaseBootstrapForm(forms.ModelForm):
             elif isinstance(widget, forms.FileInput):
                 existing_class = widget.attrs.get("class", "")
                 widget.attrs["class"] = f"{existing_class} form-control".strip()
-
-                # No mobile, deixe o template decidir entre câmera e galeria
                 widget.attrs.setdefault("accept", "image/*")
                 widget.attrs.pop("capture", None)
 
@@ -179,7 +182,16 @@ class ProdutoForm(BaseBootstrapForm):
         cleaned_data = super().clean()
         ativo = cleaned_data.get("ativo")
 
-        if ativo and (not self.instance.pk or not self.instance.imagens.exists()):
+        # Novo produto ainda não tem imagem
+        if ativo and not self.instance.pk:
+            self.add_error(
+                "ativo",
+                "Para ativar o produto, salve primeiro e adicione ao menos uma imagem."
+            )
+            return cleaned_data
+
+        # Produto existente precisa ter imagem para ativar
+        if ativo and self.instance.pk and not self.instance.imagens.exists():
             self.add_error(
                 "ativo",
                 "Para ativar o produto, adicione ao menos uma imagem."
@@ -204,9 +216,12 @@ class ProdutoImagemForm(BaseBootstrapForm):
 
         principal = cleaned_data.get("principal")
         imagem = cleaned_data.get("imagem")
+        deletar = cleaned_data.get("DELETE")
 
-        # Em edição, se já existir imagem salva, não deve exigir novo upload
         imagem_existente = bool(self.instance and self.instance.pk and self.instance.imagem)
+
+        if deletar:
+            return cleaned_data
 
         if principal and not imagem and not imagem_existente:
             self.add_error(
@@ -217,10 +232,44 @@ class ProdutoImagemForm(BaseBootstrapForm):
         return cleaned_data
 
 
+class BaseProdutoImagemFormSet(forms.BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+
+        if any(self.errors):
+            return
+
+        principais = 0
+        imagens_validas = 0
+
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+
+            if form.cleaned_data.get("DELETE"):
+                continue
+
+            imagem = form.cleaned_data.get("imagem")
+            imagem_existente = bool(form.instance and form.instance.pk and form.instance.imagem)
+
+            if imagem or imagem_existente:
+                imagens_validas += 1
+
+            if form.cleaned_data.get("principal"):
+                principais += 1
+
+        if principais > 1:
+            raise forms.ValidationError("Marque apenas uma imagem como principal.")
+
+        if imagens_validas > 0 and principais == 0:
+            raise forms.ValidationError("Selecione uma imagem principal.")
+
+
 ProdutoImagemFormSet = inlineformset_factory(
     Produto,
     ProdutoImagem,
     form=ProdutoImagemForm,
+    formset=BaseProdutoImagemFormSet,
     fields=["imagem", "legenda", "ordem", "principal"],
     extra=0,
     can_delete=True,

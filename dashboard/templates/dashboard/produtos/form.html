@@ -1,5 +1,4 @@
 {% extends "dashboard/base.html" %}
-
 {% block header %}
     <style>
         .dash-page-header {
@@ -52,6 +51,10 @@
             box-shadow: none !important;
         }
 
+        .dash-section-card textarea {
+            min-height: 120px;
+        }
+
         .dash-section-card .form-check-input {
             min-height: auto !important;
             height: 1.1rem !important;
@@ -73,10 +76,6 @@
         .dash-section-card .form-check-label {
             margin-bottom: 0;
             font-weight: 600;
-        }
-
-        .dash-section-card textarea {
-            min-height: 120px;
         }
 
         .dash-help-text {
@@ -147,8 +146,48 @@
                 padding: .9rem;
             }
         }
-    </style>
+		.file-name {
+			word-break: break-word;
+		}
 
+		#produtoImagensModal .modal-dialog {
+			max-width: 1100px;
+		}
+
+		#produtoImagensModal .modal-content {
+			max-height: 90vh;
+			overflow: hidden;
+		}
+
+		#produtoImagensModal .modal-body {
+			max-height: calc(90vh - 140px);
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		@media (max-width: 767.98px) {
+			.dash-page-header {
+				padding: 1.1rem;
+			}
+
+			.dash-section-card .card-body {
+				padding: 1rem;
+			}
+
+			.dash-field-block,
+			.dash-image-item {
+				padding: .9rem;
+			}
+
+			#produtoImagensModal .modal-content {
+				max-height: 95vh;
+			}
+
+			#produtoImagensModal .modal-body {
+				max-height: calc(95vh - 130px);
+			}
+		}
+    </style>
     <div class="dash-page-header mb-4">
         <div>
             <div class="text-secondary small mb-1">Catálogo administrativo</div>
@@ -159,39 +198,31 @@
                     Novo produto
                 {% endif %}
             </h1>
-            <div class="text-secondary small">Cadastre os dados do produto e gerencie as imagens na mesma tela.</div>
+            <div class="text-secondary small">Cadastre os dados do produto e gerencie as imagens em um modal separado.</div>
         </div>
     </div>
 {% endblock header %}
-
 {% block content %}
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" id="produto-form">
         {% csrf_token %}
-
+        <input type="hidden" name="form_type" value="produto">
         <div class="row g-4">
             <div class="col-12 col-xl-7">
                 <div class="card dash-section-card h-100">
                     <div class="card-body">
                         <h2 class="dash-section-title">Dados do produto</h2>
-
                         {% if form.non_field_errors %}
-                            <div class="alert alert-danger rounded-4 border-0">
-                                {{ form.non_field_errors }}
-                            </div>
+                            <div class="alert alert-danger rounded-4 border-0">{{ form.non_field_errors }}</div>
                         {% endif %}
-
                         <div class="row g-3">
                             {% for field in form %}
                                 <div class="col-md-6 {% if field.name == 'descricao' %}col-12{% endif %}">
                                     <div class="dash-field-block">
-                        
                                         {% if field.name == "ativo" %}
                                             {% if object and object.imagens.exists %}
                                                 <div class="form-check">
                                                     {{ field }}
-                                                    <label class="form-check-label" for="{{ field.id_for_label }}">
-                                                        Ativo para venda
-                                                    </label>
+                                                    <label class="form-check-label" for="{{ field.id_for_label }}">Ativo para venda</label>
                                                 </div>
                                             {% else %}
                                                 <div class="form-check">
@@ -199,143 +230,147 @@
                                                            class="form-check-input"
                                                            id="{{ field.id_for_label }}"
                                                            disabled>
-                                                    <label class="form-check-label text-muted" for="{{ field.id_for_label }}">
-                                                        Ativo para venda
-                                                    </label>
+                                                    <label class="form-check-label text-muted" for="{{ field.id_for_label }}">Ativo para venda</label>
                                                 </div>
-                                                <div class="dash-help-text">
-                                                    O produto só pode ser ativado depois de ter pelo menos uma imagem cadastrada.
-                                                </div>
+                                                <div class="dash-help-text">O produto só pode ser ativado depois de ter pelo menos uma imagem cadastrada.</div>
                                             {% endif %}
-                        
-                                            {% if field.errors %}
-                                                <div class="dash-error-text">{{ field.errors }}</div>
-                                            {% endif %}
-                        
+                                            {% if field.errors %}<div class="dash-error-text">{{ field.errors }}</div>{% endif %}
                                         {% else %}
-                                            <label class="form-label dash-form-label" for="{{ field.id_for_label }}">
-                                                {{ field.label }}
-                                            </label>
-                        
+                                            <label class="form-label dash-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                                             {{ field }}
-                        
-                                            {% if field.errors %}
-                                                <div class="dash-error-text">{{ field.errors }}</div>
-                                            {% endif %}
-                        
-                                            {% if field.help_text %}
-                                                <div class="dash-help-text">{{ field.help_text }}</div>
-                                            {% endif %}
+                                            {% if field.errors %}<div class="dash-error-text">{{ field.errors }}</div>{% endif %}
+                                            {% if field.help_text %}<div class="dash-help-text">{{ field.help_text }}</div>{% endif %}
                                         {% endif %}
-                        
                                     </div>
                                 </div>
                             {% endfor %}
                         </div>
+                        <div class="dash-actions d-flex flex-wrap gap-2">
+                            <a href="{% url 'dashboard_produto_list' %}"
+                               class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary">Salvar dados do produto</button>
+                        </div>
                     </div>
                 </div>
             </div>
-
             <div class="col-12 col-xl-5">
                 <div class="card dash-section-card h-100">
                     <div class="card-body">
-                        
-
-                        {% if not object %}
-                            <div class="alert alert-info border-0 rounded-4 mb-0 dash-note-box">
-                                Salve o produto para começar a gerenciar imagens.
+                        <div class="d-flex justify-content-between align-items-center mb-3 dash-images-toolbar">
+                            <div>
+                                <h2 class="dash-section-title mb-1">Imagens do produto</h2>
+                                <div class="text-secondary small">Adicione, organize e marque a imagem principal.</div>
                             </div>
+                        </div>
+                        {% if not object %}
+                            <div class="alert alert-info border-0 rounded-4 mb-3 dash-note-box">
+                                Salve o produto primeiro para liberar o gerenciamento de imagens.
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary w-100" disabled>Gerenciar imagens</button>
                         {% else %}
+                            <div class="alert alert-light border rounded-4 mb-3">
+                                {% if object.imagens.exists %}
+                                    <strong>{{ object.imagens.count }}</strong> imagem(ns) cadastrada(s).
+                                {% else %}
+                                    Nenhuma imagem cadastrada ainda.
+                                {% endif %}
+                            </div>
+                            <button type="button"
+                                    class="btn btn-outline-primary w-100"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#produtoImagensModal">Gerenciar imagens</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    {% if object %}
+        <div class="modal fade"
+             id="produtoImagensModal"
+             tabindex="-1"
+             aria-labelledby="produtoImagensModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="produtoImagensModalLabel">Gerenciar imagens do produto</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Fechar"></button>
+                    </div>
+                    <form method="post" enctype="multipart/form-data" id="produto-imagens-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="imagens">
+                        <div class="modal-body">
+                            {{ formset.management_form }}
+                            {% if formset.non_form_errors %}
+                                <div class="alert alert-danger border-0 rounded-4">{{ formset.non_form_errors }}</div>
+                            {% endif %}
                             <div class="d-flex justify-content-between align-items-center mb-3 dash-images-toolbar">
-                                <div>
-                                    <h2 class="dash-section-title mb-1">Imagens do produto</h2>
-                                    <div class="text-secondary small">Adicione, organize e marque a imagem principal.</div>
-                                </div>
+                                <div class="text-secondary small">Adicione, organize e marque a imagem principal.</div>
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary"
-                                        id="add-image-form">
-                                    + Adicionar imagem
-                                </button>
+                                        id="add-image-form">+ Adicionar imagem</button>
                             </div>
-                            {{ formset.management_form }}
-
-                            {% if formset.non_form_errors %}
-                                <div class="alert alert-danger border-0 rounded-4">
-                                    {{ formset.non_form_errors }}
-                                </div>
-                            {% endif %}
-
                             <div id="image-formset">
                                 {% for image_form in formset %}
                                     <div class="dash-image-item mb-3 image-form-item">
                                         {{ image_form.id }}
-
                                         <div class="row g-3">
                                             <div class="col-12">
-                                                <label class="form-label dash-form-label" for="{{ image_form.imagem.id_for_label }}">
+                                                <label class="form-label dash-form-label"
+                                                       for="{{ image_form.imagem.id_for_label }}">
                                                     {{ image_form.imagem.label }}
                                                 </label>
-
                                                 <input type="file"
                                                        name="{{ image_form.imagem.html_name }}"
                                                        id="{{ image_form.imagem.id_for_label }}"
                                                        class="d-none"
                                                        accept="image/*">
-
                                                 <div class="d-flex gap-2 flex-wrap">
                                                     <button type="button"
                                                             class="btn btn-outline-primary btn-sm btn-camera"
                                                             data-target="{{ image_form.imagem.id_for_label }}">
                                                         📷 Tirar foto
                                                     </button>
-
                                                     <button type="button"
                                                             class="btn btn-outline-secondary btn-sm btn-galeria"
                                                             data-target="{{ image_form.imagem.id_for_label }}">
                                                         🖼 Galeria
                                                     </button>
                                                 </div>
-
                                                 <div class="small text-secondary mt-2 file-name">
-                                                    {% if image_form.instance.imagem %}
-                                                        Arquivo atual: {{ image_form.instance.imagem.name }}
-                                                    {% endif %}
+                                                    {% if image_form.instance.imagem %}Arquivo atual: {{ image_form.instance.imagem.name }}{% endif %}
                                                 </div>
-
-                                                {% if image_form.imagem.errors %}
-                                                    <div class="dash-error-text">{{ image_form.imagem.errors }}</div>
-                                                {% endif %}
+                                                {% if image_form.imagem.errors %}<div class="dash-error-text">{{ image_form.imagem.errors }}</div>{% endif %}
                                             </div>
-
                                             <div class="col-md-6">
-                                                <label class="form-label dash-form-label" for="{{ image_form.legenda.id_for_label }}">
+                                                <label class="form-label dash-form-label"
+                                                       for="{{ image_form.legenda.id_for_label }}">
                                                     {{ image_form.legenda.label }}
                                                 </label>
                                                 {{ image_form.legenda }}
-                                                {% if image_form.legenda.errors %}
-                                                    <div class="dash-error-text">{{ image_form.legenda.errors }}</div>
-                                                {% endif %}
+                                                {% if image_form.legenda.errors %}<div class="dash-error-text">{{ image_form.legenda.errors }}</div>{% endif %}
                                             </div>
-
                                             <div class="col-md-3">
-                                                <label class="form-label dash-form-label" for="{{ image_form.ordem.id_for_label }}">
+                                                <label class="form-label dash-form-label"
+                                                       for="{{ image_form.ordem.id_for_label }}">
                                                     {{ image_form.ordem.label }}
                                                 </label>
                                                 {{ image_form.ordem }}
-                                                {% if image_form.ordem.errors %}
-                                                    <div class="dash-error-text">{{ image_form.ordem.errors }}</div>
-                                                {% endif %}
+                                                {% if image_form.ordem.errors %}<div class="dash-error-text">{{ image_form.ordem.errors }}</div>{% endif %}
                                             </div>
-
                                             <div class="col-md-3 d-flex align-items-end">
                                                 <div class="form-check">
                                                     {{ image_form.principal }}
-                                                    <label class="form-check-label" for="{{ image_form.principal.id_for_label }}">
+                                                    <label class="form-check-label"
+                                                           for="{{ image_form.principal.id_for_label }}">
                                                         Principal
                                                     </label>
                                                 </div>
                                             </div>
-
                                             {% if image_form.instance.pk and image_form.instance.imagem %}
                                                 <div class="col-12">
                                                     <img src="{{ image_form.instance.imagem.url }}"
@@ -343,34 +378,27 @@
                                                          class="img-fluid rounded border dash-image-preview">
                                                 </div>
                                             {% endif %}
-
                                             <div class="col-12">
                                                 <div class="form-check text-danger">
                                                     {{ image_form.DELETE }}
-                                                    <label class="form-check-label" for="{{ image_form.DELETE.id_for_label }}">
-                                                        Excluir esta imagem
-                                                    </label>
+                                                    <label class="form-check-label" for="{{ image_form.DELETE.id_for_label }}">Excluir esta imagem</label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 {% endfor %}
                             </div>
-                        {% endif %}
-                    </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    data-bs-dismiss="modal">Fechar</button>
+                            <button type="submit" class="btn btn-primary">Salvar imagens</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-
-        <div class="dash-actions d-flex flex-wrap gap-2">
-            <a href="{% url 'dashboard_produto_list' %}" class="btn btn-outline-secondary">
-                Cancelar
-            </a>
-            <button type="submit" class="btn btn-primary">Salvar</button>
-        </div>
-    </form>
-
-    {% if object %}
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 const addButton = document.getElementById("add-image-form");
@@ -443,22 +471,14 @@
                                         Imagem
                                     </label>
 
-                                    <input type="file"
-                                           name="imagens-${formCount}-imagem"
-                                           id="id_imagens-${formCount}-imagem"
-                                           class="d-none"
-                                           accept="image/*">
+                                    <input type="file" name="imagens-${formCount}-imagem" id="id_imagens-${formCount}-imagem" class="d-none" accept="image/*">
 
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button"
-                                                class="btn btn-outline-primary btn-sm btn-camera"
-                                                data-target="id_imagens-${formCount}-imagem">
+                                        <button type="button" class="btn btn-outline-primary btn-sm btn-camera" data-target="id_imagens-${formCount}-imagem">
                                             📷 Tirar foto
                                         </button>
 
-                                        <button type="button"
-                                                class="btn btn-outline-secondary btn-sm btn-galeria"
-                                                data-target="id_imagens-${formCount}-imagem">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm btn-galeria" data-target="id_imagens-${formCount}-imagem">
                                             🖼 Galeria
                                         </button>
                                     </div>
@@ -470,30 +490,19 @@
                                     <label class="form-label dash-form-label" for="id_imagens-${formCount}-legenda">
                                         Legenda
                                     </label>
-                                    <input type="text"
-                                           name="imagens-${formCount}-legenda"
-                                           class="form-control"
-                                           maxlength="120"
-                                           id="id_imagens-${formCount}-legenda">
+                                    <input type="text" name="imagens-${formCount}-legenda" class="form-control" maxlength="120" id="id_imagens-${formCount}-legenda">
                                 </div>
 
                                 <div class="col-md-3">
                                     <label class="form-label dash-form-label" for="id_imagens-${formCount}-ordem">
                                         Ordem
                                     </label>
-                                    <input type="number"
-                                           name="imagens-${formCount}-ordem"
-                                           value="0"
-                                           class="form-control"
-                                           id="id_imagens-${formCount}-ordem">
+                                    <input type="number" name="imagens-${formCount}-ordem" value="0" class="form-control" id="id_imagens-${formCount}-ordem">
                                 </div>
 
                                 <div class="col-md-3 d-flex align-items-end">
                                     <div class="form-check">
-                                        <input type="checkbox"
-                                               name="imagens-${formCount}-principal"
-                                               class="form-check-input"
-                                               id="id_imagens-${formCount}-principal">
+                                        <input type="checkbox" name="imagens-${formCount}-principal" class="form-check-input" id="id_imagens-${formCount}-principal">
                                         <label class="form-check-label" for="id_imagens-${formCount}-principal">
                                             Principal
                                         </label>
@@ -502,10 +511,7 @@
 
                                 <div class="col-12">
                                     <div class="form-check text-danger">
-                                        <input type="checkbox"
-                                               name="imagens-${formCount}-DELETE"
-                                               class="form-check-input"
-                                               id="id_imagens-${formCount}-DELETE">
+                                        <input type="checkbox" name="imagens-${formCount}-DELETE" class="form-check-input" id="id_imagens-${formCount}-DELETE">
                                         <label class="form-check-label" for="id_imagens-${formCount}-DELETE">
                                             Excluir esta imagem
                                         </label>
