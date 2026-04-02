@@ -886,29 +886,38 @@ class VendaManageView(DashboardPermissionMixin, TemplateView):
                 self.get_context_data(form=form, formset=formset)
             )
 
-        with transaction.atomic():
-            self.object = form.save(commit=False)
+        try:
+            with transaction.atomic():
+                self.object = form.save(commit=False)
 
-            if self.object.total is None:
-                self.object.total = Decimal("0.00")
+                if self.object.total is None:
+                    self.object.total = Decimal("0.00")
 
-            self.object.save()
+                self.object.save()
 
-            formset.instance = self.object
-            itens = formset.save(commit=False)
+                formset.instance = self.object
+                itens = formset.save(commit=False)
 
-            for obj in formset.deleted_objects:
-                obj.delete()
+                for obj in formset.deleted_objects:
+                    obj.delete()
 
-            for item in itens:
-                if item.produto_id:
-                    item.preco_unitario = item.produto.valor_venda
-                item.save()
+                for item in itens:
+                    if item.produto_id:
+                        item.preco_unitario = item.produto.valor_venda
+                    item.save()
 
-            self.object.recalcular_total()
+                self.object.recalcular_total()
+
+        except Exception:
+            messages.error(request, "Não foi possível salvar a venda.")
+            if self.object and self.object.pk:
+                return redirect("dashboard_venda_update", pk=self.object.pk)
+            return self.render_to_response(
+                self.get_context_data(form=form, formset=formset)
+            )
 
         messages.success(request, "Venda salva com sucesso.")
-        return redirect("dashboard_venda_update", pk=self.object.pk)
+        return redirect("dashboard_venda_list")
 
 
 class VendaExportXlsxView(DashboardPermissionMixin, View):
