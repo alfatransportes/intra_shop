@@ -530,7 +530,7 @@ class Venda(models.Model):
         on_delete=models.PROTECT
     )
 
-    total = models.DecimalField(max_digits=10, decimal_places=2)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     parcelas = models.PositiveIntegerField(default=1)
 
     status = models.CharField(
@@ -557,6 +557,14 @@ class Venda(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
+    def recalcular_total(self):
+        total = self.itens.aggregate(
+            total=Coalesce(Sum("subtotal"), Decimal("0.00"))
+        )["total"] or Decimal("0.00")
+
+        self.total = total.quantize(Decimal("0.01"))
+        self.save(update_fields=["total"])
+    
     def repor_estoque(self):
         for item in self.itens.select_related("produto").all():
             produto = item.produto
@@ -648,6 +656,9 @@ class VendaItem(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"), editable=False)
 
     def save(self, *args, **kwargs):
+        if self.produto_id and (not self.preco_unitario or self.preco_unitario <= 0):
+            self.preco_unitario = self.produto.valor_venda
+
         self.subtotal = (self.preco_unitario * self.quantidade).quantize(Decimal("0.01"))
         super().save(*args, **kwargs)
 

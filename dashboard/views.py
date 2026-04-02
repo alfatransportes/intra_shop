@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
@@ -6,6 +7,7 @@ from urllib.parse import quote
 import qrcode
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import (Count, DecimalField, ExpressionWrapper, F, Sum,
                               Value)
@@ -32,7 +34,7 @@ from website.models import (Carrinho, FormaPagamento, NivelAvaria, Produto,
 from .forms import (FormaPagamentoForm, NivelAvariaForm, ProdutoForm,
                     ProdutoImagemForm, ProdutoImagemFormSet,
                     RegraParcelamentoValeForm, TipoForm, UnidadeForm,
-                    VendaStatusForm)
+                    VendaForm, VendaItemFormSet, VendaStatusForm)
 from .mixins import DashboardPermissionMixin
 from .utils import enviar_email_status_venda_cliente
 
@@ -796,7 +798,118 @@ class VendaUpdateStatusView(DashboardPermissionMixin, UpdateView):
     def form_invalid(self, form):
         messages.error(self.request, "Não foi possível atualizar a venda. Verifique os campos abaixo.")
         return self.render_to_response(self.get_context_data(form=form))
-    
+
+
+class VendaManageView(DashboardPermissionMixin, TemplateView):
+    template_name = "dashboard/vendas/form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = None
+        pk = kwargs.get("pk")
+        if pk:
+            self.object = Venda.objects.filter(pk=pk).first()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form(self, data=None, files=None):
+        return VendaForm(data=data, files=files, instance=self.object)
+
+    def get_formset(self, data=None, files=None):
+        return VendaItemFormSet(
+            data=data,
+            files=files,
+            instance=self.object,
+            prefix="itens",
+        )
+
+    def get_produtos_info(self):
+        produtos = Produto.objects.filter(ativo=True).order_by("nome")
+        return {
+            str(produto.id): {
+                "nome": produto.nome,
+                "preco": str(produto.valor_venda),
+                "estoque": int(produto.estoque_disponivel),
+            }
+            for produto in produtos
+        }
+
+    def calcular_total_formset(self, formset):
+        total = Decimal("0.00")
+
+        for form in formset.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+
+            if form.cleaned_data.get("DELETE"):
+                continue
+
+            produto = form.cleaned_data.get("produto")
+            quantidade = form.cleaned_data.get("quantidade") or 0
+
+            if produto and quantidade:
+                total += (produto.valor_venda * quantidade)
+
+        return total.quantize(Decimal("0.01"))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        form = kwargs.get("form") or self.get_form()
+        formset = kwargs.get("formset") or self.get_formset()
+
+        total_venda = Decimal("0.00")
+        if formset.is_bound and formset.is_valid():
+            total_venda = self.calcular_total_formset(formset)
+        elif self.object:
+            total_venda = self.object.total or Decimal("0.00")
+
+        context.update(
+            {
+                "object": self.object,
+                "form": form,
+                "formset": formset,
+                "total_venda": total_venda,
+                "produtos_info_json": json.dumps(self.get_produtos_info(), cls=DjangoJSONEncoder),
+            }
+        )
+        return context
+
+    def get(self, request, *args, **kwargs):
+        return self.render_to_response(self.get_context_data())
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form(data=request.POST, files=request.FILES)
+        formset = self.get_formset(data=request.POST, files=request.FILES)
+
+        if not form.is_valid() or not formset.is_valid():
+            messages.error(request, "Corrija os erros do formulário.")
+            return self.render_to_response(
+                self.get_context_data(form=form, formset=formset)
+            )
+
+        with transaction.atomic():
+            self.object = form.save(commit=False)
+
+            if self.object.total is None:
+                self.object.total = Decimal("0.00")
+
+            self.object.save()
+
+            formset.instance = self.object
+            itens = formset.save(commit=False)
+
+            for obj in formset.deleted_objects:
+                obj.delete()
+
+            for item in itens:
+                if item.produto_id:
+                    item.preco_unitario = item.produto.valor_venda
+                item.save()
+
+            self.object.recalcular_total()
+
+        messages.success(request, "Venda salva com sucesso.")
+        return redirect("dashboard_venda_update", pk=self.object.pk)
+
 
 class VendaExportXlsxView(DashboardPermissionMixin, View):
     def get_queryset(self):

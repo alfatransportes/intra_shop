@@ -119,6 +119,10 @@
                 <h1 class="h4 mb-1 fw-bold">Vendas</h1>
                 <div class="text-secondary small">Gerencie as vendas realizadas.</div>
             </div>
+            <a href="{% url 'dashboard_venda_create' %}"
+               class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-lg me-1"></i>Venda Manual
+            </a>
         </div>
     </div>
 {% endblock header %}

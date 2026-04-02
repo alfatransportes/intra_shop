@@ -13,7 +13,8 @@ from .views import (FormaPagamentoCreateView, FormaPagamentoDeleteView,
                     TipoDeleteView, TipoListView, TipoUpdateView,
                     UnidadeCreateView, UnidadeDeleteView, UnidadeListView,
                     UnidadeUpdateView, VendaDetailView, VendaExportXlsxView,
-                    VendaListView, VendaUpdateStatusView, produto_qrcode_pdf)
+                    VendaListView, VendaManageView, VendaUpdateStatusView,
+                    produto_qrcode_pdf)
 
 urlpatterns = [
     path("painel-controle/", PainelControleView.as_view(), name="painel_controle"),
@@ -44,6 +45,8 @@ urlpatterns = [
     path("painel-controle/vendas/<int:pk>/", VendaDetailView.as_view(), name="dashboard_venda_detail"),
     path("painel-controle/vendas/<int:pk>/status/", VendaUpdateStatusView.as_view(), name="dashboard_venda_update_status"),
     path("painel-controle/vendas/exportar/", VendaExportXlsxView.as_view(), name="dashboard_venda_export_xlsx"),
+    path("painel-controle/vendas/nova/", VendaManageView.as_view(), name="dashboard_venda_create"),
+    path("painel-controle/vendas/<int:pk>/editar/", VendaManageView.as_view(), name="dashboard_venda_update"),
 
     path("painel-controle/formas-pagamento/", FormaPagamentoListView.as_view(), name="dashboard_forma_pagamento_list"),
     path("painel-controle/formas-pagamento/nova/", FormaPagamentoCreateView.as_view(), name="dashboard_forma_pagamento_create"),

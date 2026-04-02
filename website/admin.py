@@ -183,7 +183,7 @@ class VendaItemInline(admin.TabularInline):
     model = VendaItem
     extra = 0
     fields = ("produto", "quantidade", "preco_unitario", "subtotal")
-    readonly_fields = ("subtotal",)
+    readonly_fields = ("preco_unitario", "subtotal")
     autocomplete_fields = ("produto",)
 
 
@@ -195,7 +195,7 @@ class VendaAdmin(admin.ModelAdmin):
     list_filter = ("status", "forma_pagamento")
     search_fields = ("id", "usuario__email", "usuario__username")
     ordering = ("-criado_em",)
-    readonly_fields = ("criado_em", "atualizado_em")
+    readonly_fields = ("total", "criado_em", "atualizado_em")
 
     fields = (
         "usuario",
@@ -203,9 +203,19 @@ class VendaAdmin(admin.ModelAdmin):
         "forma_pagamento",
         "total",
         "parcelas",
+        "minuta",
         "comprovante_pix",
         "comprovante_vale",
         "observacao",
         "criado_em",
         "atualizado_em",
     )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "forma_pagamento":
+            kwargs["queryset"] = FormaPagamento.objects.filter(ativa=True)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.instance.recalcular_total()
