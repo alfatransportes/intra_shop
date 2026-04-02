@@ -31,7 +31,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-    cpf = models.CharField(max_length=11, blank=True, null=True, validators=[RegexValidator(r"^[0-9]+$", "Use apenas números no CPF.")])
+    cpf = models.CharField(max_length=11, blank=False, null=False, validators=[RegexValidator(r"^[0-9]+$", "Use apenas números no CPF.")])
     email = models.EmailField(unique=True, blank=False, null=False)
 
     unidade = models.ForeignKey(
@@ -48,17 +48,18 @@ class User(AbstractUser):
         unique=True,
         validators=[RegexValidator(r"^[0-9]+$", "Use apenas números no crachá.")],
         verbose_name="Número do crachá",
-        blank=True, null=True
+        blank=False, null=False
     )
 
     whatsapp = models.CharField(
         max_length=20,
         validators=[RegexValidator(r"^\+?\d{10,15}$", "WhatsApp inválido. Ex: +5511999999999")],
         verbose_name="WhatsApp",
+        blank=False, null=False
     )
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["numero_cracha", "whatsapp"]
+    REQUIRED_FIELDS = ["cpf", "numero_cracha", "whatsapp"]
 
     objects = UserManager()
 

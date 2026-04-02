@@ -44,7 +44,7 @@ class CadastroForm(UserCreationForm):
         self.fields["cpf"].widget.attrs.update({
             "class": "form-control rounded-5",
             "placeholder": "Número do CPF",
-            "autocomplete": "cpf",
+            "autofocus": "autofocus",
         })
 
         self.fields["email"].widget.attrs.update({
