@@ -336,6 +336,106 @@ class ProdutoDeleteView(DeleteView):
         return redirect(self.success_url)
 
 
+class ProdutoExportXlsxView(DashboardPermissionMixin, View):
+
+    def get_queryset(self):
+        queryset = (
+            Produto.objects
+            .select_related("unidade_prod", "tipo_prod", "nivel_ava_prod")
+            .prefetch_related("imagens")
+            .order_by("nome")
+        )
+
+        busca = self.request.GET.get("q")
+        tipo = self.request.GET.get("tipo")
+
+        if busca:
+            queryset = queryset.filter(nome__icontains=busca)
+
+        if tipo:
+            queryset = queryset.filter(tipo_prod_id=tipo)
+
+        return queryset
+
+    def get(self, request, *args, **kwargs):
+
+        produtos = self.get_queryset()
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Produtos"
+
+        headers = [
+            "ID",
+            "Nome",
+            "Tipo",
+            "Unidade",
+            "Nível Avaria",
+            "Quantidade",
+            "Estoque Disponível",
+            "Valor Nota",
+            "Desconto %",
+            "Valor Venda",
+            "Ativo",
+        ]
+
+        ws.append(headers)
+
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+
+        for produto in produtos:
+
+            ws.append([
+                produto.id,
+                produto.nome,
+                produto.tipo_prod.nome if produto.tipo_prod else "",
+                produto.unidade_prod.nome if produto.unidade_prod else "",
+                produto.nivel_ava_prod.nome if produto.nivel_ava_prod else "",
+                produto.quantidade,
+                produto.estoque_disponivel,
+                float(produto.valor_nota),
+                float(produto.porcen_desconto),
+                float(produto.valor_venda),
+                "Sim" if produto.ativo else "Não",
+            ])
+
+        widths = {
+            "A": 10,
+            "B": 40,
+            "C": 25,
+            "D": 20,
+            "E": 25,
+            "F": 15,
+            "G": 20,
+            "H": 15,
+            "I": 15,
+            "J": 18,
+            "K": 10,
+        }
+
+        for col, width in widths.items():
+            ws.column_dimensions[col].width = width
+
+        for row in range(2, ws.max_row + 1):
+            ws[f"H{row}"].number_format = 'R$ #,##0.00'
+            ws[f"J{row}"].number_format = 'R$ #,##0.00'
+
+        busca = request.GET.get("q") or "todos"
+        tipo = request.GET.get("tipo") or "todos"
+
+        filename = f"produtos_{busca}_{tipo}.xlsx"
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+
+        return response
+
+
 @xframe_options_exempt
 def produto_qrcode_pdf(request, pk):
     produto = get_object_or_404(Produto, pk=pk)

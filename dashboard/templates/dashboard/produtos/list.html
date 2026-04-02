@@ -155,15 +155,19 @@
 {% block content %}
     <div class="card dash-filter-card mb-3">
         <div class="card-body">
-            <form method="get" class="row g-2 align-items-end dash-filter-form">
-                <div class="col-md-8">
+            <form method="get"
+                action="{% url 'dashboard_produto_list' %}"
+                class="row g-2 align-items-end dash-filter-form">
+
+                <div class="col-md-6">
                     <label class="form-label fw-semibold">Buscar produto</label>
                     <input type="text"
-                           name="q"
-                           value="{{ q }}"
-                           class="form-control"
-                           placeholder="Buscar por nome...">
+                        name="q"
+                        value="{{ q }}"
+                        class="form-control"
+                        placeholder="Buscar por nome...">
                 </div>
+
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Tipo</label>
                     <select name="tipo" class="form-select">
@@ -176,9 +180,29 @@
                         {% endfor %}
                     </select>
                 </div>
+
                 <div class="col-md-1">
-                    <button class="btn btn-outline-primary w-100">Filtrar</button>
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        Filtrar
+                    </button>
                 </div>
+
+                <div class="col-md-2">
+                    <button type="submit"
+                            formaction="{% url 'dashboard_produto_export_xlsx' %}"
+                            class="btn btn-success w-100">
+                        Baixar Excel
+                    </button>
+                </div>
+
+                {% if q or tipo_atual %}
+                    <div class="col-md-2">
+                        <a href="{% url 'dashboard_produto_list' %}"
+                        class="btn btn-outline-secondary w-100">
+                            Limpar
+                        </a>
+                    </div>
+                {% endif %}
             </form>
         </div>
     </div>
