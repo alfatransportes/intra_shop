@@ -151,9 +151,16 @@
                                                             <div class="fw-semibold" id="rast-unidade-destino">-</div>
                                                         </div>
                                                     </div>
+                                                
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 rounded-4 bg-light h-100">
+                                                            <div class="small text-muted">Data de chegada</div>
+                                                            <div class="fw-semibold" id="rast-data-chegada">-</div>
+                                                        </div>
+                                                    </div>
                                 
-                                                    <div class="col-12">
-                                                        <div class="p-3 rounded-4 bg-light">
+                                                    <div class="col-6">
+                                                        <div class="p-3 rounded-4 bg-light h-100">
                                                             <div class="small text-muted">Observação</div>
                                                             <div class="fw-semibold" id="rast-obs-minuta">-</div>
                                                         </div>
@@ -328,6 +335,7 @@
                     preencherCampo("rast-localizacao", dados.localizacao || "Sem localização informada");
                     preencherCampo("rast-unidade-origem", dados.unidade_origem);
                     preencherCampo("rast-unidade-destino", dados.unidade_destino);
+                    preencherCampo("rast-data-chegada", formatarData(dados.data_chegada) || "Aguardando chegada...");
                     preencherCampo("rast-obs-minuta", dados.obs_minuta || "Sem observação");
         
                     conteudo.classList.remove("d-none");
