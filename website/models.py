@@ -570,6 +570,19 @@ class Venda(models.Model):
             produto = item.produto
             produto.quantidade += item.quantidade
             produto.save(update_fields=["quantidade"])
+    
+    def baixar_estoque(self):
+        for item in self.itens.select_related("produto").all():
+            produto = item.produto
+
+            if item.quantidade > produto.quantidade:
+                raise ValidationError(
+                    f"Estoque insuficiente para o produto '{produto.nome}'. "
+                    f"Disponível: {produto.quantidade}. Solicitado: {item.quantidade}."
+                )
+
+            produto.quantidade -= item.quantidade
+            produto.save(update_fields=["quantidade"])
 
     def clean(self):
         super().clean()

@@ -888,6 +888,10 @@ class VendaManageView(DashboardPermissionMixin, TemplateView):
 
         try:
             with transaction.atomic():
+                venda_existente = None
+                if self.object and self.object.pk:
+                    venda_existente = Venda.objects.filter(pk=self.object.pk).first()
+
                 self.object = form.save(commit=False)
 
                 if self.object.total is None:
@@ -908,16 +912,19 @@ class VendaManageView(DashboardPermissionMixin, TemplateView):
 
                 self.object.recalcular_total()
 
-        except Exception:
+                # baixa estoque somente na criação manual
+                if not venda_existente:
+                    self.object.baixar_estoque()
+
+            messages.success(request, "Venda salva com sucesso.")
+            return redirect("dashboard_venda_list")
+
+        except ValidationError as e:
+            form.add_error(None, e.message if hasattr(e, "message") else e)
             messages.error(request, "Não foi possível salvar a venda.")
-            if self.object and self.object.pk:
-                return redirect("dashboard_venda_update", pk=self.object.pk)
             return self.render_to_response(
                 self.get_context_data(form=form, formset=formset)
             )
-
-        messages.success(request, "Venda salva com sucesso.")
-        return redirect("dashboard_venda_list")
 
 
 class VendaExportXlsxView(DashboardPermissionMixin, View):
