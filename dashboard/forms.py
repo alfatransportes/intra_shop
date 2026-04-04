@@ -116,6 +116,16 @@ class ProdutoForm(BaseBootstrapForm):
         return cleaned_data
 
 
+class ProdutoImportForm(forms.Form):
+    arquivo = forms.FileField(
+        label="Planilha",
+        help_text="Formatos aceitos: CSV, XLS, XLSX",
+        widget=forms.ClearableFileInput(
+            attrs={"class": "form-control"}
+        ),
+    )
+    
+
 class ProdutoImagemForm(BaseBootstrapForm):
     class Meta:
         model = ProdutoImagem
@@ -424,3 +434,4 @@ VendaItemFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+

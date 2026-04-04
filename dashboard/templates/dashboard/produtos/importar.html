@@ -1,0 +1,232 @@
+{% extends "dashboard/base.html" %}
+{% block header %}
+    <style>
+        .dash-page-header {
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 .125rem .75rem rgba(0, 0, 0, .06);
+        }
+
+        .dash-section-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 .125rem .65rem rgba(0, 0, 0, .06);
+            overflow: hidden;
+        }
+
+        .dash-section-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .dash-section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .dash-field-block {
+            border: 1px solid rgba(0, 0, 0, .06);
+            border-radius: 1rem;
+            padding: 1rem;
+            transition: all .2s ease;
+            height: 100%;
+        }
+
+        .dash-field-block:hover {
+            border-color: rgba(13, 110, 253, .18);
+            box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .04);
+        }
+
+        .dash-form-label {
+            font-weight: 700;
+            color: #212529;
+            margin-bottom: .5rem;
+        }
+
+        .dash-section-card input:not([type="checkbox"]):not([type="radio"]),
+        .dash-section-card select,
+        .dash-section-card textarea {
+            border-radius: .85rem;
+            min-height: 46px;
+            box-shadow: none !important;
+        }
+
+        .dash-help-text {
+            color: #6c757d;
+            font-size: .85rem;
+            margin-top: .45rem;
+        }
+
+        .dash-error-text {
+            color: #dc3545;
+            font-size: .85rem;
+            margin-top: .45rem;
+        }
+
+        .dash-actions {
+            margin-top: 1.5rem;
+        }
+
+        .dash-actions .btn {
+            border-radius: 999px;
+            font-weight: 700;
+            min-height: 48px;
+            padding-inline: 1.25rem;
+        }
+
+        .dash-note-box {
+            border-radius: 1rem;
+        }
+
+        .dash-result-box {
+            border: 1px solid rgba(0, 0, 0, .06);
+            border-radius: 1rem;
+            padding: 1rem;
+            height: 100%;
+            background: #fff;
+        }
+
+        .dash-result-number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: .35rem;
+        }
+
+        .dash-error-list {
+            margin: 0;
+            padding-left: 1.1rem;
+        }
+
+        .dash-error-list li + li {
+            margin-top: .5rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .dash-page-header {
+                padding: 1.1rem;
+            }
+
+            .dash-section-card .card-body {
+                padding: 1rem;
+            }
+
+            .dash-field-block,
+            .dash-result-box {
+                padding: .9rem;
+            }
+        }
+    </style>
+    <div class="dash-page-header mb-4">
+        <div>
+            <div class="text-secondary small mb-1">Catálogo administrativo</div>
+            <h1 class="h4 mb-1 fw-bold">Importar produtos</h1>
+            <div class="text-secondary small">Envie uma planilha para cadastrar ou atualizar produtos em lote.</div>
+        </div>
+    </div>
+{% endblock header %}
+{% block content %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-4">
+            <div class="col-12 col-xl-7">
+                <div class="card dash-section-card h-100">
+                    <div class="card-body">
+                        <h2 class="dash-section-title">Arquivo de importação</h2>
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger rounded-4 border-0">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="row g-3">
+                            {% for field in form %}
+                                <div class="col-12">
+                                    <div class="dash-field-block">
+                                        <label class="form-label dash-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        {{ field }}
+                                        {% if field.errors %}<div class="dash-error-text">{{ field.errors }}</div>{% endif %}
+                                        {% if field.help_text %}<div class="dash-help-text">{{ field.help_text }}</div>{% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="alert alert-light border rounded-4 mt-3 mb-0 dash-note-box">
+                            <strong>Formato esperado da planilha:</strong>
+                            <br>
+                            nome, unidade_codigo, unidade_nome, tipo, nivel_avaria, quantidade,
+                            maximo_por_usuario, valor_nota, porcen_desconto, descricao, ativo
+                        </div>
+                        <div class="dash-actions d-flex flex-wrap gap-2">
+                            <a href="{% url 'dashboard_produto_list' %}"
+                               class="btn btn-outline-secondary">Voltar</a>
+                            <a href="{% url 'dashboard_produto_import_template' %}"
+                               class="btn btn-outline-primary">Baixar planilha modelo</a>
+                            <button type="submit" class="btn btn-primary">Importar planilha</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-5">
+                <div class="card dash-section-card h-100">
+                    <div class="card-body">
+                        <h2 class="dash-section-title">Orientações</h2>
+                        <div class="alert alert-info border-0 rounded-4 mb-3 dash-note-box">Use arquivos CSV, XLS ou XLSX.</div>
+                        <div class="dash-field-block mb-3">
+                            <div class="fw-bold mb-2">Regras importantes</div>
+                            <ul class="mb-0 ps-3 text-secondary">
+                                <li>As colunas devem seguir o padrão esperado.</li>
+                                <li>Produtos existentes podem ser atualizados.</li>
+                                <li>O valor de venda será recalculado automaticamente.</li>
+                                <li>Produtos sem imagem podem permanecer inativos.</li>
+                            </ul>
+                        </div>
+                        <div class="dash-field-block">
+                            <div class="fw-bold mb-2">Dica</div>
+                            <div class="text-secondary small">
+                                O ideal é usar uma coluna única como SKU ou código externo para evitar conflito por nome.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    {% if resultado %}
+        <div class="card dash-section-card mt-4">
+            <div class="card-body">
+                <h2 class="dash-section-title">Resultado da importação</h2>
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-4">
+                        <div class="dash-result-box">
+                            <div class="dash-result-number text-success">{{ resultado.criados }}</div>
+                            <div class="text-secondary small fw-semibold">Produtos criados</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="dash-result-box">
+                            <div class="dash-result-number text-primary">{{ resultado.atualizados }}</div>
+                            <div class="text-secondary small fw-semibold">Produtos atualizados</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="dash-result-box">
+                            <div class="dash-result-number text-danger">{{ resultado.erros|length }}</div>
+                            <div class="text-secondary small fw-semibold">Linhas com erro</div>
+                        </div>
+                    </div>
+                </div>
+                {% if resultado.erros %}
+                    <div class="alert alert-warning border-0 rounded-4 mb-3">
+                        Algumas linhas não foram importadas. Revise os erros abaixo.
+                    </div>
+                    <div class="dash-field-block">
+                        <div class="fw-bold mb-2">Erros encontrados</div>
+                        <ul class="dash-error-list">
+                            {% for erro in resultado.erros %}<li>{{ erro }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success border-0 rounded-4 mb-0">Importação concluída sem erros.</div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{% endblock content %}

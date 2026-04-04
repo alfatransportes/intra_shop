@@ -16,23 +16,26 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
-                                  TemplateView, UpdateView)
+                                  TemplateView, UpdateView, View)
 from openpyxl import Workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
+from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.worksheet.datavalidation import DataValidation
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
+from dashboard.services.importador_produtos import importar_produtos
 from website.models import (Carrinho, FormaPagamento, NivelAvaria, Produto,
                             ProdutoImagem, RegraParcelamentoVale, Tipo,
                             Unidade, Venda, VendaItem)
 
 from .forms import (FormaPagamentoForm, NivelAvariaForm, ProdutoForm,
-                    ProdutoImagemForm, ProdutoImagemFormSet,
+                    ProdutoImagemForm, ProdutoImagemFormSet, ProdutoImportForm,
                     RegraParcelamentoValeForm, TipoForm, UnidadeForm,
                     VendaForm, VendaItemFormSet, VendaStatusForm)
 from .mixins import DashboardPermissionMixin
@@ -548,6 +551,269 @@ def produto_qrcode_pdf(request, pk):
     response["Content-Disposition"] = f'inline; filename="{safe_filename}"'
     return response
 
+
+
+class ProdutoImportView(DashboardPermissionMixin, TemplateView):
+    template_name = "dashboard/produtos/importar.html"
+
+    def get_form(self, data=None, files=None):
+        return ProdutoImportForm(data=data, files=files)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form"] = kwargs.get("form") or self.get_form()
+        context["resultado"] = kwargs.get("resultado")
+        return context
+
+    def get(self, request, *args, **kwargs):
+        return self.render_to_response(self.get_context_data())
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form(data=request.POST, files=request.FILES)
+
+        if not form.is_valid():
+            messages.error(request, "Selecione um arquivo válido para importação.")
+            return self.render_to_response(self.get_context_data(form=form))
+
+        arquivo = form.cleaned_data["arquivo"]
+
+        try:
+            resultado = importar_produtos(arquivo)
+
+            messages.success(
+                request,
+                (
+                    f"Importação concluída. "
+                    f"Criados: {resultado['criados']} | "
+                    f"Atualizados: {resultado['atualizados']} | "
+                    f"Erros: {len(resultado['erros'])}"
+                ),
+            )
+
+            if resultado["erros"]:
+                messages.warning(
+                    request,
+                    "Algumas linhas não puderam ser importadas. Veja o relatório abaixo."
+                )
+
+            return self.render_to_response(
+                self.get_context_data(
+                    form=self.get_form(),
+                    resultado=resultado,
+                )
+            )
+
+        except Exception as e:
+            messages.error(request, f"Erro ao processar a planilha: {e}")
+            return self.render_to_response(self.get_context_data(form=form))
+
+
+
+class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
+    filename = "modelo_importacao_produtos.xlsx"
+
+    def get(self, request, *args, **kwargs):
+        wb = Workbook()
+
+        ws_import = wb.active
+        ws_import.title = "IMPORTACAO_PRODUTOS"
+        ws_listas = wb.create_sheet("LISTAS_SISTEMA")
+        ws_instrucoes = wb.create_sheet("INSTRUCOES")
+
+        contadores = self._build_listas_sheet(ws_listas)
+        self._create_named_ranges(wb, contadores)
+        self._build_import_sheet(ws_import)
+        self._build_instrucoes_sheet(ws_instrucoes)
+        self._apply_validations(ws_import)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{self.filename}"'
+        return response
+
+    def _build_import_sheet(self, ws):
+        headers = [
+            "nome",
+            "unidade",
+            "tipo",
+            "nivel_avaria",
+            "quantidade",
+            "maximo_por_usuario",
+            "valor_nota",
+            "porcen_desconto",
+            "descricao",
+            "ativo",
+        ]
+        ws.append(headers)
+
+        fill = PatternFill("solid", fgColor="0D6EFD")
+        font = Font(bold=True, color="FFFFFF")
+        align = Alignment(horizontal="center", vertical="center")
+
+        for cell in ws[1]:
+            cell.fill = fill
+            cell.font = font
+            cell.alignment = align
+
+        widths = {
+            1: 32,
+            2: 30,
+            3: 24,
+            4: 24,
+            5: 14,
+            6: 22,
+            7: 16,
+            8: 18,
+            9: 45,
+            10: 12,
+        }
+        for col_idx, width in widths.items():
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+        ws.freeze_panes = "A2"
+
+        ws.append([
+            "Notebook Dell",
+            "",
+            "",
+            "",
+            5,
+            1,
+            3500.00,
+            10.00,
+            "Notebook corporativo",
+            "",
+        ])
+
+    def _build_listas_sheet(self, ws):
+        headers = ["UNIDADES", "TIPOS", "NIVEIS_AVARIA", "ATIVO"]
+        ws.append(headers)
+
+        fill = PatternFill("solid", fgColor="198754")
+        font = Font(bold=True, color="FFFFFF")
+        align = Alignment(horizontal="center", vertical="center")
+
+        for cell in ws[1]:
+            cell.fill = fill
+            cell.font = font
+            cell.alignment = align
+
+        unidades = list(
+            Unidade.objects.order_by("codigo", "nome").values_list("codigo", "nome")
+        )
+        tipos = list(
+            Tipo.objects.filter(ativo=True).order_by("nome").values_list("nome", flat=True)
+        )
+        niveis = list(
+            NivelAvaria.objects.order_by("nome").values_list("nome", flat=True)
+        )
+        ativos = ["Sim", "Não"]
+
+        unidades_formatadas = []
+        for codigo, nome in unidades:
+            if codigo is not None:
+                unidades_formatadas.append(f"{codigo} - {nome}")
+            else:
+                unidades_formatadas.append(str(nome))
+
+        max_len = max(len(unidades_formatadas), len(tipos), len(niveis), len(ativos), 1)
+
+        for i in range(max_len):
+            ws.append([
+                unidades_formatadas[i] if i < len(unidades_formatadas) else "",
+                tipos[i] if i < len(tipos) else "",
+                niveis[i] if i < len(niveis) else "",
+                ativos[i] if i < len(ativos) else "",
+            ])
+
+        ws.column_dimensions["A"].width = 30
+        ws.column_dimensions["B"].width = 24
+        ws.column_dimensions["C"].width = 24
+        ws.column_dimensions["D"].width = 12
+
+        return {
+            "unidades": max(len(unidades_formatadas), 1),
+            "tipos": max(len(tipos), 1),
+            "niveis": max(len(niveis), 1),
+            "ativos": max(len(ativos), 1),
+        }
+
+    def _create_named_ranges(self, wb, contadores):
+        nomes = [
+            ("LISTA_UNIDADES", "'LISTAS_SISTEMA'!$A$2:$A$" + str(contadores["unidades"] + 1)),
+            ("LISTA_TIPOS", "'LISTAS_SISTEMA'!$B$2:$B$" + str(contadores["tipos"] + 1)),
+            ("LISTA_NIVEIS_AVARIA", "'LISTAS_SISTEMA'!$C$2:$C$" + str(contadores["niveis"] + 1)),
+            ("LISTA_ATIVO", "'LISTAS_SISTEMA'!$D$2:$D$" + str(contadores["ativos"] + 1)),
+        ]
+
+        for nome, referencia in nomes:
+            wb.defined_names[nome] = DefinedName(name=nome, attr_text=referencia)
+
+    def _build_instrucoes_sheet(self, ws):
+        linhas = [
+            "INSTRUÇÕES DE PREENCHIMENTO",
+            "",
+            "1. Preencha somente a aba IMPORTACAO_PRODUTOS.",
+            "2. Clique nas células das colunas unidade, tipo, nivel_avaria e ativo para escolher uma opção.",
+            "3. Não altere o nome das colunas.",
+            "4. Salve e envie o arquivo em formato .xlsx.",
+        ]
+
+        for linha in linhas:
+            ws.append([linha])
+
+        ws["A1"].font = Font(bold=True, size=14)
+        ws.column_dimensions["A"].width = 110
+
+    def _apply_validations(self, ws):
+        dv_unidade = DataValidation(type="list", formula1="=LISTA_UNIDADES", allow_blank=True)
+        dv_tipo = DataValidation(type="list", formula1="=LISTA_TIPOS", allow_blank=True)
+        dv_nivel = DataValidation(type="list", formula1="=LISTA_NIVEIS_AVARIA", allow_blank=True)
+        dv_ativo = DataValidation(type="list", formula1="=LISTA_ATIVO", allow_blank=True)
+
+        dv_quantidade = DataValidation(
+            type="whole",
+            operator="greaterThanOrEqual",
+            formula1="1",
+            allow_blank=False,
+        )
+        dv_maximo = DataValidation(
+            type="whole",
+            operator="greaterThanOrEqual",
+            formula1="0",
+            allow_blank=True,
+        )
+        dv_valor = DataValidation(
+            type="decimal",
+            operator="greaterThanOrEqual",
+            formula1="0",
+            allow_blank=False,
+        )
+        dv_desconto = DataValidation(
+            type="decimal",
+            operator="between",
+            formula1="0",
+            formula2="100",
+            allow_blank=False,
+        )
+
+        for dv in [dv_unidade, dv_tipo, dv_nivel, dv_ativo, dv_quantidade, dv_maximo, dv_valor, dv_desconto]:
+            ws.add_data_validation(dv)
+
+        dv_unidade.add("B2:B1000")
+        dv_tipo.add("C2:C1000")
+        dv_nivel.add("D2:D1000")
+        dv_quantidade.add("E2:E1000")
+        dv_maximo.add("F2:F1000")
+        dv_valor.add("G2:G1000")
+        dv_desconto.add("H2:H1000")
+        dv_ativo.add("J2:J1000")
 
 # -------------------------
 # TIPOS
