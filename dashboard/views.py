@@ -640,9 +640,9 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
     def _build_import_sheet(self, ws):
         headers = [
             "nome",
-            "unidade",
-            "tipo",
-            "nivel_avaria",
+            "unidade_prod",
+            "tipo_prod",
+            "nivel_ava_prod",
             "quantidade",
             "maximo_por_usuario",
             "valor_nota",
@@ -673,6 +673,7 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
             9: 45,
             10: 12,
         }
+
         for col_idx, width in widths.items():
             ws.column_dimensions[get_column_letter(col_idx)].width = width
 
