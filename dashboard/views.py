@@ -773,9 +773,26 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
 
     def _apply_validations(self, ws):
         dv_unidade = DataValidation(type="list", formula1="=LISTA_UNIDADES", allow_blank=True)
+        dv_unidade.promptTitle = "Unidade"
+        dv_unidade.prompt = "Selecione uma unidade da lista."
+        dv_unidade.showInputMessage = True
+
+
         dv_tipo = DataValidation(type="list", formula1="=LISTA_TIPOS", allow_blank=True)
+        dv_tipo.promptTitle = "Tipo"
+        dv_tipo.prompt = "Selecione um tipo da lista."
+        dv_tipo.showInputMessage = True
+
+
         dv_nivel = DataValidation(type="list", formula1="=LISTA_NIVEIS_AVARIA", allow_blank=True)
+        dv_nivel.promptTitle = "Nível de avaria"
+        dv_nivel.prompt = "Selecione um nível de avaria da lista."
+        dv_nivel.showInputMessage = True
+
         dv_ativo = DataValidation(type="list", formula1="=LISTA_ATIVO", allow_blank=True)
+        dv_ativo.promptTitle = "Ativo"
+        dv_ativo.prompt = "Selecione um status da lista."
+        dv_ativo.showInputMessage = True
 
         dv_quantidade = DataValidation(
             type="whole",
