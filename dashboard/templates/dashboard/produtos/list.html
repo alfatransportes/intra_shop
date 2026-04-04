@@ -145,15 +145,17 @@
                 <h1 class="h4 mb-1 fw-bold">Produtos</h1>
                 <div class="text-secondary small">Gerencie produtos e imagens em um só lugar.</div>
             </div>
-            <a href="{% url 'dashboard_produto_import' %}"
-               class="btn btn-success rounded-pill px-4">
-                <i class="bi bi-file-earmark-arrow-up me-1"></i>
-                Importar produtos
-            </a>
-            <a href="{% url 'dashboard_produto_create' %}"
-               class="btn btn-primary rounded-pill px-4">
-                <i class="bi bi-plus-lg me-1"></i>Novo produto
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{% url 'dashboard_produto_import' %}"
+                   class="btn btn-success rounded-pill px-4">
+                    <i class="bi bi-file-earmark-arrow-up me-1"></i>
+                    Importar produtos
+                </a>
+                <a href="{% url 'dashboard_produto_create' %}"
+                   class="btn btn-primary rounded-pill px-4">
+                    <i class="bi bi-plus-lg me-1"></i>Novo produto
+                </a>
+            </div>
         </div>
     </div>
 {% endblock header %}
