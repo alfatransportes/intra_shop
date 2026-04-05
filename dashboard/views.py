@@ -691,7 +691,7 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
             "Notebook corporativo",
             "",
         ])
-
+        
     def _build_listas_sheet(self, ws):
         headers = ["UNIDADES", "TIPOS", "NIVEIS_AVARIA", "ATIVO"]
         ws.append(headers)

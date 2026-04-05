@@ -1,4 +1,3 @@
-# services/produto_import_service.py
 from decimal import Decimal, InvalidOperation
 
 import pandas as pd
@@ -8,10 +7,9 @@ from website.models import NivelAvaria, Produto, Tipo, Unidade
 
 COLUNAS_OBRIGATORIAS = {
     "nome",
-    "unidade_codigo",
-    "unidade_nome",
-    "tipo",
-    "nivel_avaria",
+    "unidade_prod",
+    "tipo_prod",
+    "nivel_ava_prod",
     "quantidade",
     "maximo_por_usuario",
     "valor_nota",
@@ -22,8 +20,17 @@ COLUNAS_OBRIGATORIAS = {
 
 
 def normalizar_colunas(df):
+    mapeamento = {
+        "unidade": "unidade_prod",
+        "tipo": "tipo_prod",
+        "nivel_avaria": "nivel_ava_prod",
+    }
+
     df.columns = [
-        str(col).strip().lower().replace(" ", "_")
+        mapeamento.get(
+            str(col).strip().lower().replace(" ", "_"),
+            str(col).strip().lower().replace(" ", "_"),
+        )
         for col in df.columns
     ]
     return df
@@ -49,23 +56,77 @@ def parse_decimal(valor, default="0.00"):
     if pd.isna(valor) or valor == "":
         return Decimal(default)
 
-    # Se já vier numérico do pandas/excel
     if isinstance(valor, (int, float)):
         return Decimal(str(valor)).quantize(Decimal("0.01"))
 
     texto = str(valor).strip()
 
-    # tenta formato BR e EN
     try:
         if "," in texto and "." in texto:
-            # 1.234,56 -> 1234.56
             texto = texto.replace(".", "").replace(",", ".")
         else:
-            # 1234,56 -> 1234.56
             texto = texto.replace(",", ".")
         return Decimal(texto)
     except (InvalidOperation, ValueError):
         raise ValueError(f"Valor decimal inválido: {valor}")
+
+
+def parse_unidade(valor):
+    if pd.isna(valor) or str(valor).strip() == "":
+        raise ValueError("Unidade não informada.")
+
+    valor = str(valor).strip()
+
+    if " - " in valor:
+        codigo_str, nome = valor.split(" - ", 1)
+
+        try:
+            codigo = int(codigo_str.strip())
+        except ValueError:
+            raise ValueError(f"Unidade inválida: {valor}")
+
+        unidade = Unidade.objects.filter(
+            codigo=codigo,
+            nome=nome.strip(),
+        ).first()
+        if unidade:
+            return unidade
+
+        unidade = Unidade.objects.filter(codigo=codigo).first()
+        if unidade:
+            return unidade
+
+    unidade = Unidade.objects.filter(nome=valor).first()
+    if unidade:
+        return unidade
+
+    raise ValueError(f"Unidade inválida: {valor}")
+
+
+def parse_tipo(valor):
+    if pd.isna(valor) or str(valor).strip() == "":
+        raise ValueError("Tipo não informado.")
+
+    valor = str(valor).strip()
+
+    tipo = Tipo.objects.filter(nome=valor).first()
+    if tipo:
+        return tipo
+
+    raise ValueError(f"Tipo inválido: {valor}")
+
+
+def parse_nivel_avaria(valor):
+    if pd.isna(valor) or str(valor).strip() == "":
+        raise ValueError("Nível de avaria não informado.")
+
+    valor = str(valor).strip()
+
+    nivel = NivelAvaria.objects.filter(nome=valor).first()
+    if nivel:
+        return nivel
+
+    raise ValueError(f"Nível de avaria inválido: {valor}")
 
 
 def ler_arquivo(arquivo):
@@ -110,35 +171,9 @@ def importar_produtos(arquivo):
             if not nome:
                 raise ValueError("Nome do produto não informado.")
 
-            unidade_codigo_raw = row["unidade_codigo"]
-            unidade_codigo = None
-            if not pd.isna(unidade_codigo_raw) and str(unidade_codigo_raw).strip() != "":
-                unidade_codigo = parse_int(unidade_codigo_raw)
-
-            unidade_nome = str(row["unidade_nome"]).strip()
-            tipo_nome = str(row["tipo"]).strip()
-            nivel_nome = str(row["nivel_avaria"]).strip()
-
-            if not unidade_nome:
-                raise ValueError("Unidade não informada.")
-            if not tipo_nome:
-                raise ValueError("Tipo não informado.")
-            if not nivel_nome:
-                raise ValueError("Nível de avaria não informado.")
-
-            unidade, _ = Unidade.objects.get_or_create(
-                codigo=unidade_codigo,
-                nome=unidade_nome,
-            )
-
-            tipo, _ = Tipo.objects.get_or_create(
-                nome=tipo_nome,
-                defaults={"ativo": True},
-            )
-
-            nivel, _ = NivelAvaria.objects.get_or_create(
-                nome=nivel_nome,
-            )
+            unidade = parse_unidade(row["unidade_prod"])
+            tipo = parse_tipo(row["tipo_prod"])
+            nivel = parse_nivel_avaria(row["nivel_ava_prod"])
 
             defaults = {
                 "unidade_prod": unidade,
@@ -157,7 +192,6 @@ def importar_produtos(arquivo):
                 defaults=defaults,
             )
 
-            # garante execução do save do model e recálculo de valor_venda
             produto.save()
 
             if criado:
