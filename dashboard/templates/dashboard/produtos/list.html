@@ -235,7 +235,7 @@
                                     {% endwith %}
                                 </td>
                                 <td>
-                                    <div class="">{{ produto.num_controle }}</div>
+                                    <div class="">{{ produto.num_controle|default:"-" }}</div>
                                 </td>
                                 <td>
                                     <div class="dash-name">{{ produto.nome }}</div>
