@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
 from urllib.parse import quote
@@ -9,8 +8,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import (Count, DecimalField, ExpressionWrapper, F, Sum,
-                              Value)
+from django.db.models import DecimalField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -187,7 +185,10 @@ class ProdutoListView(DashboardPermissionMixin, ListView):
         tipo = self.request.GET.get("tipo")
 
         if busca:
-            queryset = queryset.filter(nome__icontains=busca)
+            queryset = queryset.filter(
+                Q(nome__icontains=busca) |
+                Q(num_controle__icontains=busca)
+            )
 
         if tipo:
             queryset = queryset.filter(tipo_prod_id=tipo)
@@ -639,6 +640,7 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
 
     def _build_import_sheet(self, ws):
         headers = [
+            "num_controle",
             "nome",
             "unidade_prod",
             "tipo_prod",
@@ -662,16 +664,17 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
             cell.alignment = align
 
         widths = {
-            1: 32,
-            2: 30,
-            3: 24,
-            4: 24,
-            5: 14,
-            6: 22,
-            7: 16,
-            8: 18,
-            9: 45,
-            10: 12,
+            1: 22,  # num_controle
+            2: 32,  # nome
+            3: 30,  # unidade_prod
+            4: 24,  # tipo_prod
+            5: 24,  # nivel_ava_prod
+            6: 14,  # quantidade
+            7: 22,  # maximo_por_usuario
+            8: 16,  # valor_nota
+            9: 18,  # porcen_desconto
+            10: 45, # descricao
+            11: 12, # ativo
         }
 
         for col_idx, width in widths.items():
@@ -680,6 +683,7 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
         ws.freeze_panes = "A2"
 
         ws.append([
+            "",
             "Notebook Dell",
             "",
             "",
@@ -761,7 +765,7 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
             "INSTRUÇÕES DE PREENCHIMENTO",
             "",
             "1. Preencha somente a aba IMPORTACAO_PRODUTOS.",
-            "2. Clique nas células das colunas unidade, tipo, nivel_avaria e ativo para escolher uma opção.",
+            "2. Clique nas células das colunas unidade_prod, tipo_prod, nivel_ava_prod e ativo para escolher uma opção.",
             "3. Não altere o nome das colunas.",
             "4. Salve e envie o arquivo em formato .xlsx.",
         ]
@@ -778,12 +782,10 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
         dv_unidade.prompt = "Selecione uma unidade da lista."
         dv_unidade.showInputMessage = True
 
-
         dv_tipo = DataValidation(type="list", formula1="=LISTA_TIPOS", allow_blank=True)
         dv_tipo.promptTitle = "Tipo"
         dv_tipo.prompt = "Selecione um tipo da lista."
         dv_tipo.showInputMessage = True
-
 
         dv_nivel = DataValidation(type="list", formula1="=LISTA_NIVEIS_AVARIA", allow_blank=True)
         dv_nivel.promptTitle = "Nível de avaria"
@@ -824,14 +826,14 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
         for dv in [dv_unidade, dv_tipo, dv_nivel, dv_ativo, dv_quantidade, dv_maximo, dv_valor, dv_desconto]:
             ws.add_data_validation(dv)
 
-        dv_unidade.add("B2:B1000")
-        dv_tipo.add("C2:C1000")
-        dv_nivel.add("D2:D1000")
-        dv_quantidade.add("E2:E1000")
-        dv_maximo.add("F2:F1000")
-        dv_valor.add("G2:G1000")
-        dv_desconto.add("H2:H1000")
-        dv_ativo.add("J2:J1000")
+        dv_unidade.add("C2:C1000")
+        dv_tipo.add("D2:D1000")
+        dv_nivel.add("E2:E1000")
+        dv_quantidade.add("F2:F1000")
+        dv_maximo.add("G2:G1000")
+        dv_valor.add("H2:H1000")
+        dv_desconto.add("I2:I1000")
+        dv_ativo.add("K2:K1000")
 
 # -------------------------
 # TIPOS

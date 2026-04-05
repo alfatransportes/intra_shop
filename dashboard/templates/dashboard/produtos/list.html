@@ -171,7 +171,7 @@
                            name="q"
                            value="{{ q }}"
                            class="form-control"
-                           placeholder="Buscar por nome...">
+                           placeholder="Buscar por nome ou número de controle...">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Tipo</label>
@@ -208,6 +208,7 @@
                 <table class="table align-middle dash-table mb-0">
                     <thead>
                         <tr>
+                            <th>Nº Controle</th>
                             <th>Imagem</th>
                             <th>Nome</th>
                             <th>Status</th>
@@ -232,6 +233,9 @@
                                             <div class="border d-flex align-items-center justify-content-center produto-thumb-placeholder">-</div>
                                         {% endif %}
                                     {% endwith %}
+                                </td>
+                                <td>
+                                    <div class="">{{ produto.num_controle }}</div>
                                 </td>
                                 <td>
                                     <div class="dash-name">{{ produto.nome }}</div>

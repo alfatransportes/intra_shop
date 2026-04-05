@@ -87,6 +87,7 @@ class ProdutoForm(BaseBootstrapForm):
             "unidade_prod",
             "tipo_prod",
             "nivel_ava_prod",
+            "num_controle",
             "nome",
             "quantidade",
             "maximo_por_usuario",

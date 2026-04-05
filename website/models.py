@@ -123,6 +123,7 @@ class Produto(models.Model):
         verbose_name="Nível de Avaria",
     )
 
+    num_controle = models.CharField(max_length=255, null=True, blank=True, verbose_name="Número de Controle")
     nome = models.CharField(max_length=255)
     quantidade = models.PositiveIntegerField(
         default=1,

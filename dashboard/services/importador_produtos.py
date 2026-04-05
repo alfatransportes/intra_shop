@@ -175,6 +175,17 @@ def importar_produtos(arquivo):
             tipo = parse_tipo(row["tipo_prod"])
             nivel = parse_nivel_avaria(row["nivel_ava_prod"])
 
+            num_controle = None
+
+            if not pd.isna(row.get("num_controle")):
+                valor = str(row["num_controle"]).strip()
+                if valor:
+                    num_controle = valor
+
+            descricao = ""
+            if not pd.isna(row["descricao"]):
+                descricao = str(row["descricao"]).strip()
+
             defaults = {
                 "unidade_prod": unidade,
                 "tipo_prod": tipo,
@@ -183,14 +194,24 @@ def importar_produtos(arquivo):
                 "maximo_por_usuario": parse_int(row["maximo_por_usuario"], default=0),
                 "valor_nota": parse_decimal(row["valor_nota"]),
                 "porcen_desconto": parse_decimal(row["porcen_desconto"]),
-                "descricao": str(row["descricao"]).strip(),
+                "descricao": descricao,
                 "ativo": parse_bool(row["ativo"]),
             }
 
-            produto, criado = Produto.objects.update_or_create(
-                nome=nome,
-                defaults=defaults,
-            )
+            if num_controle:
+                produto, criado = Produto.objects.update_or_create(
+                    num_controle=num_controle,
+                    defaults={
+                        "nome": nome,
+                        "num_controle": num_controle,
+                        **defaults
+                    },
+                )
+            else:
+                produto, criado = Produto.objects.update_or_create(
+                    nome=nome,
+                    defaults=defaults,
+                )
 
             produto.save()
 
