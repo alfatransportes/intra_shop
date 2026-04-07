@@ -4,21 +4,50 @@ from decimal import Decimal
 from django.contrib import admin
 from django.db.models import DecimalField, F, Sum
 from django.db.models.functions import Coalesce
+from django.utils.html import format_html
 
-from .models import (Carrinho, CarrinhoItem, ConfigWebsite, FormaPagamento,
-                     NivelAvaria, Pagamento, Produto, ProdutoImagem,
-                     RegraParcelamentoVale, Tipo, Unidade, Venda, VendaItem)
+from .models import (BannerConfigWebsite, Carrinho, CarrinhoItem,
+                     ConfigWebsite, FormaPagamento, NivelAvaria, Pagamento,
+                     Produto, ProdutoImagem, RegraParcelamentoVale, Tipo,
+                     Unidade, Venda, VendaItem)
 
 
 # -------------------------
 # Config Website
 # -------------------------
+class BannerConfigWebsiteInline(admin.StackedInline):
+    model = BannerConfigWebsite
+    extra = 1
+    fields = (
+        "ordem",
+        "ativo",
+        "titulo",
+        "subtitulo",
+        "link",
+        "banner",
+        "preview_banner",
+    )
+    readonly_fields = ("preview_banner",)
+    ordering = ("ordem", "id")
+
+    def preview_banner(self, obj):
+        if obj and obj.banner:
+            return format_html(
+                '<img src="{}" style="max-height:120px; border-radius:8px;" />',
+                obj.banner.url,
+            )
+        return "Sem imagem"
+
+    preview_banner.short_description = "Pré-visualização"
+
+
 @admin.register(ConfigWebsite)
 class ConfigWebsiteAdmin(admin.ModelAdmin):
     list_display = ("titulo", "active", "cor_destaque")
     list_filter = ("active",)
     search_fields = ("titulo",)
     ordering = ("titulo",)
+    inlines = [BannerConfigWebsiteInline]
 
 
 # -------------------------

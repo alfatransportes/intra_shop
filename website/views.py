@@ -9,7 +9,7 @@ from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from .models import RESERVA_HORAS, Favorito, Produto, Tipo
+from .models import RESERVA_HORAS, ConfigWebsite, Favorito, Produto, Tipo
 
 
 def index(request):
@@ -69,10 +69,22 @@ def index(request):
 
     categorias = Tipo.objects.all().order_by("nome")
 
-    paginator = Paginator(produtos_qs, 12)  # 12 por página
+    paginator = Paginator(produtos_qs, 12)
     page_obj = paginator.get_page(page_number_int)
 
     filtros_ativos = bool(busca or tipo_id or ordenar)
+
+    # configuração ativa + banners do carrossel
+    config_ativa = (
+        ConfigWebsite.objects
+        .prefetch_related("banners")
+        .filter(active=True)
+        .first()
+    )
+
+    banners = []
+    if config_ativa:
+        banners = config_ativa.banners.filter(ativo=True).order_by("ordem", "id")
 
     return render(
         request,
@@ -83,9 +95,11 @@ def index(request):
             "categoria": tipo_id,
             "ordenar": ordenar,
             "filtros_ativos": filtros_ativos,
-            "page_obj": page_obj,        # paginado
-            "produtos": page_obj.object_list,  # lista atual
+            "page_obj": page_obj,
+            "produtos": page_obj.object_list,
             "total_produtos": paginator.count,
+            "config_ativa": config_ativa,
+            "banners": banners,
         },
     )
 

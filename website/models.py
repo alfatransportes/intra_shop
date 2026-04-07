@@ -1,5 +1,6 @@
 # website/models.py
 import os
+import uuid
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from io import BytesIO
@@ -23,6 +24,7 @@ def upload_to(instance, filename):
     return f"produtos/{base}.webp"
 
 
+
 class ConfigWebsite(models.Model):
     titulo = models.CharField(max_length=50, verbose_name="Título da Configuração")
     cor_destaque = models.CharField(
@@ -31,17 +33,19 @@ class ConfigWebsite(models.Model):
         help_text="Selecione uma cor destaque (ex: #DE1E3E).",
         default="#DE1E3E",
     )
-    logo = models.FileField(
+    logo = models.ImageField(
         upload_to="imagensConfiguracaoWebsite/",
         verbose_name="Logotipo",
     )
-    favicon = models.FileField(
+    favicon = models.ImageField(
         upload_to="imagensConfiguracaoWebsite/",
         verbose_name="Favicon",
     )
-    image_auth = models.FileField(
+    image_auth = models.ImageField(
         upload_to="imagensConfiguracaoWebsite/",
-        verbose_name="Imagem de Autenticação",blank=True, null=True
+        verbose_name="Imagem de Autenticação",
+        blank=True,
+        null=True,
     )
     active = models.BooleanField(default=False)
 
@@ -70,6 +74,159 @@ class ConfigWebsite(models.Model):
                     "Já existe uma configuração ativa. Desative a outra antes de ativar esta."
                 )
 
+
+class BannerConfigWebsite(models.Model):
+    config_website = models.ForeignKey(
+        ConfigWebsite,
+        on_delete=models.CASCADE,
+        related_name="banners",
+        verbose_name="Configuração do Website",
+    )
+    titulo = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        verbose_name="Título do banner",
+    )
+    subtitulo = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Subtítulo do banner",
+    )
+    link = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name="Link do banner",
+    )
+    banner = models.ImageField(
+        upload_to="imagensBannersConfiguracaoWebsite/",
+        verbose_name="Imagem do Banner",
+    )
+    ordem = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Ordem",
+        help_text="Menor valor aparece primeiro no carrossel.",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Banner da Configuração do Website"
+        verbose_name_plural = "Banners da Configuração do Website"
+        ordering = ["ordem", "id"]
+
+    def __str__(self):
+        return f"{self.config_website.titulo} - Banner {self.ordem}"
+
+    def clean(self):
+        super().clean()
+
+        if self.config_website_id:
+            total_banners = BannerConfigWebsite.objects.filter(
+                config_website=self.config_website
+            ).exclude(pk=self.pk).count()
+
+            if total_banners >= 10:
+                raise ValidationError(
+                    "Cada configuração pode ter no máximo 10 banners no carrossel."
+                )
+
+    def _imagem_foi_alterada(self):
+        if not self.pk:
+            return True
+
+        antigo = type(self).objects.filter(pk=self.pk).only("banner").first()
+        if not antigo:
+            return True
+
+        nome_antigo = antigo.banner.name if antigo.banner else None
+        nome_atual = self.banner.name if self.banner else None
+
+        return nome_antigo != nome_atual
+
+    def _gerar_banner_webp(self):
+        self.banner.seek(0)
+
+        largura_final = 1920
+        altura_final = 700
+
+        with Image.open(self.banner) as img:
+            img = ImageOps.exif_transpose(img)
+
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGB")
+
+            largura, altura = img.size
+            proporcao_original = largura / altura
+            proporcao_final = largura_final / altura_final
+
+            # cortar imagem para manter proporção correta
+            if proporcao_original > proporcao_final:
+                # imagem muito larga
+                nova_largura = int(altura * proporcao_final)
+                offset = (largura - nova_largura) // 2
+                box = (offset, 0, offset + nova_largura, altura)
+            else:
+                # imagem muito alta
+                nova_altura = int(largura / proporcao_final)
+                offset = (altura - nova_altura) // 2
+                box = (0, offset, largura, offset + nova_altura)
+
+            img = img.crop(box)
+
+            # redimensiona para tamanho final
+            img = img.resize((largura_final, altura_final), Image.LANCZOS)
+
+            buffer = BytesIO()
+
+            img.save(
+                buffer,
+                format="WEBP",
+                quality=85,
+                method=6,
+                optimize=True,
+            )
+
+            buffer.seek(0)
+
+        nome_base, _ = os.path.splitext(os.path.basename(self.banner.name))
+        nome_unico = f"{nome_base}_{uuid.uuid4().hex[:10]}.webp"
+
+        return nome_unico, ContentFile(buffer.read())
+
+    def save(self, *args, **kwargs):
+        if not self.banner:
+            return super().save(*args, **kwargs)
+
+        arquivo_antigo = None
+        if self.pk:
+            antigo = type(self).objects.filter(pk=self.pk).only("banner").first()
+            if antigo and antigo.banner:
+                arquivo_antigo = antigo.banner.name
+
+        if self._imagem_foi_alterada():
+            novo_nome, novo_arquivo = self._gerar_banner_webp()
+            self.banner.save(novo_nome, novo_arquivo, save=False)
+
+        super().save(*args, **kwargs)
+
+        if (
+            arquivo_antigo
+            and arquivo_antigo != self.banner.name
+            and self.banner.storage.exists(arquivo_antigo)
+        ):
+            self.banner.storage.delete(arquivo_antigo)
+
+    def delete(self, *args, **kwargs):
+        arquivo = self.banner.name if self.banner else None
+        storage = self.banner.storage if self.banner else None
+
+        super().delete(*args, **kwargs)
+
+        if arquivo and storage and storage.exists(arquivo):
+            storage.delete(arquivo)
 
 class Unidade(models.Model):
     codigo = models.IntegerField(blank=True, null=True)
