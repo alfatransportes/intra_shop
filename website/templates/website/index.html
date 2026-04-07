@@ -59,11 +59,29 @@
                         </button>
                     </div>
             </div>
-        {% endif %}
+            {% else %}
+            <div class="container-fluid">
+                <div class="p-5 mb-4 bg-body-tertiary rounded-4 hero-fallback">
+                    <div class="container-fluid py-5 text-center text-md-start">
+                        <h1 class="display-6 fw-bold mb-3">
+                            Bem-vindo ao Intra Shop
+                        </h1>
+                        <p class="col-md-8 fs-5 mb-4 mx-auto mx-md-0">
+                            Confira os produtos disponíveis, encontre ofertas e navegue pelas categorias com facilidade.
+                        </p>
+                        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center justify-content-md-start">
+                            <a href="#produtos" class="btn btn-primary btn-lg px-4">
+                                Ver produtos
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         <div class="container">
             <!-- topo banners-->
             <!-- Chips de categorias -->
-            <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-4 {% if not banners %} pt-3{% endif %}">
+            <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-4 {% if not banners %} pt-3{% endif %}" id="produtos">
                 <a href="{% url 'index' %}"
                    class="badge categoria-chip text-bg-{% if not categoria %}primary{% else %}light{% endif %} text-decoration-none">
                     Todas
