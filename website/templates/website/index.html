@@ -4,21 +4,21 @@
 {% endblock title %}
 {% block conteudo %}
     <style>
-	.carousel-item img {
-    width: 100%;
-    height: 420px;
-    object-fit: cover;
-}
-
-@media (max-width: 768px) {
-    .carousel-item img {
-        height: 220px;
-    }
-}
+        .carousel-item img {
+            width: 100%;
+            height: 420px;
+            object-fit: contain;
+        }
+        
+        @media (max-width: 768px) {
+            .carousel-item img {
+                height: 220px;
+            }
+        }
     </style>
     <main class="shop-page pb-4 pb-md-5">
+        {% if banners %}
         <div class="container-fluid">
-            {% if banners %}
                 <div class="shop-hero mb-4">
                     <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
                         <div class="carousel-inner">
@@ -60,12 +60,12 @@
                         </button>
                     </div>
                 </div>
-            {% endif %}
-        </div>
+            </div>
+        {% endif %}
         <div class="container">
             <!-- topo banners-->
             <!-- Chips de categorias -->
-            <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-4">
+            <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-4 {% if not banners %} pt-3{% endif %}">
                 <a href="{% url 'index' %}"
                    class="badge categoria-chip text-bg-{% if not categoria %}primary{% else %}light{% endif %} text-decoration-none">
                     Todas

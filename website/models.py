@@ -149,38 +149,20 @@ class BannerConfigWebsite(models.Model):
     def _gerar_banner_webp(self):
         self.banner.seek(0)
 
-        largura_final = 1920
-        altura_final = 700
+        largura_max = 1920
+        altura_max = 420
 
         with Image.open(self.banner) as img:
             img = ImageOps.exif_transpose(img)
 
+            # Mantém transparência quando existir
             if img.mode not in ("RGB", "RGBA"):
-                img = img.convert("RGB")
+                img = img.convert("RGBA" if "A" in img.getbands() else "RGB")
 
-            largura, altura = img.size
-            proporcao_original = largura / altura
-            proporcao_final = largura_final / altura_final
-
-            # cortar imagem para manter proporção correta
-            if proporcao_original > proporcao_final:
-                # imagem muito larga
-                nova_largura = int(altura * proporcao_final)
-                offset = (largura - nova_largura) // 2
-                box = (offset, 0, offset + nova_largura, altura)
-            else:
-                # imagem muito alta
-                nova_altura = int(largura / proporcao_final)
-                offset = (altura - nova_altura) // 2
-                box = (0, offset, largura, offset + nova_altura)
-
-            img = img.crop(box)
-
-            # redimensiona para tamanho final
-            img = img.resize((largura_final, altura_final), Image.LANCZOS)
+            # Mantém proporção original sem cortar
+            img.thumbnail((largura_max, altura_max), Image.LANCZOS)
 
             buffer = BytesIO()
-
             img.save(
                 buffer,
                 format="WEBP",
@@ -188,7 +170,6 @@ class BannerConfigWebsite(models.Model):
                 method=6,
                 optimize=True,
             )
-
             buffer.seek(0)
 
         nome_base, _ = os.path.splitext(os.path.basename(self.banner.name))
