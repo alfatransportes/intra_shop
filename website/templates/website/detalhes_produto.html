@@ -1,666 +1,109 @@
 {% extends "website/base.html" %}
 {% load static %}
-{% block title %}
-    {{ produto.nome }}
-{% endblock title %}
+{% block title %}{{ produto.nome }}{% endblock %}
 {% block conteudo %}
-    <style>
-        .produto-page {
-            background: #f8f9fa;
-            min-height: 100vh;
-        }
-
-        .produto-card,
-        .produto-info-card,
-        .produto-rel-card {
-            border: 0;
-            border-radius: 1rem;
-            box-shadow: 0 .125rem .5rem rgba(0, 0, 0, .06);
-            background: #fff;
-        }
-
-        .produto-breadcrumb a {
-            text-decoration: none;
-        }
-
-        .produto-titulo {
-            line-height: 1.2;
-            font-weight: 700;
-        }
-
-        .produto-favorito-btn {
-            width: 42px;
-            height: 42px;
-            border-radius: 999px;
-        }
-
-        .produto-galeria-principal {
-            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
-        }
-
-        .produto-galeria-principal img {
-            object-fit: contain;
-            width: 100%;
-            height: 100%;
-        }
-
-        .produto-thumb-btn {
-            width: 76px;
-            height: 76px;
-            overflow: hidden;
-            border-radius: .85rem;
-            transition: all .2s ease;
-        }
-
-        .produto-thumb-btn:hover {
-            transform: translateY(-2px);
-            border-color: var(--bs-primary) !important;
-        }
-
-        .produto-thumb-btn img {
-            width: 76px;
-            height: 76px;
-            object-fit: cover;
-        }
-
-        .produto-badge-pill {
-            border-radius: 999px;
-            padding: .45rem .85rem;
-        }
-
-        .produto-preco-atual {
-            font-size: clamp(2rem, 4vw, 2.6rem);
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .produto-box-suave {
-            background: #f8f9fa;
-            border-radius: .9rem;
-        }
-
-
-        .produto-tab .nav-link {
-            border: 0;
-            border-radius: .8rem;
-            color: #495057;
-            font-weight: 600;
-        }
-
-        .produto-tab .nav-link.active {
-            background: var(--bs-primary);
-            color: #fff;
-        }
-
-        .produto-detalhe-item {
-            background: #f8f9fa;
-            border-radius: .85rem;
-            padding: .9rem;
-            height: 100%;
-        }
-
-        .produto-relacionado-card {
-            border: 0;
-            border-radius: .9rem;
-            overflow: hidden;
-            box-shadow: 0 .125rem .45rem rgba(0, 0, 0, .05);
-            transition: transform .2s ease, box-shadow .2s ease;
-            height: 100%;
-        }
-
-        .produto-relacionado-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 .45rem 1rem rgba(0, 0, 0, .10);
-        }
-
-        .produto-relacionado-img {
-            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
-        }
-
-        .produto-relacionado-img img {
-            object-fit: contain;
-            width: 100%;
-            height: 100%;
-            padding: .5rem;
-        }
-
-        .produto-sticky {
-            position: sticky;
-            top: 96px;
-        }
-
-        .galeria-dot {
-            appearance: none;
-            cursor: pointer;
-        }
-        
-        .galeria-dot.active {
-            background: #0d6efd !important;
-            border-color: #0d6efd !important;
-        }
-        
-        .produto-thumb-btn.border-primary {
-            border-width: 2px !important;
-        }
-
-        @media (max-width: 991.98px) {
-            .produto-sticky {
-                position: static;
-                top: auto;
-            }
-        }
-    </style>
-    <main class="produto-page py-4 py-md-5">
-        <div class="container">
-            <!-- Breadcrumb + ações desktop -->
-            <div class="d-none d-lg-flex align-items-center justify-content-between mb-3 produto-breadcrumb">
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item">
-                            <a href="{% url 'index' %}">Início</a>
-                        </li>
-                        <li class="breadcrumb-item">
-                            <span>{{ produto.tipo_prod }}</span>
-                        </li>
-                        <li class="breadcrumb-item active fw-semibold" aria-current="page">{{ produto.nome }}</li>
-                    </ol>
-                </nav>
-                <div class="small"></div>
-            </div>
-            <div class="row g-4">
-                <!-- MOBILE título -->
-                <div class="col-12 d-lg-none">
-                    <div class="card produto-info-card">
-                        <div class="card-body p-3 p-md-4">
-                            <div class="small text-muted mb-1">Novo</div>
-                            <div class="d-flex align-items-start justify-content-between gap-2">
-                                <h1 class="h4 mb-2 produto-titulo">{{ produto.nome }}</h1>
-                                <a href="{% url 'favorito_toggle' produto.id %}"
-                                   class="btn btn-light border d-inline-flex align-items-center justify-content-center produto-favorito-btn"
-                                   aria-label="Favoritar">
-                                    {% if favoritado %}
-                                        ❤️
-                                    {% else %}
-                                        ♡
-                                    {% endif %}
-                                </a>
-                            </div>
-                            {% if nota_media and total_avaliacoes %}
-                                <div class="small text-muted mb-2">
-                                    <span class="text-dark fw-semibold">{{ nota_media }}</span>
-                                    <span class="text-warning">★★★★★</span>
-                                    <span>({{ total_avaliacoes }})</span>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                <!-- GALERIA -->
-                <div class="col-12 col-lg-7">
-                    <div class="card produto-card">
-                        <div class="card-body p-3 p-md-4">
-                            {% with imgs=produto.imagens.all %}
-                                {% with total=imgs|length %}
-                                    <div class="position-relative">
-                                        {% if total > 1 %}
-                                            <div class="position-absolute top-0 start-0 m-2" style="z-index: 3;">
-                                                <span id="galeriaContador"
-                                                      class="badge text-bg-light border produto-badge-pill">
-                                                    1/{{ total }}
-                                                </span>
-                                            </div>
-                                        {% endif %}
-                                        {% if total > 1 %}
-                                            <button type="button"
-                                                    class="btn btn-light border position-absolute top-50 start-0 translate-middle-y ms-2 d-flex align-items-center justify-content-center"
-                                                    style="z-index: 3;
-                                                           width: 42px;
-                                                           height: 42px;
-                                                           border-radius: 999px"
-                                                    onclick="mudarImagem(-1)"
-                                                    aria-label="Imagem anterior">‹</button>
-                                            <button type="button"
-                                                    class="btn btn-light border position-absolute top-50 end-0 translate-middle-y me-2 d-flex align-items-center justify-content-center"
-                                                    style="z-index: 3;
-                                                           width: 42px;
-                                                           height: 42px;
-                                                           border-radius: 999px"
-                                                    onclick="mudarImagem(1)"
-                                                    aria-label="Próxima imagem">›</button>
-                                        {% endif %}
-                                        <div class="ratio ratio-4x3 produto-galeria-principal rounded-4 overflow-hidden border">
-                                            {% if total > 0 %}
-                                                {% for img in imgs %}
-                                                    {% if img.imagem %}
-                                                        <img class="produto-galeria-img {% if not forloop.first %}d-none{% endif %}"
-                                                             src="{{ img.imagem.url }}"
-                                                             alt="{{ produto.nome }} - imagem {{ forloop.counter }}"
-                                                             data-index="{{ forloop.counter0 }}">
-                                                    {% endif %}
-                                                {% endfor %}
-                                            {% else %}
-                                                <img class="produto-galeria-img"
-                                                     src="{% static 'img/sem-imagem.png' %}"
-                                                     alt="Sem imagem"
-                                                     data-index="0">
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    {% if total > 1 %}
-                                        <div class="d-flex justify-content-center gap-2 mt-3 d-lg-none"
-                                             id="galeriaDots">
-                                            {% for img in imgs %}
-                                                {% if img.imagem %}
-                                                    <button type="button"
-                                                            class="border rounded-circle p-0 galeria-dot {% if forloop.first %}active{% endif %}"
-                                                            style="width:10px;
-                                                                   height:10px;
-                                                                   background:{% if forloop.first %}#0d6efd{% else %}transparent{% endif %};
-                                                                   border-color:{% if forloop.first %}#0d6efd{% else %}#ced4da{% endif %}"
-                                                            onclick="irParaImagem({{ forloop.counter0 }})"
-                                                            aria-label="Ir para imagem {{ forloop.counter }}"></button>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    {% if total > 1 %}
-                                        <div class="d-none d-lg-flex gap-2 mt-3 flex-wrap" id="galeriaThumbs">
-                                            {% for img in imgs %}
-                                                {% if img.imagem %}
-                                                    <button type="button"
-                                                            class="btn p-0 border bg-white produto-thumb-btn {% if forloop.first %}border-primary{% endif %}"
-                                                            onclick="irParaImagem({{ forloop.counter0 }})"
-                                                            aria-label="Ver imagem {{ forloop.counter }}"
-                                                            data-thumb-index="{{ forloop.counter0 }}">
-                                                        <img src="{{ img.imagem.url }}" alt="Imagem {{ forloop.counter }}">
-                                                    </button>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                {% endwith %}
-                            {% endwith %}
-                        </div>
-                    </div>
-                </div>
-                <!-- COLUNA DIREITA -->
-                <div class="col-12 col-lg-5">
-                    <div class="produto-sticky">
-                        <!-- DESKTOP título -->
-                        <div class="d-none d-lg-block mb-3">
-                            <div class="card produto-info-card">
-                                <div class="card-body p-3 p-md-4">
-                                    <div class="small text-muted mb-1">Novo</div>
-                                    <div class="d-flex align-items-start justify-content-between gap-2">
-                                        <h1 class="h4 mb-2 produto-titulo">{{ produto.nome }}</h1>
-                                        <a href="{% url 'favorito_toggle' produto.id %}"
-                                           class="btn btn-light border d-inline-flex align-items-center justify-content-center produto-favorito-btn"
-                                           aria-label="Favoritar">
-                                            {% if favoritado %}
-                                                ❤️
-                                            {% else %}
-                                                ♡
-                                            {% endif %}
-                                        </a>
-                                    </div>
-                                    {% if nota_media and total_avaliacoes %}
-                                        <div class="small text-muted">
-                                            <span class="text-dark fw-semibold">{{ nota_media }}</span>
-                                            <span class="text-warning">★★★★★</span>
-                                            <span>({{ total_avaliacoes }})</span>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        <!-- CARD COMPRA -->
-                        <div class="card produto-info-card">
-                            <div class="card-body p-4">
-                                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-                                    {% if produto.porcen_desconto|default:0 > 0 %}
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge text-bg-success produto-badge-pill">{{ produto.porcen_desconto|floatformat }}% OFF</span>
-                                        </div>
-                                    {% else %}
-                                        <div></div>
-                                    {% endif %}
-                                    <button id="btnCompartilhar"
-                                            class="btn btn-link p-0 text-decoration-none small fw-semibold">
-                                        <i class="bi bi-share-fill me-2"></i>Compartilhar
-                                    </button>
-                                </div>
-                                <div class="mb-3">
-                                    {% if produto.porcen_desconto|default:0 > 0 %}
-                                        <div class="text-muted text-decoration-line-through mb-1">R$ {{ produto.valor_nota|floatformat:2 }}</div>
-                                    {% endif %}
-                                    <div class="produto-preco-atual">R$ {{ produto.valor_venda|floatformat:2 }}</div>
-                                    {% if economia|default:0 > 0 %}
-                                        <div class="small text-muted mt-2">
-                                            Você economiza <strong>R$ {{ economia|floatformat:2 }}</strong>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <div class="produto-box-suave p-3 mb-3">
-                                    {% if produto.estoque_disponivel|default:0 > 0 %}
-                                        <div class="fw-semibold text-success">Estoque disponível</div>
-                                        <div class="small text-muted">
-                                            Quantidade: <strong>{{ produto.estoque_disponivel }}</strong> unidade(s)
-                                        </div>
-                                    {% else %}
-                                        <div class="fw-semibold text-danger">Sem estoque</div>
-                                        <div class="small text-muted">Sem unidades disponíveis</div>
-                                    {% endif %}
-                                </div>
-                                <div class="produto-box-suave p-3 mb-3">
-                                    {% if produto.maximo_por_usuario|default:0 > 0 %}
-                                        <div class="fw-semibold text-success">Máximo permitido por usuário</div>
-                                        <div class="small text-muted">
-                                            Limite total: <strong>{{ produto.maximo_por_usuario }}</strong> unidade(s)
-                                        </div>
-                                        {% if user.is_authenticated and restante_para_usuario is not None %}
-                                            <div class="small text-muted mt-1">
-                                                Você ainda pode solicitar:
-                                                <strong>{{ restante_para_usuario }}</strong> unidade(s)
-                                            </div>
-                                        {% endif %}
-                                    {% else %}
-                                        <div class="fw-semibold text-success">Sem limite por usuário</div>
-                                    {% endif %}
-                                </div>
-                                <div class="d-grid gap-2">
-                                    {% if produto.estoque_disponivel|default:0 > 0 %}
-                                        <form method="post"
-                                              action="{% url 'carrinho_add' produto.id %}"
-                                              class="d-grid gap-3">
-                                            {% csrf_token %}
-                                            {% if produto.usa_variacoes %}
-                                                <div>
-                                                    <label for="id_variacao" class="form-label fw-semibold">Tamanho</label>
-                                                    <select name="variacao_id" id="id_variacao" class="form-select" required>
-                                                        <option value="">Selecione uma opção</option>
-                                                        {% for variacao in variacoes_disponiveis %}
-                                                            <option value="{{ variacao.id }}">
-                                                                {{ variacao.tamanho }}
-                                                                {% if variacao.genero %}• {{ variacao.get_genero_display }}{% endif %}
-                                                                {% if variacao.faixa_etaria %}• {{ variacao.get_faixa_etaria_display }}{% endif %}
-                                                                • Estoque: {{ variacao.quantidade }}
-                                                            </option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
-                                            {% endif %}
-                                            <div>
-                                                <label for="id_quantidade" class="form-label fw-semibold">Quantidade</label>
-                                                <input type="number"
-                                                       name="quantidade"
-                                                       id="id_quantidade"
-                                                       min="1"
-                                                       value="1"
-                                                       class="form-control"
-                                                       required>
-                                            </div>
-                                            <div class="d-grid gap-2">
-                                                <button type="submit"
-                                                        name="acao"
-                                                        value="comprar"
-                                                        class="btn btn-primary btn-lg">Comprar agora</button>
-                                                <button type="submit"
-                                                        name="acao"
-                                                        value="carrinho"
-                                                        class="btn btn-outline-primary btn-lg">
-                                                    Adicionar ao carrinho
-                                                </button>
-                                            </div>
-                                        </form>
-                                    {% else %}
-                                        <button class="btn btn-secondary btn-lg" disabled>Indisponível</button>
-                                    {% endif %}
-                                </div>
-                                <div class="mt-4 small text-muted">
-                                    <div class="d-flex gap-2">
-                                        <span>↩️</span>
-                                        <span>Devolução conforme regras internas.</span>
-                                    </div>
-                                    <div class="d-flex gap-2 mt-2">
-                                        <span>✅</span>
-                                        <span>Compra garantida: após aprovação, o pedido fica registrado em Minhas compras.</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- detalhes rápidos -->
-                        <div class="card produto-info-card mt-3">
-                            <div class="card-body p-4">
-                                <div class="fw-bold mb-3">Detalhes do produto</div>
-                                <div class="row g-2 small">
-                                    <div class="col-6">
-                                        <div class="produto-detalhe-item">
-                                            <div class="text-muted mb-1">Unidade</div>
-                                            <div class="fw-semibold">{{ produto.unidade_prod }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="produto-detalhe-item">
-                                            <div class="text-muted mb-1">Tipo</div>
-                                            <div class="fw-semibold">{{ produto.tipo_prod }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="produto-detalhe-item">
-                                            <div class="text-muted mb-1">Avaria</div>
-                                            <div class="fw-semibold">{{ produto.nivel_ava_prod }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="produto-detalhe-item">
-                                            <div class="text-muted mb-1">Disponível</div>
-                                            <div class="fw-semibold">{{ produto.estoque_disponivel }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- ABAIXO -->
-            <div class="row mt-4">
-                <div class="col-12 col-lg-7">
-                    <div class="card produto-card">
-                        <div class="card-body p-4">
-                            <ul class="nav nav-tabs produto-tab border-0 gap-2" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link active"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#tab-desc"
-                                            type="button"
-                                            role="tab">Descrição</button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#tab-info"
-                                            type="button"
-                                            role="tab">Informações</button>
-                                </li>
-                            </ul>
-                            <div class="tab-content pt-4">
-                                <div class="tab-pane fade show active" id="tab-desc" role="tabpanel">
-                                    {% if produto.descricao %}
-                                        <div style="white-space: pre-line;">{{ produto.descricao }}</div>
-                                    {% else %}
-                                        <div class="text-muted">Sem descrição.</div>
-                                    {% endif %}
-                                </div>
-                                <div class="tab-pane fade" id="tab-info" role="tabpanel">
-                                    <div class="small">
-                                        <div class="mb-2">
-                                            <strong>Unidade:</strong> {{ produto.unidade_prod }}
-                                        </div>
-                                        <div class="mb-2">
-                                            <strong>Tipo:</strong> {{ produto.tipo_prod }}
-                                        </div>
-                                        <div class="mb-2">
-                                            <strong>Nível de avaria:</strong> {{ produto.nivel_ava_prod }}
-                                        </div>
-                                        <div class="mb-2">
-                                            <strong>Disponível:</strong> {{ produto.estoque_disponivel }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- relacionados -->
-                <div class="col-12 col-lg-5 mt-3 mt-lg-0">
-                    <div class="card produto-rel-card">
-                        <div class="card-body p-4">
-                            <div class="fw-bold mb-3">Produtos relacionados</div>
-                            {% if relacionados %}
-                                <div class="row g-3">
-                                    {% for prod in relacionados %}
-                                        <div class="col-6">
-                                            <a href="{% url 'detalhe_produto' prod.id %}"
-                                               class="text-decoration-none text-dark">
-                                                <div class="card produto-relacionado-card">
-                                                    <div class="ratio ratio-1x1 produto-relacionado-img">
-                                                        {% with img=prod.imagens.first %}
-                                                            {% if img and img.imagem %}<img src="{{ img.imagem.url }}" alt="{{ prod.nome }}">{% endif %}
-                                                        {% endwith %}
-                                                    </div>
-                                                    <div class="card-body p-2 p-md-3">
-                                                        <div class="small text-muted">{{ prod.tipo_prod }}</div>
-                                                        <div class="small fw-semibold" style="line-height:1.2;">{{ prod.nome|truncatechars:40 }}</div>
-                                                        <div class="fw-bold small mt-2 text-success">R$ {{ prod.valor_venda|floatformat:2 }}</div>
-                                                    </div>
-                                                </div>
-                                            </a>
-                                        </div>
-                                    {% endfor %}
-                                </div>
+<main class="py-4 py-md-5 bg-light min-vh-100">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        {% with imgs=produto.imagens.all %}
+                        <div class="ratio ratio-4x3 rounded-4 overflow-hidden border bg-white mb-3">
+                            {% if imgs %}
+                            <img id="mainImg" src="{{ imgs.first.imagem.url }}" alt="{{ produto.nome }}" style="object-fit:contain;">
                             {% else %}
-                                <div class="text-muted small">Nenhum produto relacionado encontrado.</div>
+                            <img id="mainImg" src="{% static 'img/sem-imagem.png' %}" alt="Sem imagem" style="object-fit:contain;">
                             {% endif %}
                         </div>
+                        {% if imgs|length > 1 %}
+                        <div class="d-flex gap-2 flex-wrap">
+                            {% for img in imgs %}
+                            <button type="button" class="btn p-0 border rounded-3 overflow-hidden" onclick="document.getElementById('mainImg').src='{{ img.imagem.url }}'">
+                                <img src="{{ img.imagem.url }}" alt="{{ produto.nome }}" width="72" height="72" style="object-fit:cover;">
+                            </button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top:96px;">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <div class="small text-muted">{{ produto.tipo_prod }}</div>
+                                <h1 class="h3 fw-bold mb-1">{{ produto.nome }}</h1>
+                            </div>
+                            {% if user.is_authenticated %}
+                            <form method="post" action="{% url 'favorito_toggle' produto.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <button type="submit" class="btn btn-light border rounded-circle" aria-label="Favoritar">{% if favoritado %}❤️{% else %}♡{% endif %}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% if produto.porcen_desconto > 0 %}<div class="small text-muted text-decoration-line-through">R$ {{ produto.valor_nota|floatformat:2 }}</div>{% endif %}
+                        <div class="display-6 fw-bold">R$ {{ produto.valor_venda|floatformat:2 }}</div>
+                        {% if economia > 0 %}<div class="small text-muted mb-3">Você economiza <strong>R$ {{ economia|floatformat:2 }}</strong></div>{% endif %}
+                        <div class="p-3 rounded-4 bg-light mb-3">
+                            <div class="fw-semibold {% if produto.estoque_disponivel > 0 %}text-success{% else %}text-danger{% endif %}">{% if produto.estoque_disponivel > 0 %}Estoque disponível{% else %}Sem estoque{% endif %}</div>
+                            <div class="small text-muted">Quantidade: {{ produto.estoque_disponivel }}</div>
+                        </div>
+                        <div class="p-3 rounded-4 bg-light mb-3">
+                            {% if produto.maximo_por_usuario > 0 %}
+                            <div class="fw-semibold">Limite por usuário: {{ produto.maximo_por_usuario }}</div>
+                            {% if restante_para_usuario is not None %}<div class="small text-muted">Você ainda pode solicitar {{ restante_para_usuario }} unidade(s).</div>{% endif %}
+                            {% else %}
+                            <div class="fw-semibold">Sem limite por usuário</div>
+                            {% endif %}
+                        </div>
+
+                        {% if produto.estoque_disponivel > 0 %}
+                        <form method="post" action="{% url 'carrinho_add' produto.id %}" class="d-grid gap-3">
+                            {% csrf_token %}
+                            {% if produto.usa_variacoes %}
+                            <div>
+                                <label for="id_variacao" class="form-label fw-semibold">Variação</label>
+                                <select name="variacao_id" id="id_variacao" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                    {% for variacao in variacoes_disponiveis %}
+                                    <option value="{{ variacao.id }}">{{ variacao.tamanho }} {% if variacao.genero %}• {{ variacao.get_genero_display }}{% endif %} {% if variacao.faixa_etaria %}• {{ variacao.get_faixa_etaria_display }}{% endif %} • Estoque: {{ variacao.quantidade }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <label for="id_quantidade" class="form-label fw-semibold">Quantidade</label>
+                                <input type="number" name="quantidade" id="id_quantidade" min="1" value="1" class="form-control" required>
+                            </div>
+                            <button type="submit" name="acao" value="comprar" class="btn btn-primary btn-lg">Comprar agora</button>
+                            <button type="submit" name="acao" value="carrinho" class="btn btn-outline-primary btn-lg">Adicionar ao carrinho</button>
+                        </form>
+                        {% else %}
+                        <button class="btn btn-secondary btn-lg" disabled>Indisponível</button>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
-    </main>
-    <script>
-        let imagemAtual = 0;
-    
-        function getGaleriaImagens() {
-            return Array.from(document.querySelectorAll(".produto-galeria-img"));
-        }
-    
-        function getGaleriaThumbs() {
-            return Array.from(document.querySelectorAll("[data-thumb-index]"));
-        }
-    
-        function getGaleriaDots() {
-            return Array.from(document.querySelectorAll(".galeria-dot"));
-        }
-    
-        function atualizarGaleria(index) {
-            const imagens = getGaleriaImagens();
-            const thumbs = getGaleriaThumbs();
-            const dots = getGaleriaDots();
-            const contador = document.getElementById("galeriaContador");
-    
-            if (!imagens.length) return;
-    
-            if (index < 0) {
-                index = imagens.length - 1;
-            }
-    
-            if (index >= imagens.length) {
-                index = 0;
-            }
-    
-            imagemAtual = index;
-    
-            imagens.forEach((img, i) => {
-                img.classList.toggle("d-none", i !== imagemAtual);
-            });
-    
-            thumbs.forEach((thumb, i) => {
-                thumb.classList.toggle("border-primary", i === imagemAtual);
-            });
-    
-            dots.forEach((dot, i) => {
-                if (i === imagemAtual) {
-                    dot.classList.add("active");
-                    dot.style.background = "#0d6efd";
-                    dot.style.borderColor = "#0d6efd";
-                } else {
-                    dot.classList.remove("active");
-                    dot.style.background = "transparent";
-                    dot.style.borderColor = "#ced4da";
-                }
-            });
-    
-            if (contador) {
-                contador.textContent = `${imagemAtual + 1}/${imagens.length}`;
-            }
-        }
-    
-        function irParaImagem(index) {
-            atualizarGaleria(index);
-        }
-    
-        function mudarImagem(direcao) {
-            atualizarGaleria(imagemAtual + direcao);
-        }
-    
-        document.addEventListener("DOMContentLoaded", function () {
-            atualizarGaleria(0);
-    
-            const galeriaPrincipal = document.querySelector(".produto-galeria-principal");
-            if (!galeriaPrincipal) return;
-    
-            let touchStartX = 0;
-            let touchEndX = 0;
-    
-            galeriaPrincipal.addEventListener("touchstart", function (e) {
-                touchStartX = e.changedTouches[0].screenX;
-            }, { passive: true });
-    
-            galeriaPrincipal.addEventListener("touchend", function (e) {
-                touchEndX = e.changedTouches[0].screenX;
-                const diff = touchEndX - touchStartX;
-    
-                if (Math.abs(diff) < 40) return;
-    
-                if (diff < 0) {
-                    mudarImagem(1);
-                } else {
-                    mudarImagem(-1);
-                }
-            }, { passive: true });
-        });
-    </script>
-    <script>
-        document.getElementById("btnCompartilhar").addEventListener("click", function() {
-            const url = window.location.href
-            const titulo = document.title
 
-            if (navigator.share) {
-                navigator.share({
-                    title: titulo,
-                    url: url
-                })
-            } else {
-                const texto = `${titulo} - ${url}`
-
-                navigator.clipboard.writeText(url)
-
-                alert("Link copiado! Agora você pode compartilhar.")
-
-                // opcional abrir WhatsApp direto
-                // window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank")
-            }
-        })
-    </script>
-{% endblock conteudo %}
+        <div class="row mt-4 g-4">
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-4"><h2 class="h5 fw-bold">Descrição</h2><div style="white-space:pre-line;">{{ produto.descricao|default:'Sem descrição.' }}</div></div></div>
+            </div>
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-4"><h2 class="h5 fw-bold">Produtos relacionados</h2>
+                    <div class="row g-3">
+                        {% for prod in relacionados %}
+                        <div class="col-6"><a href="{% url 'detalhe_produto' prod.id %}" class="text-decoration-none text-dark"><div class="border rounded-4 p-2 h-100 bg-white"><div class="small text-muted">{{ prod.tipo_prod }}</div><div class="fw-semibold small">{{ prod.nome|truncatechars:40 }}</div><div class="fw-bold text-success mt-2">R$ {{ prod.valor_venda|floatformat:2 }}</div></div></a></div>
+                        {% empty %}<div class="col-12 text-muted small">Nenhum produto relacionado encontrado.</div>{% endfor %}
+                    </div>
+                </div></div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

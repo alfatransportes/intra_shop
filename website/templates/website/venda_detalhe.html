@@ -1,345 +1,69 @@
 {% extends "website/base.html" %}
 {% block title %}Pedido #{{ venda.id }}{% endblock %}
 {% block conteudo %}
-    <main class="py-4 py-md-5 bg-light min-vh-100">
-        <div class="container">
-            <div class="row g-4">
-                <!-- Conteúdo principal -->
-                <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-                        <div class="card-body p-4 p-md-5">
-                            <!-- Cabeçalho -->
-                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-                                <div>
-                                    <p class="text-muted small mb-1">Detalhes do pedido</p>
-                                    <h1 class="h3 fw-bold mb-0">Pedido #{{ venda.id }}</h1>
+<main class="py-4 py-md-5 bg-light min-vh-100">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                            <div><p class="text-muted small mb-1">Detalhes do pedido</p><h1 class="h3 fw-bold mb-0">Pedido #{{ venda.id }}</h1></div>
+                            <span class="badge rounded-pill {% if venda.status == 'PENDENTE' %}bg-warning-subtle text-warning-emphasis{% elif venda.status == 'APROVADA' or venda.status == 'CONCLUIDA' %}bg-success-subtle text-success-emphasis{% elif venda.status == 'CANCELADA' %}bg-danger-subtle text-danger-emphasis{% else %}bg-secondary-subtle text-secondary-emphasis{% endif %} px-3 py-2 fs-6">{{ venda.get_status_display }}</span>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4"><div class="border rounded-4 p-3 h-100 bg-white"><div class="small text-muted mb-1">Pagamento</div><div class="fw-semibold">{{ venda.forma_pagamento }}</div></div></div>
+                            <div class="col-md-4"><div class="border rounded-4 p-3 h-100 bg-white"><div class="small text-muted mb-1">Status</div><div class="fw-semibold">{{ venda.get_status_display }}</div></div></div>
+                            <div class="col-md-4"><div class="border rounded-4 p-3 h-100 bg-white"><div class="small text-muted mb-1">Total</div><div class="fw-bold fs-5 text-success">R$ {{ venda.total|floatformat:2 }}</div></div></div>
+                        </div>
+                        <div class="mb-4">
+                            <h2 class="h5 fw-bold mb-3">Itens do pedido</h2>
+                            <div class="border rounded-4 overflow-hidden bg-white">
+                                {% for item in venda.itens.all %}
+                                <div class="p-3 p-md-4 {% if not forloop.last %}border-bottom{% endif %}">
+                                    <div class="d-flex justify-content-between align-items-center gap-3">
+                                        <div><div class="fw-semibold">{{ item.produto.nome }}</div>{% if item.variacao %}<div class="text-muted small">{{ item.variacao }}</div>{% endif %}<div class="text-muted small">{{ item.quantidade }} x R$ {{ item.preco_unitario|floatformat:2 }}</div></div>
+                                        <div class="fw-bold">R$ {{ item.subtotal|floatformat:2 }}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    {% if venda.status == "PENDENTE" %}
-                                        <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 py-2 fs-6">
-                                            {{ venda.get_status_display }}
-                                        </span>
-                                    {% elif venda.status == "PAGO" %}
-                                        <span class="badge rounded-pill bg-success-subtle text-success-emphasis px-3 py-2 fs-6">
-                                            {{ venda.get_status_display }}
-                                        </span>
-                                    {% elif venda.status == "CANCELADO" %}
-                                        <span class="badge rounded-pill bg-danger-subtle text-danger-emphasis px-3 py-2 fs-6">
-                                            {{ venda.get_status_display }}
-                                        </span>
-                                    {% else %}
-                                        <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis px-3 py-2 fs-6">
-                                            {{ venda.get_status_display }}
-                                        </span>
-                                    {% endif %}
-                                </div>
+                                {% empty %}<div class="p-4 text-center text-muted">Nenhum item encontrado neste pedido.</div>{% endfor %}
                             </div>
-                            <!-- Resumo -->
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-4">
-                                    <div class="border rounded-4 p-3 h-100 bg-white">
-                                        <div class="small text-muted mb-1">Pagamento</div>
-                                        <div class="fw-semibold">{{ venda.forma_pagamento }}</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="border rounded-4 p-3 h-100 bg-white">
-                                        <div class="small text-muted mb-1">Status</div>
-                                        <div class="fw-semibold">{{ venda.get_status_display }}</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="border rounded-4 p-3 h-100 bg-white">
-                                        <div class="small text-muted mb-1">Total</div>
-                                        <div class="fw-bold fs-5 text-success">R$ {{ venda.total|floatformat:2 }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Itens -->
-                            <div class="mb-4">
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h2 class="h5 fw-bold mb-0">Itens do pedido</h2>
-                                    <span class="text-muted small">{{ venda.itens.all|length }} item(ns)</span>
-                                </div>
-                                <div class="border rounded-4 overflow-hidden bg-white">
-                                    {% for item in venda.itens.all %}
-                                        <div class="p-3 p-md-4 {% if not forloop.last %}border-bottom{% endif %}">
-                                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                                                <div class="flex-grow-1">
-                                                    <div class="fw-semibold fs-6">{{ item.produto.nome }}</div>
-                                                    {% if item.variacao %}
-                                                        <div class="text-muted small mt-1">
-                                                            Variação:
-                                                            {% if item.variacao.tamanho %}<strong>{{ item.variacao.tamanho }}</strong>{% endif %}
-                                                            {% if item.variacao.genero %}• {{ item.variacao.get_genero_display }}{% endif %}
-                                                            {% if item.variacao.faixa_etaria %}• {{ item.variacao.get_faixa_etaria_display }}{% endif %}
-                                                        </div>
-                                                    {% endif %}
-                                                    <div class="text-muted small mt-1">{{ item.quantidade }} x R$ {{ item.preco_unitario|floatformat:2 }}</div>
-                                                </div>
-                                                <div class="text-md-end">
-                                                    <div class="fw-bold fs-6">R$ {{ item.subtotal|floatformat:2 }}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {% empty %}
-                                        <div class="p-4 text-center text-muted">Nenhum item encontrado neste pedido.</div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% if venda.minuta %}
-                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 border rounded-4 p-4">
-                                    <div>
-                                        <div class="fw-semibold mb-1">Minuta de Entrega</div>
-                                        <div class="small text-muted">{{ venda.minuta }}</div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <button type="button"
-                                                class="btn btn-outline-primary rounded-pill"
-                                                id="btn-rastrear-encomenda"
-                                                data-url="{% url 'rastrear_encomenda_json' venda.pk %}">
-                                            Rastrear encomenda
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="my-4" id="box-rastreamento" style="display:none;">
-                                    <div class="card border-0 shadow-sm rounded-4">
-                                        <div class="card-body p-4">
-                                            <h3 class="h6 fw-bold mb-3">Rastreamento da encomenda</h3>
-                                            <div id="rastreamento-loading"
-                                                 class="text-muted small"
-                                                 style="display:none">Consultando rastreamento...</div>
-                                            <div id="rastreamento-erro"
-                                                 class="alert alert-danger rounded-4 d-none mb-0"></div>
-                                            <div id="rastreamento-conteudo" class="d-none">
-                                                <div class="row g-3">
-                                                    <div class="col-md-6">
-                                                        <div class="p-3 rounded-4 bg-light h-100">
-                                                            <div class="small text-muted">Número da minuta</div>
-                                                            <div class="fw-semibold" id="rast-numero-minuta">-</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="p-3 rounded-4 bg-light h-100">
-                                                            <div class="small text-muted">Data da minuta</div>
-                                                            <div class="fw-semibold" id="rast-data-minuta">-</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="p-3 rounded-4 bg-light h-100">
-                                                            <div class="small text-muted">Tipo da minuta</div>
-                                                            <div class="fw-semibold" id="rast-tipo-minuta">-</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="p-3 rounded-4 bg-light h-100">
-                                                            <div class="small text-muted">Localização atual</div>
-                                                            <div class="fw-semibold" id="rast-localizacao">-</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="p-3 rounded-4 bg-light h-100">
-                                                            <div class="small text-muted">Unidade de origem</div>
-                                                            <div class="fw-semibold" id="rast-unidade-origem">-</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="p-3 rounded-4 bg-light h-100">
-                                                            <div class="small text-muted">Unidade de destino</div>
-                                                            <div class="fw-semibold" id="rast-unidade-destino">-</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <div class="p-3 rounded-4 bg-light h-100">
-                                                            <div class="small text-muted">Data de chegada</div>
-                                                            <div class="fw-semibold" id="rast-data-chegada">-</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <div class="p-3 rounded-4 bg-light h-100">
-                                                            <div class="small text-muted">Observação</div>
-                                                            <div class="fw-semibold" id="rast-obs-minuta">-</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
-                            <!-- Pagamento -->
-                            <div class="mb-4">
-                                <h2 class="h5 fw-bold mb-3">Pagamento</h2>
-                                {% if venda.forma_pagamento.codigo == "DINHEIRO" %}
-                                    <div class="alert alert-info border-0 rounded-4 d-flex align-items-start gap-3 mb-0">
-                                        <div class="fs-4">💵</div>
-                                        <div>
-                                            <div class="fw-semibold mb-1">Pagamento em dinheiro</div>
-                                            <div class="mb-0">O pagamento será realizado em dinheiro no momento da retirada ou entrega.</div>
-                                        </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h2 class="h5 fw-bold mb-3">Pagamento</h2>
+                            {% if venda.forma_pagamento.codigo == 'DINHEIRO' %}
+                                <div class="alert alert-info rounded-4 border-0 mb-0">O pagamento será realizado em dinheiro no momento da retirada ou entrega.</div>
+                            {% else %}
+                                {% if venda.comprovante_principal %}
+                                    <div class="alert alert-success rounded-4 border-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-0">
+                                        <div><div class="fw-semibold">Comprovante enviado</div><div class="small">Seu comprovante já foi anexado ao pedido.</div></div>
+                                        <a href="{{ venda.comprovante_principal.url }}" class="btn btn-success rounded-pill px-4" target="_blank">Abrir comprovante</a>
                                     </div>
                                 {% else %}
-                                    {% if venda.comprovante_pix %}
-                                        <div class="alert alert-success border-0 rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-0">
-                                            <div>
-                                                <div class="fw-semibold">Comprovante Pix enviado com sucesso</div>
-                                                <div class="small">Seu comprovante já foi anexado ao pedido.</div>
-                                            </div>
-                                            <a href="{{ venda.comprovante_pix.url }}"
-                                               class="btn btn-success rounded-pill px-4"
-                                               target="_blank">Abrir comprovante</a>
-                                        </div>
-                                    {% elif venda.comprovante_vale %}
-                                        <div class="alert alert-success border-0 rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-0">
-                                            <div>
-                                                <div class="fw-semibold">Comprovante de vale enviado com sucesso</div>
-                                                <div class="small">Seu comprovante já foi anexado ao pedido.</div>
-                                            </div>
-                                            <a href="{{ venda.comprovante_vale.url }}"
-                                               class="btn btn-success rounded-pill px-4"
-                                               target="_blank">Abrir comprovante</a>
-                                        </div>
-                                    {% else %}
-                                        <div class="alert alert-warning border-0 rounded-4 mb-3">
-                                            <div class="fw-semibold mb-1">Nenhum comprovante anexado ainda</div>
-                                            <div class="small">Envie o comprovante para que o pagamento seja identificado.</div>
-                                        </div>
-                                        {% if venda.status == "PENDENTE" %}
-                                            <div class="d-flex flex-column gap-2">
-                                                {% if venda.forma_pagamento.codigo == "PIX" %}
-                                                    <a href="{% url 'pix_pagar' venda.id %}"
-                                                       class="btn btn-primary btn-lg rounded-pill px-4 align-self-start">
-                                                        Continuar pagamento Pix
-                                                    </a>
-                                                {% elif venda.forma_pagamento.codigo == "VALE" %}
-                                                    <div class="alert alert-info mb-0">Seu pedido está pendente de conferência do vale pela administração.</div>
-                                                {% elif venda.forma_pagamento.codigo == "DINHEIRO" %}
-                                                    <div class="alert alert-info mb-0">O pagamento será realizado em dinheiro no momento da retirada/entrega.</div>
-                                                {% endif %}
-                                            </div>
-                                        {% endif %}
+                                    <div class="alert alert-warning border-0 rounded-4 mb-3"><div class="fw-semibold mb-1">Nenhum comprovante anexado ainda</div><div class="small">Envie o comprovante para que o pagamento seja identificado.</div></div>
+                                    {% if venda.forma_pagamento.codigo == 'PIX' and venda.status == 'PENDENTE' %}
+                                        <a href="{% url 'pix_pagar' venda.id %}" class="btn btn-primary rounded-pill px-4">Continuar pagamento Pix</a>
+                                    {% elif venda.forma_pagamento.codigo == 'VALE' %}
+                                        <div class="alert alert-info mb-0">Seu pedido está pendente de conferência do vale pela administração.</div>
                                     {% endif %}
                                 {% endif %}
-                            </div>
-                            <!-- Voltar -->
-                            <div class="pt-2">
-                                <a href="{% url 'minhas_compras' %}"
-                                   class="btn btn-outline-secondary rounded-pill px-4">← Voltar para minhas compras</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Sidebar -->
-                <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm rounded-4 sticky-top"
-                         style="top: 100px">
-                        <div class="card-body p-4">
-                            <h2 class="h5 fw-bold mb-3">Resumo do pedido</h2>
-                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <span class="text-muted">Número</span>
-                                <span class="fw-semibold">#{{ venda.id }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <span class="text-muted">Status</span>
-                                <span class="fw-semibold">{{ venda.get_status_display }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                                <span class="text-muted">Pagamento</span>
-                                <span class="fw-semibold">{{ venda.forma_pagamento }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center pt-3">
-                                <span class="fs-6 fw-semibold">Total</span>
-                                <span class="fs-4 fw-bold text-success">R$ {{ venda.total|floatformat:2 }}</span>
-                            </div>
-                            {% if venda.status == "PENDENTE" %}
-                                <div class="mt-4 p-3 rounded-4 bg-warning-subtle border">
-                                    <div class="fw-semibold mb-1">Pedido aguardando ação</div>
-                                    <div class="small text-muted">Finalize o pagamento ou envie o comprovante para continuar.</div>
-                                </div>
-                            {% endif %}
-                            {% if venda.observacao %}
-                                <div class="mt-4 p-3 rounded-4 bg-warning-subtle border">
-                                    <div class="fw-semibold mb-1">Observação</div>
-                                    <div class="small text-muted">{{ venda.observacao }}</div>
-                                </div>
                             {% endif %}
                         </div>
+                        <a href="{% url 'minhas_compras' %}" class="btn btn-outline-secondary rounded-pill px-4">← Voltar para minhas compras</a>
                     </div>
                 </div>
             </div>
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top:100px"><div class="card-body p-4"><h2 class="h5 fw-bold mb-3">Resumo do pedido</h2>
+                    <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted">Número</span><span class="fw-semibold">#{{ venda.id }}</span></div>
+                    <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted">Status</span><span class="fw-semibold">{{ venda.get_status_display }}</span></div>
+                    <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted">Pagamento</span><span class="fw-semibold">{{ venda.forma_pagamento }}</span></div>
+                    <div class="d-flex justify-content-between pt-3"><span class="fs-6 fw-semibold">Total</span><span class="fs-4 fw-bold text-success">R$ {{ venda.total|floatformat:2 }}</span></div>
+                    {% if venda.observacao %}<div class="mt-4 p-3 rounded-4 bg-light border"><div class="fw-semibold mb-1">Observação</div><div class="small text-muted">{{ venda.observacao }}</div></div>{% endif %}
+                </div></div>
+            </div>
         </div>
-    </main>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const botao = document.getElementById("btn-rastrear-encomenda");
-            const box = document.getElementById("box-rastreamento");
-            const loading = document.getElementById("rastreamento-loading");
-            const erro = document.getElementById("rastreamento-erro");
-            const conteudo = document.getElementById("rastreamento-conteudo");
-        
-            if (!botao) return;
-        
-            function formatarData(valor) {
-                if (!valor) return "-";
-        
-                const data = new Date(valor);
-                if (isNaN(data.getTime())) return valor;
-        
-                return data.toLocaleDateString("pt-BR");
-            }
-        
-            function preencherCampo(id, valor) {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.textContent = (valor !== null && valor !== undefined && valor !== "") ? valor : "-";
-            }
-        
-            botao.addEventListener("click", async function () {
-                const url = botao.dataset.url;
-        
-                box.style.display = "block";
-                loading.style.display = "block";
-                erro.classList.add("d-none");
-                erro.textContent = "";
-                conteudo.classList.add("d-none");
-        
-                try {
-                    const response = await fetch(url, {
-                        method: "GET",
-                        headers: {
-                            "X-Requested-With": "XMLHttpRequest"
-                        }
-                    });
-        
-                    const payload = await response.json();
-        
-                    loading.style.display = "none";
-        
-                    if (!response.ok || !payload.ok) {
-                        erro.textContent = payload.erro || "Erro ao consultar rastreamento.";
-                        erro.classList.remove("d-none");
-                        return;
-                    }
-        
-                    const dados = payload.dados || {};
-        
-                    preencherCampo("rast-numero-minuta", dados.numero_minuta);
-                    preencherCampo("rast-data-minuta", formatarData(dados.data_minuta));
-                    preencherCampo("rast-tipo-minuta", dados.tipo_minuta);
-                    preencherCampo("rast-localizacao", dados.localizacao || "Sem localização informada");
-                    preencherCampo("rast-unidade-origem", dados.unidade_origem);
-                    preencherCampo("rast-unidade-destino", dados.unidade_destino);
-                    preencherCampo("rast-data-chegada", formatarData(dados.data_chegada) || "Aguardando chegada...");
-                    preencherCampo("rast-obs-minuta", dados.obs_minuta || "Sem observação");
-        
-                    conteudo.classList.remove("d-none");
-        
-                } catch (e) {
-                    loading.style.display = "none";
-                    erro.textContent = "Não foi possível consultar o rastreamento no momento.";
-                    erro.classList.remove("d-none");
-                }
-            });
-        });
-    </script>
+    </div>
+</main>
 {% endblock %}

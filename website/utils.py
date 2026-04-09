@@ -1,8 +1,9 @@
 import logging
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.mail import EmailMultiAlternatives, send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.db.models import Prefetch
 from django.template.loader import render_to_string
 
@@ -19,19 +20,12 @@ def enviar_email_staff_nova_compra(venda, comprovante_enviado=False):
         .values_list("email", flat=True)
         .distinct()
     )
-
     if not emails_staff:
+        logger.info("Nenhum staff com e-mail para notificação da venda %s", venda.pk)
         return
 
-    cliente = (
-        venda.usuario.get_full_name()
-        or venda.usuario.username
-        or venda.usuario.email
-        or "Cliente"
-    )
-
+    cliente = venda.usuario.get_full_name() or venda.usuario.username or venda.usuario.email or "Cliente"
     site_url = getattr(settings, "SITE_URL", "http://127.0.0.1:8000").rstrip("/")
-
     context = {
         "venda": venda,
         "usuario": venda.usuario,
@@ -43,40 +37,22 @@ def enviar_email_staff_nova_compra(venda, comprovante_enviado=False):
     }
 
     if comprovante_enviado:
-        subject = render_to_string(
-            "website/emails/pix_comprovante_subject.txt",
-            context,
-        ).strip()
-        body_text = render_to_string(
-            "website/emails/pix_comprovante_email.txt",
-            context,
-        )
-        body_html = render_to_string(
-            "website/emails/pix_comprovante_email.html",
-            context,
-        )
+        subject_template = "website/emails/pix_comprovante_subject.txt"
+        text_template = "website/emails/pix_comprovante_email.txt"
+        html_template = "website/emails/pix_comprovante_email.html"
     else:
-        subject = render_to_string(
-            "website/emails/nova_compra_subject.txt",
-            context,
-        ).strip()
-        body_text = render_to_string(
-            "website/emails/nova_compra_email.txt",
-            context,
-        )
-        body_html = render_to_string(
-            "website/emails/nova_compra_email.html",
-            context,
-        )
+        subject_template = "website/emails/nova_compra_subject.txt"
+        text_template = "website/emails/nova_compra_email.txt"
+        html_template = "website/emails/nova_compra_email.html"
 
     try:
         email = EmailMultiAlternatives(
-            subject=subject,
-            body=body_text,
+            subject=render_to_string(subject_template, context).strip(),
+            body=render_to_string(text_template, context),
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=emails_staff,
         )
-        email.attach_alternative(body_html, "text/html")
+        email.attach_alternative(render_to_string(html_template, context), "text/html")
         email.send()
     except Exception:
         logger.exception("Falha ao enviar e-mail da venda %s", venda.pk)
@@ -85,13 +61,15 @@ def enviar_email_staff_nova_compra(venda, comprovante_enviado=False):
 def get_config_website():
     return ConfigWebsite.objects.filter(active=True).first()
 
+
 def get_tipo_produtos():
-    return Tipo.objects.all().order_by('nome')
+    return Tipo.objects.filter(ativo=True).order_by("nome")
 
 
 def get_produtos_destaque(limit=12):
     return (
-        Produto.objects.select_related("unidade_prod", "tipo_prod", "nivel_ava_prod")
+        Produto.objects.filter(ativo=True)
+        .select_related("unidade_prod", "tipo_prod", "nivel_ava_prod")
         .prefetch_related(
             Prefetch(
                 "imagens",
@@ -104,7 +82,7 @@ def get_produtos_destaque(limit=12):
                 to_attr="imagens_ordenadas",
             ),
         )
-        .order_by("-id")[:limit]  # ou "-criado_em" se você tiver esse campo
+        .order_by("-id")[:limit]
     )
 
 
@@ -119,35 +97,23 @@ def crc16_ccitt_false(data: str) -> str:
 
 
 def inserir_ou_atualizar_valor(payload: str, valor: float) -> str:
-    """
-    Recebe um payload PIX (copia e cola) e devolve o payload com campo 54 (valor)
-    atualizado e CRC (63) recalculado.
-
-    - Remove o CRC atual
-    - Remove campo 54 antigo (se existir)
-    - Insere 54 antes do 58 (país) quando possível
-    """
     p = (payload or "").strip().replace("\n", "").replace("\r", "")
     if "6304" not in p:
         raise ValueError("Payload PIX inválido: não encontrei o campo 63 (CRC).")
 
-    # remove CRC atual (tudo a partir do 63)
     pos63 = p.rfind("6304")
     sem_crc = p[:pos63]
 
-    # remove campo 54 existente, se houver (54LL<valor>)
-    # parsing simples por TLV (EMV): ID(2) + LEN(2) + VALUE(LEN)
     def remover_campo(sem_crc_str: str, campo_id: str) -> str:
         i = 0
         out = ""
         s = sem_crc_str
         while i + 4 <= len(s):
-            _id = s[i:i+2]
-            ln = int(s[i+2:i+4])
+            _id = s[i:i + 2]
+            ln = int(s[i + 2:i + 4])
             val_ini = i + 4
             val_fim = val_ini + ln
             if val_fim > len(s):
-                # se corrompido, devolve original
                 return sem_crc_str
             if _id != campo_id:
                 out += s[i:val_fim]
@@ -155,16 +121,10 @@ def inserir_ou_atualizar_valor(payload: str, valor: float) -> str:
         return out
 
     sem_crc = remover_campo(sem_crc, "54")
-
-    valor_str = f"{float(valor):.2f}"  # 108.00
+    valor_str = f"{Decimal(str(valor)):.2f}"
     campo54 = f"54{len(valor_str):02d}{valor_str}"
-
-    idx58 = sem_crc.find("5802")  # país
-    if idx58 != -1:
-        novo_sem_crc = sem_crc[:idx58] + campo54 + sem_crc[idx58:]
-    else:
-        novo_sem_crc = sem_crc + campo54
-
+    idx58 = sem_crc.find("5802")
+    novo_sem_crc = sem_crc[:idx58] + campo54 + sem_crc[idx58:] if idx58 != -1 else sem_crc + campo54
     base_crc = novo_sem_crc + "6304"
     crc = crc16_ccitt_false(base_crc)
     return base_crc + crc

@@ -4,6 +4,143 @@
     Meu carrinho
 {% endblock title %}
 {% block conteudo %}
+<style>
+    .hidden {
+        display: none !important;
+    }
+
+    .cart-card {
+        border: 0;
+        border-radius: 1rem;
+        box-shadow: 0 .125rem .5rem rgba(0, 0, 0, .06);
+    }
+
+    .cart-section-title {
+        font-weight: 700;
+        letter-spacing: -.02em;
+    }
+
+    .pagamento-opcao {
+        transition: all .2s ease;
+        cursor: pointer;
+        background: #fff;
+    }
+
+    .pagamento-opcao:hover {
+        border-color: var(--bs-primary);
+        background: #f8fbff;
+    }
+
+    .produto-imagem-container {
+        width: 104px;
+        min-width: 104px;
+    }
+
+    .produto-imagem-placeholder {
+        width: 104px;
+        height: 104px;
+        background: #f8f9fa;
+    }
+
+    .quantidade-input {
+        width: 92px;
+    }
+
+    .preco-container {
+        min-width: 150px;
+    }
+
+    .linha-suave {
+        border-color: rgba(0, 0, 0, .08) !important;
+    }
+
+    .bloco-suave {
+        background: #f8f9fa;
+        border-radius: .85rem;
+    }
+
+    /* ===== CORREÇÃO DO CARD DO CARRINHO ===== */
+    .col-lg-8 .produto-card {
+        height: auto !important;
+        min-height: 0 !important;
+        border: 0;
+        border-radius: 1rem;
+        box-shadow: 0 .125rem .5rem rgba(0, 0, 0, .06);
+        overflow: hidden;
+        transform: none !important;
+    }
+
+    .col-lg-8 .produto-card:hover {
+        transform: none !important;
+        box-shadow: 0 .125rem .5rem rgba(0, 0, 0, .06) !important;
+    }
+
+    .col-lg-8 .produto-card .card-body {
+        padding: 1rem 1.25rem !important;
+    }
+
+    .col-lg-8 .produto-card .d-flex.flex-column.flex-md-row.gap-3 {
+        align-items: flex-start;
+    }
+
+    .col-lg-8 .produto-card .flex-grow-1 {
+        min-width: 0;
+    }
+
+    .col-lg-8 .produto-card .bloco-suave {
+        padding: .85rem 1rem !important;
+        margin-bottom: 0;
+    }
+
+    .col-lg-8 .produto-card .preco-container {
+        align-self: flex-start;
+        padding-top: 0 !important;
+        border-top: 0 !important;
+    }
+
+    .col-lg-8 .produto-card h5,
+    .col-lg-8 .produto-card .h5 {
+        margin-bottom: .35rem !important;
+        line-height: 1.25;
+    }
+
+    .col-lg-8 .produto-card .small,
+    .col-lg-8 .produto-card .text-muted {
+        line-height: 1.35;
+    }
+
+    .col-lg-8 .produto-card.mb-3 {
+        margin-bottom: 1rem !important;
+    }
+
+    @media (max-width: 991.98px) {
+
+        .preco-container {
+            min-width: 100%;
+        }
+
+        .col-lg-8 .produto-card .preco-container {
+            padding-top: .75rem !important;
+            border-top: 1px solid rgba(0, 0, 0, .06) !important;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .produto-imagem-container {
+            width: 88px;
+            min-width: 88px;
+        }
+
+        .produto-imagem-placeholder {
+            width: 88px;
+            height: 88px;
+        }
+
+        .col-lg-8 .produto-card .card-body {
+            padding: .9rem !important;
+        }
+    }
+</style>
     <main class="py-4 py-md-5 bg-light min-vh-100">
         <div class="container">
             <!-- Cabeçalho -->
@@ -22,7 +159,7 @@
                          role="alert">{{ message }}</div>
                 {% endfor %}
             {% endif %}
-            <div class="row g-4">
+            <div class="row g-4 align-items-start">
                 <!-- Coluna itens -->
                 <div class="col-12 col-lg-8">
                     {% if carrinho.itens.exists %}
@@ -31,7 +168,7 @@
                             <span class="badge rounded-pill text-bg-light px-3 py-2">{{ carrinho.total_itens }} item(ns)</span>
                         </div>
                         {% for item in carrinho.itens.all %}
-                            <div class="card produto-card mb-3 overflow-hidden">
+                            <div class="card produto-card cart-item-card mb-3 overflow-hidden">
                                 <div class="card-body p-3 p-md-4">
                                     <div class="d-flex flex-column flex-md-row gap-3">
                                         <!-- imagem -->
@@ -60,13 +197,6 @@
                                                class="h5 d-block mb-2 text-decoration-none produto-link fw-bold">
                                                 {{ item.produto.nome }}
                                             </a>
-                                            {% if item.variacao %}
-                                                <div class="small text-muted mb-2">
-                                                    Variação: <strong>{{ item.variacao.tamanho }}</strong>
-                                                    {% if item.variacao.genero %}• {{ item.variacao.get_genero_display }}{% endif %}
-                                                    {% if item.variacao.faixa_etaria %}• {{ item.variacao.get_faixa_etaria_display }}{% endif %}
-                                                </div>
-                                            {% endif %}
                                             <div class="text-muted small mb-3">
                                                 Em estoque: {{ item.produto.quantidade }}
                                                 <span class="mx-1">•</span>
@@ -80,15 +210,17 @@
                                                         {% csrf_token %}
                                                         <label class="small text-muted mb-0">Qtd</label>
                                                         <input type="number"
-                                                               name="quantidade"
-                                                               value="{{ item.quantidade }}"
-                                                               min="0"
-                                                               max="{{ item.maximo_permitido }}"
-                                                               class="form-control quantidade-input">
+                                                            name="quantidade"
+                                                            value="{{ item.quantidade }}"
+                                                            min="0"
+                                                            max="{{ item.maximo_permitido }}"
+                                                            class="form-control quantidade-input">
                                                         <button class="btn btn-outline-secondary" type="submit">Atualizar</button>
                                                         <span class="text-muted small">(0 remove)</span>
                                                         <div class="text-muted small mt-1">
-                                                            {% if item.produto.maximo_por_usuario > 0 %}Limite por usuário: {{ item.produto.maximo_por_usuario }} •{% endif %}
+                                                            {% if item.produto.maximo_por_usuario > 0 %}
+                                                                Limite por usuário: {{ item.produto.maximo_por_usuario }} •
+                                                            {% endif %}
                                                             Máximo permitido agora: {{ item.maximo_permitido }}
                                                         </div>
                                                     </form>
@@ -122,8 +254,9 @@
                     {% endif %}
                 </div>
                 <!-- Coluna resumo / checkout -->
-                <div class="col-12 col-lg-4">
-                    <div class="resumo-box">
+                <!-- Coluna resumo / checkout -->
+                <div class="col-12 col-lg-4" style="position: static !important;">
+                    <div style="position: static !important; top: auto !important;">
                         <div class="card cart-card">
                             <div class="card-body p-4">
                                 <h2 class="h5 fw-bold mb-4">Resumo do pedido</h2>
@@ -144,12 +277,12 @@
                                             {% for fp in formas_pagamento %}
                                                 <label class="pagamento-opcao border rounded-4 p-3 d-flex align-items-center gap-2">
                                                     <input class="form-check-input m-0"
-                                                           type="radio"
-                                                           name="forma_pagamento"
-                                                           value="{{ fp.id }}"
-                                                           {% if form.data.forma_pagamento == fp.id|stringformat:"s" %}checked{% endif %}
-                                                           data-codigo="{{ fp.codigo }}"
-                                                           required>
+                                                        type="radio"
+                                                        name="forma_pagamento"
+                                                        value="{{ fp.id }}"
+                                                        {% if form.data.forma_pagamento == fp.id|stringformat:"s" %}checked{% endif %}
+                                                        data-codigo="{{ fp.codigo }}"
+                                                        required>
                                                     <span class="fw-semibold">{{ fp.get_codigo_display }}</span>
                                                     {% if fp.codigo == "PIX" %}
                                                         <span class="badge text-bg-light ms-auto">Comprovante</span>
@@ -167,7 +300,7 @@
                                     {% else %}
                                         <div class="alert alert-warning rounded-4 border-0">Nenhuma forma de pagamento ativa foi cadastrada no admin.</div>
                                     {% endif %}
-                                    <!-- Parcelas (aparece só no VALE) -->
+
                                     <div id="parcelas-bloco" class="mb-4 hidden">
                                         <label class="form-label mb-1">{{ form.parcelas.label }}</label>
                                         <select name="parcelas" class="form-select">
@@ -177,6 +310,7 @@
                                         </select>
                                         <div class="form-text">As opções dependem do total e das regras cadastradas.</div>
                                     </div>
+
                                     <button class="btn btn-primary btn-lg w-100 rounded-pill"
                                             type="submit"
                                             {% if carrinho.total_itens == 0 %}disabled{% endif %}>
@@ -185,6 +319,7 @@
                                 </form>
                             </div>
                         </div>
+
                         {% if carrinho.itens.exists %}
                             <div class="card cart-card mt-3">
                                 <div class="card-body p-3">
