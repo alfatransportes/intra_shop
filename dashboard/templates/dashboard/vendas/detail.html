@@ -252,9 +252,20 @@
                             <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
                                 <div>
                                     <div class="fw-semibold">{{ item.produto.nome }}</div>
-                                    <div class="small text-secondary">Quantidade: {{ item.quantidade }}</div>
+                                    {% if item.variacao %}
+                                        <div class="small text-secondary">
+                                            Variação:
+                                            {% if item.variacao.tamanho %}<strong>{{ item.variacao.tamanho }}</strong>{% endif %}
+                                            {% if item.variacao.genero %}• {{ item.variacao.get_genero_display }}{% endif %}
+                                            {% if item.variacao.faixa_etaria %}• {{ item.variacao.get_faixa_etaria_display }}{% endif %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="small text-secondary">
+                                        Quantidade: {{ item.quantidade }}
+                                        {% if item.preco_unitario %}• Unitário: R$ {{ item.preco_unitario|floatformat:2 }}{% endif %}
+                                    </div>
                                 </div>
-                                <strong>R$ {{ item.subtotal }}</strong>
+                                <strong>R$ {{ item.subtotal|floatformat:2 }}</strong>
                             </li>
                         {% empty %}
                             <li class="list-group-item text-center text-secondary">Nenhum item encontrado nesta venda.</li>
@@ -320,53 +331,38 @@
                         <div class="text-secondary small">Altere o status e, quando necessário, anexe o comprovante correto.</div>
                     </div>
                     <form method="post"
-                        enctype="multipart/form-data"
-                        action="{% url 'dashboard_venda_update_status' venda.pk %}">
+                          enctype="multipart/form-data"
+                          action="{% url 'dashboard_venda_update_status' venda.pk %}">
                         {% csrf_token %}
-
                         {% for field in form %}
                             {% if field.name == "comprovante_pix" and venda.forma_pagamento.codigo != "PIX" %}
                             {% elif field.name == "comprovante_vale" and venda.forma_pagamento.codigo != "VALE" %}
                             {% else %}
                                 <div class="dash-field-block mb-3 {% if field.name == 'minuta' %}{% if venda.status != 'APROVADA' %}d-none{% endif %}{% endif %}"
-                                    {% if field.name == "status" %}id="field-status-wrapper"{% endif %}
-                                    {% if field.name == "minuta" %}id="field-minuta-wrapper"{% endif %}>
-                                    
+                                     {% if field.name == "status" %}id="field-status-wrapper"{% endif %}
+                                     {% if field.name == "minuta" %}id="field-minuta-wrapper"{% endif %}>
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <label class="form-label dash-form-label mb-0"
-                                            {% if field.id_for_label %}for="{{ field.id_for_label }}"{% endif %}>
+                                               {% if field.id_for_label %}for="{{ field.id_for_label }}"{% endif %}>
                                             {{ field.label }}
                                         </label>
-                                        {% if field.field.required %}
-                                            <span class="badge rounded-pill text-bg-warning">Obrigatório</span>
-                                        {% endif %}
+                                        {% if field.field.required %}<span class="badge rounded-pill text-bg-warning">Obrigatório</span>{% endif %}
                                     </div>
-
                                     <div class="dash-field-control">{{ field }}</div>
-
-                                    {% if field.help_text %}
-                                        <div class="text-secondary small mt-2">{{ field.help_text }}</div>
-                                    {% endif %}
-
+                                    {% if field.help_text %}<div class="text-secondary small mt-2">{{ field.help_text }}</div>{% endif %}
                                     {% if field.errors %}
                                         <div class="text-danger small mt-2">
-                                            {% for error in field.errors %}
-                                                <div>{{ error }}</div>
-                                            {% endfor %}
+                                            {% for error in field.errors %}<div>{{ error }}</div>{% endfor %}
                                         </div>
                                     {% endif %}
                                 </div>
                             {% endif %}
                         {% endfor %}
-
                         {% if form.non_field_errors %}
                             <div class="alert alert-danger">
-                                {% for error in form.non_field_errors %}
-                                    <div>{{ error }}</div>
-                                {% endfor %}
+                                {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
                             </div>
                         {% endif %}
-
                         <div class="dash-form-actions pt-2">
                             <button type="submit" class="btn btn-primary dash-save-btn w-100">Salvar alterações</button>
                         </div>
@@ -408,8 +404,6 @@
             </div>
         </div>
     {% endif %}
-
-
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const statusField = document.getElementById("id_status");
@@ -432,5 +426,5 @@
             statusField.addEventListener("change", toggleMinutaField);
             toggleMinutaField();
         });
-        </script>
+    </script>
 {% endblock content %}

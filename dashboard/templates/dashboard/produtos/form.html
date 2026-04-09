@@ -187,6 +187,31 @@
 				max-height: calc(95vh - 130px);
 			}
 		}
+
+		#produtoVariacoesModal .modal-dialog {
+			max-width: 1100px;
+		}
+
+		#produtoVariacoesModal .modal-content {
+			max-height: 90vh;
+			overflow: hidden;
+		}
+
+		#produtoVariacoesModal .modal-body {
+			max-height: calc(90vh - 140px);
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		@media (max-width: 767.98px) {
+			#produtoVariacoesModal .modal-content {
+				max-height: 95vh;
+			}
+
+			#produtoVariacoesModal .modal-body {
+				max-height: calc(95vh - 130px);
+			}
+		}
     </style>
     <div class="dash-page-header mb-4">
         <div>
@@ -198,7 +223,7 @@
                     Novo produto
                 {% endif %}
             </h1>
-            <div class="text-secondary small">Cadastre os dados do produto e gerencie as imagens em um modal separado.</div>
+            <div class="text-secondary small">Cadastre os dados do produto e siga as etapas de estoque, variações e imagens.</div>
         </div>
     </div>
 {% endblock header %}
@@ -214,12 +239,20 @@
                         {% if form.non_field_errors %}
                             <div class="alert alert-danger rounded-4 border-0">{{ form.non_field_errors }}</div>
                         {% endif %}
+                        <div class="alert alert-light border rounded-4 mb-3">
+                            <div class="fw-semibold mb-1">Fluxo do cadastro</div>
+                            <div class="small text-secondary">
+                                1. Salve os dados básicos.
+                                {% if object and object.usa_variacoes %}2. Cadastre as variações com estoque.{% endif %}
+                                3. Adicione as imagens. 4. Ative o produto.
+                            </div>
+                        </div>
                         <div class="row g-3">
                             {% for field in form %}
-                                <div class="col-md-6 {% if field.name == 'descricao' %}col-12{% endif %}">
+                                <div class="col-md-6 {% if field.name == 'descricao' %}col-12{% endif %} {% if field.name == 'quantidade' %}js-estoque-simples-wrapper{% endif %}">
                                     <div class="dash-field-block">
                                         {% if field.name == "ativo" %}
-                                            {% if object and object.imagens.exists %}
+                                            {% if object and object.pode_ativar_produto %}
                                                 <div class="form-check">
                                                     {{ field }}
                                                     <label class="form-check-label" for="{{ field.id_for_label }}">Ativo para venda</label>
@@ -232,14 +265,32 @@
                                                            disabled>
                                                     <label class="form-check-label text-muted" for="{{ field.id_for_label }}">Ativo para venda</label>
                                                 </div>
-                                                <div class="dash-help-text">O produto só pode ser ativado depois de ter pelo menos uma imagem cadastrada.</div>
+                                                <div class="dash-help-text">
+                                                    {% if object and object.usa_variacoes %}
+                                                        O produto só pode ser ativado com imagem e pelo menos uma variação ativa com estoque.
+                                                    {% else %}
+                                                        O produto só pode ser ativado com imagem e estoque maior que zero.
+                                                    {% endif %}
+                                                </div>
                                             {% endif %}
                                             {% if field.errors %}<div class="dash-error-text">{{ field.errors }}</div>{% endif %}
+                                        {% elif field.name == "usa_variacoes" %}
+                                            <div class="form-check">
+                                                {{ field }}
+                                                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            </div>
+                                            {% if field.errors %}<div class="dash-error-text">{{ field.errors }}</div>{% endif %}
+                                            {% if field.help_text %}<div class="dash-help-text">{{ field.help_text }}</div>{% endif %}
                                         {% else %}
                                             <label class="form-label dash-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                                             {{ field }}
+                                            {% if field.name == "quantidade" %}
+                                                <div class="dash-help-text">Use este campo somente quando o produto não trabalhar com variações.</div>
+                                            {% endif %}
                                             {% if field.errors %}<div class="dash-error-text">{{ field.errors }}</div>{% endif %}
-                                            {% if field.help_text %}<div class="dash-help-text">{{ field.help_text }}</div>{% endif %}
+                                            {% if field.help_text and field.name != "quantidade" %}
+                                                <div class="dash-help-text">{{ field.help_text }}</div>
+                                            {% endif %}
                                         {% endif %}
                                     </div>
                                 </div>
@@ -254,7 +305,45 @@
                 </div>
             </div>
             <div class="col-12 col-xl-5">
-                <div class="card dash-section-card h-100">
+                <div class="card dash-section-card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h2 class="dash-section-title mb-1">Variações do produto</h2>
+                                <div class="text-secondary small">Cadastre o estoque por tamanho e demais atributos.</div>
+                            </div>
+                        </div>
+                        {% if object and not object.usa_variacoes %}
+                            <div class="alert alert-light border rounded-4 mb-3 dash-note-box">
+                                Este produto está configurado como produto simples. Ative a opção <strong>Produto com variações</strong> para liberar este cadastro.
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary w-100" disabled>Gerenciar variações</button>
+                        {% elif not object %}
+                            <div class="alert alert-info border-0 rounded-4 mb-3 dash-note-box">
+                                Salve o produto primeiro para liberar o gerenciamento de variações.
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary w-100" disabled>Gerenciar variações</button>
+                        {% else %}
+                            <div class="alert alert-light border rounded-4 mb-3">
+                                {% if object.tem_variacoes_ativas_com_estoque %}
+                                    <div class="small text-success fw-semibold mb-1">Etapa concluída</div>
+                                {% else %}
+                                    <div class="small text-warning fw-semibold mb-1">Etapa pendente</div>
+                                {% endif %}
+                                {% if object.variacoes.exists %}
+                                    <strong>{{ object.variacoes.count }}</strong> variação(ões) cadastrada(s).
+                                {% else %}
+                                    Nenhuma variação cadastrada ainda.
+                                {% endif %}
+                            </div>
+                            <button type="button"
+                                    class="btn btn-outline-primary w-100"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#produtoVariacoesModal">Gerenciar variações</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card dash-section-card">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3 dash-images-toolbar">
                             <div>
@@ -269,6 +358,11 @@
                             <button type="button" class="btn btn-outline-secondary w-100" disabled>Gerenciar imagens</button>
                         {% else %}
                             <div class="alert alert-light border rounded-4 mb-3">
+                                {% if object.imagens.exists %}
+                                    <div class="small text-success fw-semibold mb-1">Etapa concluída</div>
+                                {% else %}
+                                    <div class="small text-warning fw-semibold mb-1">Etapa pendente</div>
+                                {% endif %}
                                 {% if object.imagens.exists %}
                                     <strong>{{ object.imagens.count }}</strong> imagem(ns) cadastrada(s).
                                 {% else %}
@@ -286,6 +380,96 @@
         </div>
     </form>
     {% if object %}
+        <div class="modal fade"
+             id="produtoVariacoesModal"
+             tabindex="-1"
+             aria-labelledby="produtoVariacoesModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="produtoVariacoesModalLabel">Gerenciar variações do produto</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Fechar"></button>
+                    </div>
+                    <form method="post" id="produto-variacoes-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="variacoes">
+                        <div class="modal-body">
+                            {{ variacao_formset.management_form }}
+                            {% if variacao_formset.non_form_errors %}
+                                <div class="alert alert-danger border-0 rounded-4">{{ variacao_formset.non_form_errors }}</div>
+                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 dash-images-toolbar">
+                                <div class="text-secondary small">Adicione as variações de estoque do produto.</div>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        id="add-variacao-form">+ Adicionar variação</button>
+                            </div>
+                            <div id="variacao-formset">
+                                {% for vform in variacao_formset %}
+                                    <div class="dash-image-item mb-3">
+                                        {{ vform.id }}
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label dash-form-label">{{ vform.categoria.label }}</label>
+                                                {{ vform.categoria }}
+                                                {% if vform.categoria.errors %}<div class="dash-error-text">{{ vform.categoria.errors }}</div>{% endif %}
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label dash-form-label">{{ vform.genero.label }}</label>
+                                                {{ vform.genero }}
+                                                {% if vform.genero.errors %}<div class="dash-error-text">{{ vform.genero.errors }}</div>{% endif %}
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label dash-form-label">{{ vform.faixa_etaria.label }}</label>
+                                                {{ vform.faixa_etaria }}
+                                                {% if vform.faixa_etaria.errors %}<div class="dash-error-text">{{ vform.faixa_etaria.errors }}</div>{% endif %}
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label dash-form-label">{{ vform.tamanho.label }}</label>
+                                                {{ vform.tamanho }}
+                                                {% if vform.tamanho.errors %}<div class="dash-error-text">{{ vform.tamanho.errors }}</div>{% endif %}
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label dash-form-label">{{ vform.cor.label }}</label>
+                                                {{ vform.cor }}
+                                                {% if vform.cor.errors %}<div class="dash-error-text">{{ vform.cor.errors }}</div>{% endif %}
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label dash-form-label">{{ vform.quantidade.label }}</label>
+                                                {{ vform.quantidade }}
+                                                {% if vform.quantidade.errors %}<div class="dash-error-text">{{ vform.quantidade.errors }}</div>{% endif %}
+                                            </div>
+                                            <div class="col-md-3 d-flex align-items-end">
+                                                <div class="form-check">
+                                                    {{ vform.ativo }}
+                                                    <label class="form-check-label" for="{{ vform.ativo.id_for_label }}">Ativa</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-12 d-flex align-items-end">
+                                                <div class="form-check text-danger">
+                                                    {{ vform.DELETE }}
+                                                    <label class="form-check-label" for="{{ vform.DELETE.id_for_label }}">Excluir esta variação</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    data-bs-dismiss="modal">Fechar</button>
+                            <button type="submit" class="btn btn-primary">Salvar variações</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         <div class="modal fade"
              id="produtoImagensModal"
              tabindex="-1"
@@ -401,6 +585,91 @@
         </div>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
+                const usaVariacoesInput = document.getElementById("id_usa_variacoes");
+                const estoqueWrapper = document.querySelector(".js-estoque-simples-wrapper");
+                const quantidadeInput = document.getElementById("id_quantidade");
+                const variacaoAddButton = document.getElementById("add-variacao-form");
+                const variacaoTotalForms = document.getElementById("id_variacoes-TOTAL_FORMS");
+                const variacaoFormset = document.getElementById("variacao-formset");
+
+                function atualizarExibicaoEstoqueSimples() {
+                    if (!usaVariacoesInput || !estoqueWrapper) return;
+                    const usaVariacoes = usaVariacoesInput.checked;
+                    estoqueWrapper.style.display = usaVariacoes ? "none" : "block";
+                    if (quantidadeInput && usaVariacoes) {
+                        quantidadeInput.value = "0";
+                    }
+                }
+
+                if (usaVariacoesInput) {
+                    usaVariacoesInput.addEventListener("change", atualizarExibicaoEstoqueSimples);
+                    atualizarExibicaoEstoqueSimples();
+                }
+
+                if (variacaoAddButton && variacaoTotalForms && variacaoFormset) {
+                    variacaoAddButton.addEventListener("click", function () {
+                        const formCount = parseInt(variacaoTotalForms.value, 10);
+                        const html = `
+							<div class="dash-image-item mb-3">
+								<input type="hidden" name="variacoes-${formCount}-id" id="id_variacoes-${formCount}-id">
+								<div class="row g-3">
+									<div class="col-md-3">
+										<label class="form-label dash-form-label" for="id_variacoes-${formCount}-categoria">Categoria</label>
+										<select name="variacoes-${formCount}-categoria" class="form-select" id="id_variacoes-${formCount}-categoria">
+											<option value="CALCADO">Calçado</option>
+											<option value="ROUPA">Roupa</option>
+											<option value="OUTRO" selected>Outro</option>
+										</select>
+									</div>
+									<div class="col-md-3">
+										<label class="form-label dash-form-label" for="id_variacoes-${formCount}-genero">Gênero</label>
+										<select name="variacoes-${formCount}-genero" class="form-select" id="id_variacoes-${formCount}-genero">
+											<option value="" selected>---------</option>
+											<option value="MASCULINO">Masculino</option>
+											<option value="FEMININO">Feminino</option>
+											<option value="UNISSEX">Unissex</option>
+										</select>
+									</div>
+									<div class="col-md-3">
+										<label class="form-label dash-form-label" for="id_variacoes-${formCount}-faixa_etaria">Faixa etária</label>
+										<select name="variacoes-${formCount}-faixa_etaria" class="form-select" id="id_variacoes-${formCount}-faixa_etaria">
+											<option value="" selected>---------</option>
+											<option value="ADULTO">Adulto</option>
+											<option value="INFANTIL">Infantil</option>
+										</select>
+									</div>
+									<div class="col-md-3">
+										<label class="form-label dash-form-label" for="id_variacoes-${formCount}-tamanho">Tamanho</label>
+										<input type="text" name="variacoes-${formCount}-tamanho" maxlength="20" class="form-control" id="id_variacoes-${formCount}-tamanho">
+									</div>
+									<div class="col-md-3">
+										<label class="form-label dash-form-label" for="id_variacoes-${formCount}-cor">Cor</label>
+										<input type="text" name="variacoes-${formCount}-cor" maxlength="50" class="form-control" id="id_variacoes-${formCount}-cor">
+									</div>
+									<div class="col-md-3">
+										<label class="form-label dash-form-label" for="id_variacoes-${formCount}-quantidade">Quantidade</label>
+										<input type="number" name="variacoes-${formCount}-quantidade" value="0" min="0" class="form-control" id="id_variacoes-${formCount}-quantidade">
+									</div>
+									<div class="col-md-3 d-flex align-items-end">
+										<div class="form-check">
+											<input type="checkbox" name="variacoes-${formCount}-ativo" class="form-check-input" id="id_variacoes-${formCount}-ativo" checked>
+											<label class="form-check-label" for="id_variacoes-${formCount}-ativo">Ativa</label>
+										</div>
+									</div>
+									<div class="col-md-3 d-flex align-items-end">
+										<div class="form-check text-danger">
+											<input type="checkbox" name="variacoes-${formCount}-DELETE" class="form-check-input" id="id_variacoes-${formCount}-DELETE">
+											<label class="form-check-label" for="id_variacoes-${formCount}-DELETE">Excluir esta variação</label>
+										</div>
+									</div>
+								</div>
+							</div>
+						`;
+                        variacaoFormset.insertAdjacentHTML("beforeend", html);
+                        variacaoTotalForms.value = formCount + 1;
+                    });
+                }
+
                 const addButton = document.getElementById("add-image-form");
                 const totalForms = document.getElementById("id_imagens-TOTAL_FORMS");
                 const formsetContainer = document.getElementById("image-formset");
@@ -529,6 +798,20 @@
                 });
 
                 bindImageButtons(document);
+
+                {% if open_variacoes_modal %}
+                    const variacoesModalEl = document.getElementById("produtoVariacoesModal");
+                    if (variacoesModalEl && window.bootstrap) {
+                        new bootstrap.Modal(variacoesModalEl).show();
+                    }
+                {% endif %}
+
+                {% if open_images_modal %}
+                    const imagensModalEl = document.getElementById("produtoImagensModal");
+                    if (imagensModalEl && window.bootstrap) {
+                        new bootstrap.Modal(imagensModalEl).show();
+                    }
+                {% endif %}
             });
         </script>
     {% endif %}

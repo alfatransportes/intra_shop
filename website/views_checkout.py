@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from website.utils import inserir_ou_atualizar_valor
 
 from .forms import CheckoutForm, ComprovantePixForm
-from .models import FormaPagamento, Produto, Venda, VendaItem
+from .models import FormaPagamento, Produto, ProdutoVariacao, Venda, VendaItem
 from .services.carrinho import get_carrinho_aberto
 from .services.rastreamento import consultar_minuta
 from .utils import enviar_email_staff_nova_compra
@@ -71,7 +71,7 @@ def checkout(request):
     carrinho = (
         carrinho.__class__.objects
         .select_related("usuario")
-        .prefetch_related("itens__produto")
+        .prefetch_related("itens__produto", "itens__variacao")
         .get(pk=carrinho.pk)
     )
 
@@ -93,27 +93,44 @@ def checkout(request):
                 parcelas = int(form.cleaned_data.get("parcelas") or 1)
 
             produto_ids = list(carrinho.itens.values_list("produto_id", flat=True))
+            variacao_ids = list(carrinho.itens.exclude(variacao_id=None).values_list("variacao_id", flat=True))
+
             produtos_travados = Produto.objects.select_for_update().filter(id__in=produto_ids)
+            variacoes_travadas = ProdutoVariacao.objects.select_for_update().filter(id__in=variacao_ids)
+
             mapa_produtos = {p.id: p for p in produtos_travados}
+            mapa_variacoes = {v.id: v for v in variacoes_travadas}
 
             for item in carrinho.itens.all():
                 produto_travado = mapa_produtos.get(item.produto_id)
-
                 if not produto_travado:
                     messages.error(request, "Produto do carrinho não encontrado. Tente novamente.")
                     return redirect("carrinho_detail")
 
-                if item.quantidade > (produto_travado.quantidade or 0):
-                    messages.error(request, f"Estoque insuficiente para {produto_travado.nome}.")
-                    return redirect("carrinho_detail")
+                if item.variacao_id:
+                    variacao_travada = mapa_variacoes.get(item.variacao_id)
+                    if not variacao_travada or variacao_travada.produto_id != produto_travado.id:
+                        messages.error(request, f"Variação inválida para {produto_travado.nome}.")
+                        return redirect("carrinho_detail")
 
-                permitido, erro = produto_travado.pode_finalizar_no_checkout(
-                    request.user,
-                    item.quantidade
-                )
-                if not permitido:
-                    messages.error(request, erro)
-                    return redirect("carrinho_detail")
+                    if item.quantidade > (variacao_travada.quantidade or 0):
+                        messages.error(
+                            request,
+                            f"Estoque insuficiente para {produto_travado.nome} - {variacao_travada.tamanho}."
+                        )
+                        return redirect("carrinho_detail")
+                else:
+                    if item.quantidade > (produto_travado.quantidade or 0):
+                        messages.error(request, f"Estoque insuficiente para {produto_travado.nome}.")
+                        return redirect("carrinho_detail")
+
+                    permitido, erro = produto_travado.pode_finalizar_no_checkout(
+                        request.user,
+                        item.quantidade
+                    )
+                    if not permitido:
+                        messages.error(request, erro)
+                        return redirect("carrinho_detail")
 
             venda = Venda.objects.create(
                 usuario=request.user,
@@ -128,13 +145,19 @@ def checkout(request):
 
             for item in carrinho.itens.all():
                 produto_travado = mapa_produtos[item.produto_id]
+                variacao_travada = mapa_variacoes.get(item.variacao_id) if item.variacao_id else None
 
-                produto_travado.quantidade -= item.quantidade
-                produto_travado.save(update_fields=["quantidade"])
+                if variacao_travada:
+                    variacao_travada.quantidade -= item.quantidade
+                    variacao_travada.save(update_fields=["quantidade"])
+                else:
+                    produto_travado.quantidade -= item.quantidade
+                    produto_travado.save(update_fields=["quantidade"])
 
                 VendaItem.objects.create(
                     venda=venda,
                     produto=produto_travado,
+                    variacao=variacao_travada,
                     quantidade=item.quantidade,
                     preco_unitario=item.preco_unitario,
                 )
@@ -148,7 +171,6 @@ def checkout(request):
             carrinho.save(update_fields=["status"])
             carrinho.itens.all().delete()
 
-            # envia email só se NÃO for PIX
             if forma.codigo != FormaPagamento.Codigo.PIX:
                 transaction.on_commit(lambda: enviar_email_staff_nova_compra(venda))
 
@@ -202,7 +224,7 @@ def venda_detalhe(request, pk):
     venda = get_object_or_404(
         Venda.objects
         .select_related("forma_pagamento", "usuario")
-        .prefetch_related("itens__produto"),
+        .prefetch_related("itens__produto", "itens__variacao"),
         pk=pk,
         usuario=request.user,
     )

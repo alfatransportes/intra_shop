@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import F, IntegerField, Q, Sum
+from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -13,68 +13,41 @@ from .models import RESERVA_HORAS, ConfigWebsite, Favorito, Produto, Tipo
 
 
 def index(request):
-    # parâmetros
     busca = (request.GET.get("q") or "").strip()
     tipo_id = (request.GET.get("categoria") or "").strip()
     ordenar = (request.GET.get("ordenar") or "").strip()
 
-    # paginação
-    page_number = request.GET.get("page") or "1"
-    try:
-        page_number_int = int(page_number)
-    except ValueError:
-        page_number_int = 1
-
-    limite = timezone.now() - timedelta(hours=RESERVA_HORAS)
-
     produtos_qs = (
         Produto.objects
-        .prefetch_related("imagens")
-        .annotate(
-            reservado=Coalesce(
-                Sum(
-                    "itens_carrinho__quantidade",
-                    filter=Q(
-                        itens_carrinho__carrinho__status="ABERTO",
-                        itens_carrinho__atualizado_em__gte=limite,
-                    ),
-                ),
-                0,
-                output_field=IntegerField(),
-            ),
-            estoque_calc=F("quantidade") - F("reservado"),
-        )
-        .filter(estoque_calc__gt=0, ativo=True)
+        .prefetch_related("imagens", "variacoes")
+        .filter(ativo=True)
     )
 
-    # busca
     if busca:
         produtos_qs = produtos_qs.filter(
             Q(nome__icontains=busca) | Q(descricao__icontains=busca)
         )
 
-    # categoria
     if tipo_id.isdigit():
         produtos_qs = produtos_qs.filter(tipo_prod_id=int(tipo_id))
 
-    # ordenação
+    produtos = [p for p in produtos_qs if p.estoque_disponivel > 0]
+
     if ordenar == "preco":
-        produtos_qs = produtos_qs.order_by("valor_venda", "-id")
+        produtos.sort(key=lambda p: (p.valor_venda, -p.id))
     elif ordenar == "preco_desc":
-        produtos_qs = produtos_qs.order_by("-valor_venda", "-id")
+        produtos.sort(key=lambda p: (-p.valor_venda, -p.id))
     elif ordenar == "nome":
-        produtos_qs = produtos_qs.order_by("nome")
+        produtos.sort(key=lambda p: p.nome.lower())
     else:
-        produtos_qs = produtos_qs.order_by("-id")
+        produtos.sort(key=lambda p: -p.id)
+
+    paginator = Paginator(produtos, 12)
+    page_obj = paginator.get_page(request.GET.get("page") or "1")
 
     categorias = Tipo.objects.all().order_by("nome")
-
-    paginator = Paginator(produtos_qs, 12)
-    page_obj = paginator.get_page(page_number_int)
-
     filtros_ativos = bool(busca or tipo_id or ordenar)
 
-    # configuração ativa + banners do carrossel
     config_ativa = (
         ConfigWebsite.objects
         .prefetch_related("banners")
@@ -82,9 +55,7 @@ def index(request):
         .first()
     )
 
-    banners = []
-    if config_ativa:
-        banners = config_ativa.banners.filter(ativo=True).order_by("ordem", "id")
+    banners = config_ativa.banners.filter(ativo=True).order_by("ordem", "id") if config_ativa else []
 
     return render(
         request,
@@ -106,8 +77,16 @@ def index(request):
 
 def detalhe_produto(request, pk):
     produto = get_object_or_404(
-        Produto.objects.prefetch_related("imagens", "tipo_prod", "unidade_prod", "nivel_ava_prod"),
+        Produto.objects.prefetch_related(
+            "imagens",
+            "variacoes",
+        ).select_related(
+            "tipo_prod",
+            "unidade_prod",
+            "nivel_ava_prod",
+        ),
         pk=pk,
+        ativo=True,
     )
 
     economia = Decimal("0.00")
@@ -126,17 +105,15 @@ def detalhe_produto(request, pk):
 
     relacionados = (
         Produto.objects
-        .filter(tipo_prod=produto.tipo_prod)
+        .filter(tipo_prod=produto.tipo_prod, ativo=True)
         .exclude(pk=produto.pk)
         .prefetch_related("imagens")
         .order_by("?")[:4]
     )
 
     restante_para_usuario = None
-
     if request.user.is_authenticated:
         limite = produto.maximo_por_usuario or 0
-
         if limite > 0:
             ja_solicitada = produto.quantidade_ja_solicitada_por_usuario(request.user)
             no_carrinho = produto.quantidade_no_carrinho_aberto(request.user)
@@ -151,6 +128,7 @@ def detalhe_produto(request, pk):
             "favoritado": favoritado,
             "relacionados": relacionados,
             "restante_para_usuario": restante_para_usuario,
+            "variacoes_disponiveis": produto.variacoes_disponiveis if produto.usa_variacoes else [],
         },
     )
 

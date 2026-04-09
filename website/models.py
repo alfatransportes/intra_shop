@@ -240,7 +240,6 @@ class NivelAvaria(models.Model):
     def __str__(self):
         return self.nome
 
-
 class Produto(models.Model):
     unidade_prod = models.ForeignKey(
         Unidade,
@@ -263,11 +262,19 @@ class Produto(models.Model):
 
     num_controle = models.CharField(max_length=255, null=True, blank=True, verbose_name="Número de Controle")
     nome = models.CharField(max_length=255)
+
+    usa_variacoes = models.BooleanField(
+        default=False,
+        verbose_name="Usa variações",
+        help_text="Marque para produtos como roupa e calçado, cujo estoque é controlado por variações.",
+    )
+
     quantidade = models.PositiveIntegerField(
         default=1,
         verbose_name="Quantidade",
         help_text="Quantidade em estoque (mínimo 1).",
     )
+
     maximo_por_usuario = models.PositiveIntegerField(
         default=0,
         verbose_name="Quantidade máxima por usuário",
@@ -298,7 +305,6 @@ class Produto(models.Model):
         editable=False,
     )
     descricao = models.TextField(verbose_name="Descrição do produto")
-
     ativo = models.BooleanField(default=False, verbose_name="Ativo para venda")
 
     class Meta:
@@ -314,27 +320,75 @@ class Produto(models.Model):
             rounding=ROUND_HALF_UP,
         )
 
+        if self.usa_variacoes:
+            self.quantidade = 0
+
         super().save(*args, **kwargs)
 
-        # Se estiver ativo mas sem imagens, desativa automaticamente
-        if self.ativo and not self.imagens.exists():
+        pode_ativar, _motivo = self.pode_ativar()
+        if self.ativo and not pode_ativar:
             self.ativo = False
             super().save(update_fields=["ativo"])
 
     @property
     def estoque_disponivel(self) -> int:
-        """
-        Estoque disponível = estoque físico - reservado em carrinhos ABERTOS
-        (considerando apenas itens não expirados).
-        """
         limite = timezone.now() - timedelta(hours=RESERVA_HORAS)
+
         reservado = (
             self.itens_carrinho.filter(
                 carrinho__status="ABERTO",
                 atualizado_em__gte=limite,
             ).aggregate(q=Coalesce(Sum("quantidade"), 0))["q"]
         )
-        return max((self.quantidade or 0) - int(reservado or 0), 0)
+
+        estoque_base = (
+            self.estoque_total_variacoes if self.usa_variacoes else (self.quantidade or 0)
+        )
+
+        return max(int(estoque_base) - int(reservado or 0), 0)
+    
+    @property
+    def pode_ativar_produto(self):
+        ok, _motivo = self.pode_ativar()
+        return ok
+
+    @property
+    def estoque_total_variacoes(self) -> int:
+        return int(
+            self.variacoes.filter(ativo=True).aggregate(
+                total=Coalesce(Sum("quantidade"), 0)
+            )["total"] or 0
+        )
+
+    @property
+    def tem_variacoes_ativas_com_estoque(self) -> bool:
+        return self.variacoes.filter(
+            ativo=True,
+            quantidade__gt=0
+        ).exists()
+    
+    @property
+    def variacoes_disponiveis(self):
+        return self.variacoes.filter(ativo=True, quantidade__gt=0).order_by(
+            "categoria", "genero", "faixa_etaria", "tamanho", "id"
+        )
+
+    def pode_ativar(self) -> tuple[bool, str]:
+        if not self.imagens.exists():
+            return False, "Para ativar o produto, adicione ao menos uma imagem."
+
+        if self.usa_variacoes:
+            if not self.tem_variacoes_ativas_com_estoque:
+                return False, (
+                    "Para ativar um produto com variações, "
+                    "cadastre ao menos uma variação ativa com estoque."
+                )
+            return True, ""
+
+        if (self.quantidade or 0) <= 0:
+            return False, "Para ativar o produto, informe uma quantidade maior que zero."
+
+        return True, ""
     
     def quantidade_ja_solicitada_por_usuario(self, usuario) -> int:
         if not usuario or not usuario.is_authenticated:
@@ -493,6 +547,109 @@ class ProdutoImagem(models.Model):
         return super().save(*args, **kwargs)
 
 
+class ProdutoVariacao(models.Model):
+    class Categoria(models.TextChoices):
+        CALCADO = "CALCADO", "Calçado"
+        ROUPA = "ROUPA", "Roupa"
+        OUTRO = "OUTRO", "Outro"
+
+    class Genero(models.TextChoices):
+        MASCULINO = "MASCULINO", "Masculino"
+        FEMININO = "FEMININO", "Feminino"
+        UNISSEX = "UNISSEX", "Unissex"
+
+    class FaixaEtaria(models.TextChoices):
+        ADULTO = "ADULTO", "Adulto"
+        INFANTIL = "INFANTIL", "Infantil"
+
+    produto = models.ForeignKey(
+        Produto,
+        on_delete=models.CASCADE,
+        related_name="variacoes",
+        verbose_name="Produto",
+    )
+    categoria = models.CharField(
+        max_length=20,
+        choices=Categoria.choices,
+        default=Categoria.OUTRO,
+        verbose_name="Categoria da variação",
+    )
+    genero = models.CharField(
+        max_length=20,
+        choices=Genero.choices,
+        blank=True,
+        null=True,
+        verbose_name="Gênero",
+    )
+    faixa_etaria = models.CharField(
+        max_length=20,
+        choices=FaixaEtaria.choices,
+        blank=True,
+        null=True,
+        verbose_name="Faixa etária",
+    )
+    tamanho = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name="Tamanho",
+        help_text="Ex.: P, M, G, GG, 34, 35, 36, 37...",
+    )
+    cor = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Cor",
+        help_text="Ex.: Preto, Branco, Azul Marinho...",
+    )
+    quantidade = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Estoque da variação",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativa")
+
+    class Meta:
+        ordering = ["categoria", "genero", "faixa_etaria", "tamanho", "cor", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["produto", "categoria", "genero", "faixa_etaria", "tamanho", "cor"],
+                name="unique_produto_variacao",
+            )
+        ]
+
+    def __str__(self):
+        partes = [self.produto.nome]
+
+        if self.categoria:
+            partes.append(self.get_categoria_display())
+
+        if self.genero:
+            partes.append(self.get_genero_display())
+
+        if self.faixa_etaria:
+            partes.append(self.get_faixa_etaria_display())
+
+        if self.tamanho:
+            partes.append(f"Tamanho {self.tamanho}")
+
+        if self.cor:
+            partes.append(self.cor)
+
+        return " - ".join(partes)
+
+    def clean(self):
+        super().clean()
+
+        if self.quantidade < 0:
+            raise ValidationError({"quantidade": "A quantidade não pode ser negativa."})
+
+        self.tamanho = (self.tamanho or "").strip().upper() or None
+        self.cor = (self.cor or "").strip() or None
+
+        if self.quantidade > 0 and not self.tamanho:
+            raise ValidationError({"tamanho": "Informe o tamanho da variação."})
+
+
 class Carrinho(models.Model):
     class Status(models.TextChoices):
         ABERTO = "ABERTO", "Aberto"
@@ -538,6 +695,13 @@ class Carrinho(models.Model):
 class CarrinhoItem(models.Model):
     carrinho = models.ForeignKey("Carrinho", on_delete=models.CASCADE, related_name="itens")
     produto = models.ForeignKey("Produto", on_delete=models.PROTECT, related_name="itens_carrinho")
+    variacao = models.ForeignKey(
+        "ProdutoVariacao",
+        on_delete=models.PROTECT,
+        related_name="itens_carrinho",
+        null=True,
+        blank=True,
+    )
     quantidade = models.PositiveIntegerField(default=1)
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
 
@@ -545,12 +709,28 @@ class CarrinhoItem(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("carrinho", "produto")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["carrinho", "produto", "variacao"],
+                name="unique_cart_product_variation",
+            )
+        ]
 
     def save(self, *args, **kwargs):
+        if self.produto.usa_variacoes and not self.variacao_id:
+            raise ValidationError("Selecione uma variação para este produto.")
+
+        if self.variacao_id and self.variacao.produto_id != self.produto_id:
+            raise ValidationError("A variação informada não pertence ao produto.")
+
         if not self.preco_unitario or self.preco_unitario <= 0:
             self.preco_unitario = self.produto.valor_venda
+
         super().save(*args, **kwargs)
+
+    @property
+    def descricao_variacao(self):
+        return str(self.variacao) if self.variacao_id else ""
 
     @property
     def subtotal(self) -> Decimal:
@@ -705,23 +885,40 @@ class Venda(models.Model):
         self.save(update_fields=["total"])
     
     def repor_estoque(self):
-        for item in self.itens.select_related("produto").all():
-            produto = item.produto
-            produto.quantidade += item.quantidade
-            produto.save(update_fields=["quantidade"])
+        for item in self.itens.select_related("produto", "variacao").all():
+            if getattr(item, "variacao_id", None):
+                variacao = item.variacao
+                variacao.quantidade += item.quantidade
+                variacao.save(update_fields=["quantidade"])
+            else:
+                produto = item.produto
+                produto.quantidade += item.quantidade
+                produto.save(update_fields=["quantidade"])
     
     def baixar_estoque(self):
-        for item in self.itens.select_related("produto").all():
-            produto = item.produto
+        for item in self.itens.select_related("produto", "variacao").all():
+            if getattr(item, "variacao_id", None):
+                variacao = item.variacao
 
-            if item.quantidade > produto.quantidade:
-                raise ValidationError(
-                    f"Estoque insuficiente para o produto '{produto.nome}'. "
-                    f"Disponível: {produto.quantidade}. Solicitado: {item.quantidade}."
-                )
+                if item.quantidade > variacao.quantidade:
+                    raise ValidationError(
+                        f"Estoque insuficiente para a variação '{variacao}'. "
+                        f"Disponível: {variacao.quantidade}. Solicitado: {item.quantidade}."
+                    )
 
-            produto.quantidade -= item.quantidade
-            produto.save(update_fields=["quantidade"])
+                variacao.quantidade -= item.quantidade
+                variacao.save(update_fields=["quantidade"])
+            else:
+                produto = item.produto
+
+                if item.quantidade > produto.quantidade:
+                    raise ValidationError(
+                        f"Estoque insuficiente para o produto '{produto.nome}'. "
+                        f"Disponível: {produto.quantidade}. Solicitado: {item.quantidade}."
+                    )
+
+                produto.quantidade -= item.quantidade
+                produto.save(update_fields=["quantidade"])
 
     def clean(self):
         super().clean()
@@ -803,19 +1000,33 @@ class VendaItem(models.Model):
         on_delete=models.PROTECT,
         related_name="itens_venda"
     )
+    variacao = models.ForeignKey(
+        "ProdutoVariacao",
+        on_delete=models.PROTECT,
+        related_name="itens_venda",
+        null=True,
+        blank=True,
+    )
     quantidade = models.PositiveIntegerField(default=1)
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"), editable=False)
 
     def save(self, *args, **kwargs):
+        if self.produto.usa_variacoes and not self.variacao_id:
+            raise ValidationError("VendaItem de produto com variação exige uma variação.")
+
+        if self.variacao_id and self.variacao.produto_id != self.produto_id:
+            raise ValidationError("A variação informada não pertence ao produto.")
+
         if self.produto_id and (not self.preco_unitario or self.preco_unitario <= 0):
             self.preco_unitario = self.produto.valor_venda
 
         self.subtotal = (self.preco_unitario * self.quantidade).quantize(Decimal("0.01"))
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"{self.produto} x{self.quantidade}"
+    @property
+    def descricao_variacao(self):
+        return str(self.variacao) if self.variacao_id else ""
 
 class Favorito(models.Model):
     usuario = models.ForeignKey(

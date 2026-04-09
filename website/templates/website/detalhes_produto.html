@@ -176,8 +176,8 @@
                             <div class="d-flex align-items-start justify-content-between gap-2">
                                 <h1 class="h4 mb-2 produto-titulo">{{ produto.nome }}</h1>
                                 <a href="{% url 'favorito_toggle' produto.id %}"
-                                class="btn btn-light border d-inline-flex align-items-center justify-content-center produto-favorito-btn"
-                                aria-label="Favoritar">
+                                   class="btn btn-light border d-inline-flex align-items-center justify-content-center produto-favorito-btn"
+                                   aria-label="Favoritar">
                                     {% if favoritado %}
                                         ❤️
                                     {% else %}
@@ -204,30 +204,30 @@
                                     <div class="position-relative">
                                         {% if total > 1 %}
                                             <div class="position-absolute top-0 start-0 m-2" style="z-index: 3;">
-                                                <span id="galeriaContador" class="badge text-bg-light border produto-badge-pill">
+                                                <span id="galeriaContador"
+                                                      class="badge text-bg-light border produto-badge-pill">
                                                     1/{{ total }}
                                                 </span>
                                             </div>
                                         {% endif %}
-                
                                         {% if total > 1 %}
                                             <button type="button"
                                                     class="btn btn-light border position-absolute top-50 start-0 translate-middle-y ms-2 d-flex align-items-center justify-content-center"
-                                                    style="z-index: 3; width: 42px; height: 42px; border-radius: 999px;"
+                                                    style="z-index: 3;
+                                                           width: 42px;
+                                                           height: 42px;
+                                                           border-radius: 999px"
                                                     onclick="mudarImagem(-1)"
-                                                    aria-label="Imagem anterior">
-                                                ‹
-                                            </button>
-                
+                                                    aria-label="Imagem anterior">‹</button>
                                             <button type="button"
                                                     class="btn btn-light border position-absolute top-50 end-0 translate-middle-y me-2 d-flex align-items-center justify-content-center"
-                                                    style="z-index: 3; width: 42px; height: 42px; border-radius: 999px;"
+                                                    style="z-index: 3;
+                                                           width: 42px;
+                                                           height: 42px;
+                                                           border-radius: 999px"
                                                     onclick="mudarImagem(1)"
-                                                    aria-label="Próxima imagem">
-                                                ›
-                                            </button>
+                                                    aria-label="Próxima imagem">›</button>
                                         {% endif %}
-                
                                         <div class="ratio ratio-4x3 produto-galeria-principal rounded-4 overflow-hidden border">
                                             {% if total > 0 %}
                                                 {% for img in imgs %}
@@ -246,22 +246,23 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                
                                     {% if total > 1 %}
-                                        <div class="d-flex justify-content-center gap-2 mt-3 d-lg-none" id="galeriaDots">
+                                        <div class="d-flex justify-content-center gap-2 mt-3 d-lg-none"
+                                             id="galeriaDots">
                                             {% for img in imgs %}
                                                 {% if img.imagem %}
                                                     <button type="button"
                                                             class="border rounded-circle p-0 galeria-dot {% if forloop.first %}active{% endif %}"
-                                                            style="width:10px; height:10px; background:{% if forloop.first %}#0d6efd{% else %}transparent{% endif %}; border-color:{% if forloop.first %}#0d6efd{% else %}#ced4da{% endif %};"
+                                                            style="width:10px;
+                                                                   height:10px;
+                                                                   background:{% if forloop.first %}#0d6efd{% else %}transparent{% endif %};
+                                                                   border-color:{% if forloop.first %}#0d6efd{% else %}#ced4da{% endif %}"
                                                             onclick="irParaImagem({{ forloop.counter0 }})"
-                                                            aria-label="Ir para imagem {{ forloop.counter }}">
-                                                    </button>
+                                                            aria-label="Ir para imagem {{ forloop.counter }}"></button>
                                                 {% endif %}
                                             {% endfor %}
                                         </div>
                                     {% endif %}
-                
                                     {% if total > 1 %}
                                         <div class="d-none d-lg-flex gap-2 mt-3 flex-wrap" id="galeriaThumbs">
                                             {% for img in imgs %}
@@ -293,8 +294,8 @@
                                     <div class="d-flex align-items-start justify-content-between gap-2">
                                         <h1 class="h4 mb-2 produto-titulo">{{ produto.nome }}</h1>
                                         <a href="{% url 'favorito_toggle' produto.id %}"
-                                        class="btn btn-light border d-inline-flex align-items-center justify-content-center produto-favorito-btn"
-                                        aria-label="Favoritar">
+                                           class="btn btn-light border d-inline-flex align-items-center justify-content-center produto-favorito-btn"
+                                           aria-label="Favoritar">
                                             {% if favoritado %}
                                                 ❤️
                                             {% else %}
@@ -356,7 +357,6 @@
                                         <div class="small text-muted">
                                             Limite total: <strong>{{ produto.maximo_por_usuario }}</strong> unidade(s)
                                         </div>
-                                
                                         {% if user.is_authenticated and restante_para_usuario is not None %}
                                             <div class="small text-muted mt-1">
                                                 Você ainda pode solicitar:
@@ -369,14 +369,51 @@
                                 </div>
                                 <div class="d-grid gap-2">
                                     {% if produto.estoque_disponivel|default:0 > 0 %}
-                                        <a href="{% url 'carrinho_add' produto.id %}"
-                                           class="btn btn-primary btn-lg ">Comprar agora</a>
-                                        <a href="{% url 'carrinho_add' produto.id %}"
-                                           class="btn btn-outline-primary btn-lg ">
-                                            Adicionar ao carrinho
-                                        </a>
+                                        <form method="post"
+                                              action="{% url 'carrinho_add' produto.id %}"
+                                              class="d-grid gap-3">
+                                            {% csrf_token %}
+                                            {% if produto.usa_variacoes %}
+                                                <div>
+                                                    <label for="id_variacao" class="form-label fw-semibold">Tamanho</label>
+                                                    <select name="variacao_id" id="id_variacao" class="form-select" required>
+                                                        <option value="">Selecione uma opção</option>
+                                                        {% for variacao in variacoes_disponiveis %}
+                                                            <option value="{{ variacao.id }}">
+                                                                {{ variacao.tamanho }}
+                                                                {% if variacao.genero %}• {{ variacao.get_genero_display }}{% endif %}
+                                                                {% if variacao.faixa_etaria %}• {{ variacao.get_faixa_etaria_display }}{% endif %}
+                                                                • Estoque: {{ variacao.quantidade }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <label for="id_quantidade" class="form-label fw-semibold">Quantidade</label>
+                                                <input type="number"
+                                                       name="quantidade"
+                                                       id="id_quantidade"
+                                                       min="1"
+                                                       value="1"
+                                                       class="form-control"
+                                                       required>
+                                            </div>
+                                            <div class="d-grid gap-2">
+                                                <button type="submit"
+                                                        name="acao"
+                                                        value="comprar"
+                                                        class="btn btn-primary btn-lg">Comprar agora</button>
+                                                <button type="submit"
+                                                        name="acao"
+                                                        value="carrinho"
+                                                        class="btn btn-outline-primary btn-lg">
+                                                    Adicionar ao carrinho
+                                                </button>
+                                            </div>
+                                        </form>
                                     {% else %}
-                                        <button class="btn btn-secondary btn-lg " disabled>Indisponível</button>
+                                        <button class="btn btn-secondary btn-lg" disabled>Indisponível</button>
                                     {% endif %}
                                 </div>
                                 <div class="mt-4 small text-muted">

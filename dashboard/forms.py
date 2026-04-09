@@ -4,8 +4,9 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from website.models import (FormaPagamento, NivelAvaria, Produto,
-                            ProdutoImagem, RegraParcelamentoVale, Tipo,
-                            Unidade, Venda, VendaItem)
+                            ProdutoImagem, ProdutoVariacao,
+                            RegraParcelamentoVale, Tipo, Unidade, Venda,
+                            VendaItem)
 
 
 class BaseBootstrapForm(forms.ModelForm):
@@ -89,6 +90,7 @@ class ProdutoForm(BaseBootstrapForm):
             "nivel_ava_prod",
             "num_controle",
             "nome",
+            "usa_variacoes",
             "quantidade",
             "maximo_por_usuario",
             "valor_nota",
@@ -97,21 +99,40 @@ class ProdutoForm(BaseBootstrapForm):
             "ativo",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["quantidade"].required = False
+        self.fields["quantidade"].widget.attrs.setdefault("min", 0)
+
     def clean(self):
         cleaned_data = super().clean()
         ativo = cleaned_data.get("ativo")
+        usa_variacoes = bool(cleaned_data.get("usa_variacoes"))
+        quantidade = cleaned_data.get("quantidade")
+
+        if usa_variacoes:
+            cleaned_data["quantidade"] = 0
+        elif quantidade in (None, ""):
+            cleaned_data["quantidade"] = 0
 
         if ativo and not self.instance.pk:
             self.add_error(
                 "ativo",
-                "Para ativar o produto, salve primeiro e adicione ao menos uma imagem."
+                "Para ativar o produto, salve primeiro e conclua as etapas obrigatórias."
             )
             return cleaned_data
 
-        if ativo and self.instance.pk and not self.instance.imagens.exists():
+        if ativo and self.instance.pk:
+            self.instance.usa_variacoes = usa_variacoes
+            self.instance.quantidade = int(cleaned_data.get("quantidade") or 0)
+            pode_ativar, mensagem = self.instance.pode_ativar()
+            if not pode_ativar:
+                self.add_error("ativo", mensagem)
+
+        if not usa_variacoes and int(cleaned_data.get("quantidade") or 0) <= 0:
             self.add_error(
-                "ativo",
-                "Para ativar o produto, adicione ao menos uma imagem."
+                "quantidade",
+                "Informe um estoque maior que zero para produto sem variações."
             )
 
         return cleaned_data
@@ -201,6 +222,85 @@ ProdutoImagemFormSet = inlineformset_factory(
     can_delete=True,
 )
 
+class ProdutoVariacaoForm(BaseBootstrapForm):
+    class Meta:
+        model = ProdutoVariacao
+        fields = [
+            "categoria",
+            "genero",
+            "faixa_etaria",
+            "tamanho",
+            "cor",
+            "quantidade",
+            "ativo",
+        ]
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if cleaned_data.get("DELETE"):
+            return cleaned_data
+
+        tamanho = (cleaned_data.get("tamanho") or "").strip()
+        cor = (cleaned_data.get("cor") or "").strip()
+        quantidade = cleaned_data.get("quantidade") or 0
+
+        if quantidade > 0 and not tamanho:
+            self.add_error("tamanho", "Informe o tamanho da variação.")
+
+        cleaned_data["tamanho"] = tamanho.upper() if tamanho else ""
+        cleaned_data["cor"] = cor
+
+        return cleaned_data
+
+
+class BaseProdutoVariacaoFormSet(forms.BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+
+        if any(self.errors):
+            return
+
+        combinacoes = set()
+
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+
+            if form.cleaned_data.get("DELETE"):
+                continue
+
+            categoria = form.cleaned_data.get("categoria")
+            genero = form.cleaned_data.get("genero")
+            faixa = form.cleaned_data.get("faixa_etaria")
+            tamanho = (form.cleaned_data.get("tamanho") or "").strip().upper()
+            cor = (form.cleaned_data.get("cor") or "").strip().lower()
+
+            chave = (categoria, genero, faixa, tamanho, cor)
+
+            if chave in combinacoes:
+                raise forms.ValidationError(
+                    "Já existe uma variação com esta combinação."
+                )
+
+            combinacoes.add(chave)
+
+ProdutoVariacaoFormSet = inlineformset_factory(
+    Produto,
+    ProdutoVariacao,
+    form=ProdutoVariacaoForm,
+    formset=BaseProdutoVariacaoFormSet,
+    fields=[
+        "categoria",
+        "genero",
+        "faixa_etaria",
+        "tamanho",
+        "quantidade",
+        "ativo",
+    ],
+    extra=0,
+    can_delete=True,
+)
 
 class VendaStatusForm(forms.ModelForm):
     class Meta:

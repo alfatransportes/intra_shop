@@ -29,13 +29,15 @@ from reportlab.pdfgen import canvas
 
 from dashboard.services.importador_produtos import importar_produtos
 from website.models import (Carrinho, FormaPagamento, NivelAvaria, Produto,
-                            ProdutoImagem, RegraParcelamentoVale, Tipo,
-                            Unidade, Venda, VendaItem)
+                            ProdutoImagem, ProdutoVariacao,
+                            RegraParcelamentoVale, Tipo, Unidade, Venda,
+                            VendaItem)
 
 from .forms import (FormaPagamentoForm, NivelAvariaForm, ProdutoForm,
                     ProdutoImagemForm, ProdutoImagemFormSet, ProdutoImportForm,
-                    RegraParcelamentoValeForm, TipoForm, UnidadeForm,
-                    VendaForm, VendaItemFormSet, VendaStatusForm)
+                    ProdutoVariacaoFormSet, RegraParcelamentoValeForm,
+                    TipoForm, UnidadeForm, VendaForm, VendaItemFormSet,
+                    VendaStatusForm)
 from .mixins import DashboardPermissionMixin
 from .utils import enviar_email_status_venda_cliente
 
@@ -216,6 +218,13 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
     def get_form(self, data=None, files=None):
         return ProdutoForm(data=data, files=files, instance=self.object)
 
+    def get_next_step_url(self, produto):
+        if produto.usa_variacoes and not produto.variacoes.filter(ativo=True, quantidade__gt=0).exists():
+            return f"{reverse('dashboard_produto_update', kwargs={'pk': produto.pk})}?step=variacoes"
+        if not produto.imagens.exists():
+            return f"{reverse('dashboard_produto_update', kwargs={'pk': produto.pk})}?step=imagens"
+        return reverse("dashboard_produto_update", kwargs={"pk": produto.pk})
+
     def get_formset(self, data=None, files=None):
         if not self.object:
             return ProdutoImagemFormSet(prefix="imagens")
@@ -225,13 +234,37 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
             instance=self.object,
             prefix="imagens",
         )
+    
+    def get_variacao_formset(self, data=None, files=None):
+        if not self.object:
+            return ProdutoVariacaoFormSet(prefix="variacoes")
+        return ProdutoVariacaoFormSet(
+            data=data,
+            files=files,
+            instance=self.object,
+            prefix="variacoes",
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        form = kwargs.get("form") or self.get_form()
+        open_images_modal = kwargs.get("open_images_modal", False)
+        open_variacoes_modal = kwargs.get("open_variacoes_modal", False)
+        step = self.request.GET.get("step")
+
+        if self.object and step == "variacoes":
+            open_variacoes_modal = True
+        if self.object and step == "imagens":
+            open_images_modal = True
+
         context["object"] = self.object
-        context["form"] = kwargs.get("form") or self.get_form()
+        context["form"] = form
         context["formset"] = kwargs.get("formset") or self.get_formset()
-        context["open_images_modal"] = kwargs.get("open_images_modal", False)
+        context["open_images_modal"] = open_images_modal
+        context["variacao_formset"] = kwargs.get("variacao_formset") or self.get_variacao_formset()
+        context["open_variacoes_modal"] = open_variacoes_modal
+        context["produto_pode_ativar"] = False
+        context["produto_motivo_bloqueio"] = ""
         return context
 
     def get(self, request, *args, **kwargs):
@@ -247,7 +280,7 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
             if form.is_valid():
                 self.object = form.save()
                 messages.success(request, "Produto cadastrado com sucesso.")
-                return redirect("dashboard_produto_update", pk=self.object.pk)
+                return redirect(self.get_next_step_url(self.object))
 
             return self.render_to_response(
                 self.get_context_data(form=form, formset=self.get_formset())
@@ -256,6 +289,9 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
         # Edição: submit separado por tipo
         if form_type == "imagens":
             return self.handle_images_form(request)
+        
+        if form_type == "variacoes":
+            return self.handle_variacoes_form(request)
 
         return self.handle_product_form(request)
 
@@ -272,11 +308,38 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
                 self.object.save(update_fields=["ativo"])
 
             messages.success(request, "Dados do produto salvos com sucesso.")
-            return redirect("dashboard_produto_update", pk=self.object.pk)
+            return redirect(self.get_next_step_url(self.object))
 
         messages.error(request, "Corrija os erros no formulário do produto.")
         return self.render_to_response(
             self.get_context_data(form=form, formset=formset)
+        )
+    
+
+    def handle_variacoes_form(self, request):
+        form = self.get_form()
+        formset = self.get_formset()
+        variacao_formset = self.get_variacao_formset(data=request.POST, files=request.FILES)
+
+        if variacao_formset.is_valid():
+            with transaction.atomic():
+                variacao_formset.save()
+
+                if self.object.usa_variacoes and not self.object.tem_variacoes_ativas_com_estoque and self.object.ativo:
+                    self.object.ativo = False
+                    self.object.save(update_fields=["ativo"])
+
+            messages.success(request, "Variações salvas com sucesso.")
+            return redirect(self.get_next_step_url(self.object))
+
+        messages.error(request, "Corrija os erros no formulário de variações.")
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                formset=formset,
+                variacao_formset=variacao_formset,
+                open_variacoes_modal=True,
+            )
         )
 
     def handle_images_form(self, request):
@@ -304,7 +367,7 @@ class ProdutoManageView(DashboardPermissionMixin, TemplateView):
                     self.object.save(update_fields=["ativo"])
 
             messages.success(request, "Imagens salvas com sucesso.")
-            return redirect("dashboard_produto_update", pk=self.object.pk)
+            return redirect(self.get_next_step_url(self.object))
 
         messages.error(request, "Corrija os erros no formulário de imagens.")
         return self.render_to_response(
@@ -1032,7 +1095,7 @@ class VendaDetailView(DashboardPermissionMixin, DetailView):
         return (
             Venda.objects
             .select_related("usuario", "forma_pagamento")
-            .prefetch_related("itens__produto")
+            .prefetch_related("itens__produto", "itens__variacao")
         )
 
     def get_context_data(self, **kwargs):
@@ -1218,7 +1281,7 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
         queryset = (
             Venda.objects
             .select_related("usuario", "forma_pagamento")
-            .prefetch_related("itens__produto")
+            .prefetch_related("itens__produto", "itens__variacao")
             .order_by("-criado_em")
         )
 
@@ -1270,7 +1333,16 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
             cpf = getattr(usuario, "cpf", "") or getattr(usuario, "username", "")
 
             itens_str = ", ".join([
-                f"{item.produto.nome} (qtd: {item.quantidade}, unit: R$ {item.preco_unitario}, subtotal: R$ {item.subtotal})"
+                (
+                    f"{item.produto.nome}"
+                    + (
+                        f" - {item.variacao.tamanho}"
+                        + (f" / {item.variacao.get_genero_display()}" if item.variacao and item.variacao.genero else "")
+                        + (f" / {item.variacao.get_faixa_etaria_display()}" if item.variacao and item.variacao.faixa_etaria else "")
+                        if item.variacao else ""
+                    )
+                    + f" (qtd: {item.quantidade}, unit: R$ {item.preco_unitario}, subtotal: R$ {item.subtotal})"
+                )
                 for item in venda.itens.all()
             ])
 

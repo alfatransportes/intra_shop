@@ -60,6 +60,13 @@
                                                class="h5 d-block mb-2 text-decoration-none produto-link fw-bold">
                                                 {{ item.produto.nome }}
                                             </a>
+                                            {% if item.variacao %}
+                                                <div class="small text-muted mb-2">
+                                                    Variação: <strong>{{ item.variacao.tamanho }}</strong>
+                                                    {% if item.variacao.genero %}• {{ item.variacao.get_genero_display }}{% endif %}
+                                                    {% if item.variacao.faixa_etaria %}• {{ item.variacao.get_faixa_etaria_display }}{% endif %}
+                                                </div>
+                                            {% endif %}
                                             <div class="text-muted small mb-3">
                                                 Em estoque: {{ item.produto.quantidade }}
                                                 <span class="mx-1">•</span>
@@ -73,17 +80,15 @@
                                                         {% csrf_token %}
                                                         <label class="small text-muted mb-0">Qtd</label>
                                                         <input type="number"
-                                                            name="quantidade"
-                                                            value="{{ item.quantidade }}"
-                                                            min="0"
-                                                            max="{{ item.maximo_permitido }}"
-                                                            class="form-control quantidade-input">
+                                                               name="quantidade"
+                                                               value="{{ item.quantidade }}"
+                                                               min="0"
+                                                               max="{{ item.maximo_permitido }}"
+                                                               class="form-control quantidade-input">
                                                         <button class="btn btn-outline-secondary" type="submit">Atualizar</button>
                                                         <span class="text-muted small">(0 remove)</span>
                                                         <div class="text-muted small mt-1">
-                                                            {% if item.produto.maximo_por_usuario > 0 %}
-                                                                Limite por usuário: {{ item.produto.maximo_por_usuario }} •
-                                                            {% endif %}
+                                                            {% if item.produto.maximo_por_usuario > 0 %}Limite por usuário: {{ item.produto.maximo_por_usuario }} •{% endif %}
                                                             Máximo permitido agora: {{ item.maximo_permitido }}
                                                         </div>
                                                     </form>
