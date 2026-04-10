@@ -12,7 +12,7 @@
                         <div>
                             <h2 class="dash-section-title mb-1">Itens da venda</h2>
                             <div class="text-secondary small">
-                                Adicione os produtos primeiro para calcular os valores da venda.
+                                Adicione produtos simples ou com variação.
                             </div>
                         </div>
 
@@ -54,6 +54,14 @@
                                         {{ item_form.produto }}
                                         {% if item_form.produto.errors %}
                                             <div class="dash-error-text">{{ item_form.produto.errors }}</div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="{{ item_form.variacao.id_for_label }}">Variação</label>
+                                        {{ item_form.variacao }}
+                                        {% if item_form.variacao.errors %}
+                                            <div class="dash-error-text">{{ item_form.variacao.errors }}</div>
                                         {% endif %}
                                     </div>
 
@@ -190,6 +198,11 @@
                     {{ item_form.produto }}
                 </div>
 
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ item_form.variacao.id_for_label }}">Variação</label>
+                    {{ item_form.variacao }}
+                </div>
+
                 <div class="col-md-2">
                     <label class="form-label" for="{{ item_form.quantidade.id_for_label }}">Quantidade</label>
                     {{ item_form.quantidade }}
@@ -254,6 +267,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function getRowFields(row) {
         return {
             produtoSelect: row.querySelector('select[name$="produto"]'),
+            variacaoSelect: row.querySelector('select[name$="variacao"]'),
             qtdInput: row.querySelector('input[name$="quantidade"]'),
             precoInput: row.querySelector('input[name$="preco_unitario"]'),
             subtotalInput: row.querySelector('input[name$="subtotal_exibicao"]'),
@@ -263,110 +277,125 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function getProdutoInfo(produtoId) {
-        if (!produtoId) {
-            return { preco: 0, estoque: 0 };
-        }
-
-        const item = produtosInfo[String(produtoId)];
-        if (!item) {
-            return { preco: 0, estoque: 0 };
-        }
-
-        return {
-            preco: parseNumber(item.preco),
-            estoque: parseInt(item.estoque || 0, 10) || 0,
-        };
+        return produtosInfo[String(produtoId)] || null;
     }
 
-    function ensureErrorBox(row) {
-        let box = row.querySelector(".js-item-error");
-        if (!box) {
-            box = document.createElement("div");
-            box.className = "dash-error-text js-item-error mt-2";
-            row.appendChild(box);
+    function fillVariacoes(variacaoSelect, produtoInfo, selectedValue = "") {
+        if (!variacaoSelect) return;
+
+        variacaoSelect.innerHTML = '<option value="">---------</option>';
+
+        if (!produtoInfo || !produtoInfo.usa_variacoes) {
+            variacaoSelect.disabled = true;
+            return;
         }
-        return box;
+
+        variacaoSelect.disabled = false;
+
+        (produtoInfo.variacoes || []).forEach((variacao) => {
+            const option = document.createElement("option");
+            option.value = variacao.id;
+            option.textContent = `${variacao.label} (Estoque: ${variacao.estoque})`;
+            if (String(selectedValue) === String(variacao.id)) {
+                option.selected = true;
+            }
+            variacaoSelect.appendChild(option);
+        });
     }
 
-    function clearErrorBox(row) {
-        const box = row.querySelector(".js-item-error");
-        if (box) box.textContent = "";
-    }
+    function updateRow(row) {
+        const {
+            produtoSelect,
+            variacaoSelect,
+            qtdInput,
+            precoInput,
+            subtotalInput,
+            estoqueInput,
+            deleteInput,
+        } = getRowFields(row);
 
-    function updateProductInfo(row) {
-        const { produtoSelect, qtdInput, precoInput, estoqueInput } = getRowFields(row);
-        if (!produtoSelect || !qtdInput || !precoInput) return;
+        if (!produtoSelect || !qtdInput || !precoInput || !subtotalInput) return 0;
 
-        const produtoId = produtoSelect.value;
-        const { preco, estoque } = getProdutoInfo(produtoId);
+        if (deleteInput && deleteInput.checked) {
+            subtotalInput.value = moneyToInput(0);
+            if (estoqueInput) estoqueInput.value = "-";
+            return 0;
+        }
 
-        precoInput.value = moneyToInput(preco);
+        const produtoInfo = getProdutoInfo(produtoSelect.value);
+
+        if (!produtoInfo) {
+            precoInput.value = moneyToInput(0);
+            subtotalInput.value = moneyToInput(0);
+            if (estoqueInput) estoqueInput.value = "-";
+            if (variacaoSelect) {
+                variacaoSelect.innerHTML = '<option value="">---------</option>';
+                variacaoSelect.disabled = true;
+            }
+            return 0;
+        }
+
+        precoInput.value = moneyToInput(produtoInfo.preco);
+
+        let estoque = parseInt(produtoInfo.estoque || 0, 10) || 0;
+
+        if (produtoInfo.usa_variacoes && variacaoSelect) {
+            fillVariacoes(variacaoSelect, produtoInfo, variacaoSelect.value);
+
+            const variacaoInfo = (produtoInfo.variacoes || []).find(
+                (v) => String(v.id) === String(variacaoSelect.value)
+            );
+
+            estoque = variacaoInfo ? parseInt(variacaoInfo.estoque || 0, 10) || 0 : 0;
+        } else if (variacaoSelect) {
+            variacaoSelect.value = "";
+            variacaoSelect.disabled = true;
+        }
 
         if (estoqueInput) {
             estoqueInput.value = String(estoque);
         }
 
-        if (estoque > 0) {
-            qtdInput.max = estoque;
-        } else {
-            qtdInput.removeAttribute("max");
-        }
-
-        const qtdAtual = parseInt(qtdInput.value || 0, 10) || 0;
-        if (estoque > 0 && qtdAtual > estoque) {
-            qtdInput.value = estoque;
-            ensureErrorBox(row).textContent = `Quantidade ajustada para o estoque disponível (${estoque}).`;
-        } else {
-            clearErrorBox(row);
-        }
-    }
-
-    function updateRow(row) {
-        const { produtoSelect, qtdInput, precoInput, subtotalInput, deleteInput } = getRowFields(row);
-        if (!qtdInput || !precoInput || !subtotalInput) return 0;
-
-        if (deleteInput && deleteInput.checked) {
-            subtotalInput.value = moneyToInput(0);
-            clearErrorBox(row);
-            return 0;
-        }
-
-        const { estoque } = getProdutoInfo(produtoSelect ? produtoSelect.value : null);
         let qtd = parseInt(qtdInput.value || 0, 10) || 0;
-        const preco = parseNumber(precoInput.value);
-
-        if (estoque > 0 && qtd > estoque) {
+        if (estoque >= 0 && qtd > estoque) {
             qtd = estoque;
             qtdInput.value = estoque;
-            ensureErrorBox(row).textContent = `Quantidade ajustada para o estoque disponível (${estoque}).`;
-        } else {
-            clearErrorBox(row);
         }
 
-        const subtotal = qtd * preco;
+        const subtotal = qtd * parseNumber(precoInput.value);
         subtotalInput.value = moneyToInput(subtotal);
         return subtotal;
     }
 
     function updateTotal() {
         let total = 0;
-
-        container.querySelectorAll(".item-form").forEach(function (row) {
+        container.querySelectorAll(".item-form").forEach((row) => {
             total += updateRow(row);
         });
-
-        if (totalGeral) {
-            totalGeral.textContent = moneyToText(total);
-        }
+        totalGeral.textContent = moneyToText(total);
     }
 
     function bindRow(row) {
-        const { produtoSelect, qtdInput, precoInput, deleteInput } = getRowFields(row);
+        const {
+            produtoSelect,
+            variacaoSelect,
+            qtdInput,
+            precoInput,
+            deleteInput,
+        } = getRowFields(row);
 
         if (produtoSelect && !produtoSelect.dataset.bound) {
             produtoSelect.dataset.bound = "1";
             produtoSelect.addEventListener("change", function () {
-                updateProductInfo(row);
+                if (variacaoSelect) variacaoSelect.value = "";
+                updateRow(row);
+                updateTotal();
+            });
+        }
+
+        if (variacaoSelect && !variacaoSelect.dataset.bound) {
+            variacaoSelect.dataset.bound = "1";
+            variacaoSelect.addEventListener("change", function () {
                 updateRow(row);
                 updateTotal();
             });
@@ -404,7 +433,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
-        updateProductInfo(row);
         updateRow(row);
     }
 
@@ -420,7 +448,7 @@ document.addEventListener("DOMContentLoaded", function () {
         updateTotal();
     });
 
-    container.querySelectorAll(".item-form").forEach(function (row) {
+    container.querySelectorAll(".item-form").forEach((row) => {
         bindRow(row);
     });
 

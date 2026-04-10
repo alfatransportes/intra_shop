@@ -1,4 +1,5 @@
 import json
+import re
 from decimal import Decimal
 from io import BytesIO
 from urllib.parse import quote
@@ -14,6 +15,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   TemplateView, UpdateView, View)
@@ -411,23 +413,58 @@ class ProdutoExportXlsxView(DashboardPermissionMixin, View):
         queryset = (
             Produto.objects
             .select_related("unidade_prod", "tipo_prod", "nivel_ava_prod")
-            .prefetch_related("imagens")
-            .order_by("nome")
+            .prefetch_related("imagens", "variacoes")
+            .order_by("nome", "id")
         )
 
-        busca = self.request.GET.get("q")
-        tipo = self.request.GET.get("tipo")
+        busca = (self.request.GET.get("q") or "").strip()
+        tipo = (self.request.GET.get("tipo") or "").strip()
 
         if busca:
             queryset = queryset.filter(nome__icontains=busca)
 
-        if tipo:
-            queryset = queryset.filter(tipo_prod_id=tipo)
+        if tipo.isdigit():
+            queryset = queryset.filter(tipo_prod_id=int(tipo))
 
         return queryset
 
-    def get(self, request, *args, **kwargs):
+    def _slug_filename_part(self, value, default="todos"):
+        value = (value or "").strip()
+        if not value:
+            return default
 
+        value = re.sub(r"[^a-zA-Z0-9_-]+", "_", value)
+        value = re.sub(r"_+", "_", value).strip("_")
+        return value or default
+
+    def _formatar_variacoes(self, produto):
+        if not produto.usa_variacoes:
+            return ""
+
+        partes = []
+        for variacao in produto.variacoes.filter(ativo=True).order_by(
+            "categoria", "genero", "faixa_etaria", "tamanho", "cor", "id"
+        ):
+            descricao = []
+
+            if variacao.categoria:
+                descricao.append(variacao.get_categoria_display())
+            if variacao.genero:
+                descricao.append(variacao.get_genero_display())
+            if variacao.faixa_etaria:
+                descricao.append(variacao.get_faixa_etaria_display())
+            if variacao.tamanho:
+                descricao.append(f"Tamanho {variacao.tamanho}")
+            if variacao.cor:
+                descricao.append(variacao.cor)
+
+            texto = " / ".join(descricao) if descricao else f"Variação #{variacao.id}"
+            texto += f" (estoque: {int(variacao.quantidade or 0)})"
+            partes.append(texto)
+
+        return "\n".join(partes)
+
+    def get(self, request, *args, **kwargs):
         produtos = self.get_queryset()
 
         wb = Workbook()
@@ -440,33 +477,37 @@ class ProdutoExportXlsxView(DashboardPermissionMixin, View):
             "Tipo",
             "Unidade",
             "Nível Avaria",
-            "Quantidade",
+            "Usa Variações",
+            "Quantidade Base",
             "Estoque Disponível",
             "Valor Nota",
             "Desconto %",
             "Valor Venda",
             "Ativo",
+            "Variações",
         ]
 
         ws.append(headers)
 
         for cell in ws[1]:
             cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
 
         for produto in produtos:
-
             ws.append([
                 produto.id,
                 produto.nome,
                 produto.tipo_prod.nome if produto.tipo_prod else "",
                 produto.unidade_prod.nome if produto.unidade_prod else "",
                 produto.nivel_ava_prod.nome if produto.nivel_ava_prod else "",
-                produto.quantidade,
-                produto.estoque_disponivel,
-                float(produto.valor_nota),
-                float(produto.porcen_desconto),
-                float(produto.valor_venda),
+                "Sim" if produto.usa_variacoes else "Não",
+                int(produto.quantidade or 0),
+                int(produto.estoque_disponivel or 0),
+                float(produto.valor_nota or Decimal("0.00")),
+                float(produto.porcen_desconto or Decimal("0.00")),
+                float(produto.valor_venda or Decimal("0.00")),
                 "Sim" if produto.ativo else "Não",
+                self._formatar_variacoes(produto),
             ])
 
         widths = {
@@ -475,23 +516,38 @@ class ProdutoExportXlsxView(DashboardPermissionMixin, View):
             "C": 25,
             "D": 20,
             "E": 25,
-            "F": 15,
-            "G": 20,
-            "H": 15,
+            "F": 16,
+            "G": 18,
+            "H": 20,
             "I": 15,
-            "J": 18,
-            "K": 10,
+            "J": 15,
+            "K": 18,
+            "L": 10,
+            "M": 70,
         }
 
         for col, width in widths.items():
             ws.column_dimensions[col].width = width
 
         for row in range(2, ws.max_row + 1):
-            ws[f"H{row}"].number_format = 'R$ #,##0.00'
-            ws[f"J{row}"].number_format = 'R$ #,##0.00'
+            ws[f"I{row}"].number_format = 'R$ #,##0.00'
+            ws[f"J{row}"].number_format = '0.00'
+            ws[f"K{row}"].number_format = 'R$ #,##0.00'
 
-        busca = request.GET.get("q") or "todos"
-        tipo = request.GET.get("tipo") or "todos"
+            ws[f"B{row}"].alignment = Alignment(vertical="top")
+            ws[f"C{row}"].alignment = Alignment(vertical="top")
+            ws[f"D{row}"].alignment = Alignment(vertical="top")
+            ws[f"E{row}"].alignment = Alignment(vertical="top")
+            ws[f"F{row}"].alignment = Alignment(horizontal="center", vertical="top")
+            ws[f"G{row}"].alignment = Alignment(horizontal="center", vertical="top")
+            ws[f"H{row}"].alignment = Alignment(horizontal="center", vertical="top")
+            ws[f"L{row}"].alignment = Alignment(horizontal="center", vertical="top")
+            ws[f"M{row}"].alignment = Alignment(wrap_text=True, vertical="top")
+
+        ws.freeze_panes = "A2"
+
+        busca = self._slug_filename_part(request.GET.get("q"), "todos")
+        tipo = self._slug_filename_part(request.GET.get("tipo"), "todos")
 
         filename = f"produtos_{busca}_{tipo}.xlsx"
 
@@ -501,7 +557,6 @@ class ProdutoExportXlsxView(DashboardPermissionMixin, View):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
         wb.save(response)
-
         return response
 
 
@@ -1171,15 +1226,47 @@ class VendaManageView(DashboardPermissionMixin, TemplateView):
         )
 
     def get_produtos_info(self):
-        produtos = Produto.objects.filter(ativo=True).order_by("nome")
-        return {
-            str(produto.id): {
+        produtos = (
+            Produto.objects
+            .filter(ativo=True)
+            .prefetch_related("variacoes")
+            .order_by("nome")
+        )
+
+        payload = {}
+        for produto in produtos:
+            variacoes = []
+            if produto.usa_variacoes:
+                variacoes = [
+                    {
+                        "id": variacao.id,
+                        "label": " - ".join(
+                            [
+                                p for p in [
+                                    variacao.get_categoria_display() if variacao.categoria else "",
+                                    variacao.get_genero_display() if variacao.genero else "",
+                                    variacao.get_faixa_etaria_display() if variacao.faixa_etaria else "",
+                                    f"Tamanho {variacao.tamanho}" if variacao.tamanho else "",
+                                    variacao.cor or "",
+                                ] if p
+                            ]
+                        ) or f"Variação #{variacao.id}",
+                        "estoque": int(variacao.quantidade or 0),
+                    }
+                    for variacao in produto.variacoes.filter(ativo=True).order_by(
+                        "categoria", "genero", "faixa_etaria", "tamanho", "cor", "id"
+                    )
+                ]
+
+            payload[str(produto.id)] = {
                 "nome": produto.nome,
                 "preco": str(produto.valor_venda),
                 "estoque": int(produto.estoque_disponivel),
+                "usa_variacoes": bool(produto.usa_variacoes),
+                "variacoes": variacoes,
             }
-            for produto in produtos
-        }
+
+        return payload
 
     def calcular_total_formset(self, formset):
         total = Decimal("0.00")
@@ -1191,11 +1278,11 @@ class VendaManageView(DashboardPermissionMixin, TemplateView):
             if form.cleaned_data.get("DELETE"):
                 continue
 
-            produto = form.cleaned_data.get("produto")
+            preco_unitario = form.cleaned_data.get("preco_unitario")
             quantidade = form.cleaned_data.get("quantidade") or 0
 
-            if produto and quantidade:
-                total += (produto.valor_venda * quantidade)
+            if preco_unitario and quantidade:
+                total += Decimal(preco_unitario) * Decimal(quantidade)
 
         return total.quantize(Decimal("0.01"))
 
@@ -1230,50 +1317,125 @@ class VendaManageView(DashboardPermissionMixin, TemplateView):
         formset = self.get_formset(data=request.POST, files=request.FILES)
 
         if not form.is_valid() or not formset.is_valid():
-            messages.error(request, "Corrija os erros do formulário.")
-            return self.render_to_response(
-                self.get_context_data(form=form, formset=formset)
-            )
+            messages.error(request, "Não foi possível salvar a venda. Verifique os campos abaixo.")
+            return self.render_to_response(self.get_context_data(form=form, formset=formset))
 
-        try:
-            with transaction.atomic():
-                venda_existente = None
-                if self.object and self.object.pk:
-                    venda_existente = Venda.objects.filter(pk=self.object.pk).first()
+        with transaction.atomic():
+            venda = form.save(commit=False)
+            is_create = venda.pk is None
 
-                self.object = form.save(commit=False)
+            venda.total = Decimal("0.00")
+            venda.save()
 
-                if self.object.total is None:
-                    self.object.total = Decimal("0.00")
+            formset.instance = venda
+            itens = formset.save(commit=False)
 
-                self.object.save()
+            itens_existentes_ids = set(
+                venda.itens.values_list("id", flat=True)
+            ) if not is_create else set()
 
-                formset.instance = self.object
-                itens = formset.save(commit=False)
+            itens_enviados_ids = set()
 
-                for obj in formset.deleted_objects:
+            for item in itens:
+                produto = item.produto
+                variacao = item.variacao
+                quantidade = int(item.quantidade or 0)
+
+                if produto.usa_variacoes:
+                    if not variacao:
+                        raise ValidationError("Produto com variação exige uma variação.")
+                    if variacao.produto_id != produto.id:
+                        raise ValidationError("A variação informada não pertence ao produto.")
+
+                    if item.pk is None:
+                        if quantidade > int(variacao.quantidade or 0):
+                            raise ValidationError(
+                                f"Estoque insuficiente para a variação '{variacao}'."
+                            )
+                        variacao.quantidade -= quantidade
+                        variacao.save(update_fields=["quantidade"])
+                    else:
+                        antigo = VendaItem.objects.get(pk=item.pk)
+                        delta = quantidade - int(antigo.quantidade or 0)
+
+                        if antigo.variacao_id == variacao.id:
+                            if delta > 0 and delta > int(variacao.quantidade or 0):
+                                raise ValidationError(
+                                    f"Estoque insuficiente para a variação '{variacao}'."
+                                )
+                            variacao.quantidade -= delta
+                            variacao.save(update_fields=["quantidade"])
+                        else:
+                            if antigo.variacao_id:
+                                antiga_variacao = antigo.variacao
+                                antiga_variacao.quantidade += int(antigo.quantidade or 0)
+                                antiga_variacao.save(update_fields=["quantidade"])
+
+                            if quantidade > int(variacao.quantidade or 0):
+                                raise ValidationError(
+                                    f"Estoque insuficiente para a variação '{variacao}'."
+                                )
+                            variacao.quantidade -= quantidade
+                            variacao.save(update_fields=["quantidade"])
+                else:
+                    if variacao:
+                        raise ValidationError("Produto simples não pode receber variação.")
+
+                    if item.pk is None:
+                        if quantidade > int(produto.quantidade or 0):
+                            raise ValidationError(
+                                f"Estoque insuficiente para o produto '{produto.nome}'."
+                            )
+                        produto.quantidade -= quantidade
+                        produto.save(update_fields=["quantidade"])
+                    else:
+                        antigo = VendaItem.objects.get(pk=item.pk)
+                        delta = quantidade - int(antigo.quantidade or 0)
+
+                        if delta > 0 and delta > int(produto.quantidade or 0):
+                            raise ValidationError(
+                                f"Estoque insuficiente para o produto '{produto.nome}'."
+                            )
+
+                        produto.quantidade -= delta
+                        produto.save(update_fields=["quantidade"])
+
+                item.venda = venda
+                item.preco_unitario = produto.valor_venda
+                item.save()
+                itens_enviados_ids.add(item.id)
+
+            # excluídos
+            ids_para_excluir = list(itens_existentes_ids - itens_enviados_ids)
+            if ids_para_excluir:
+                for antigo in VendaItem.objects.filter(id__in=ids_para_excluir).select_related("produto", "variacao"):
+                    if antigo.variacao_id:
+                        variacao = antigo.variacao
+                        variacao.quantidade += int(antigo.quantidade or 0)
+                        variacao.save(update_fields=["quantidade"])
+                    else:
+                        produto = antigo.produto
+                        produto.quantidade += int(antigo.quantidade or 0)
+                        produto.save(update_fields=["quantidade"])
+
+                VendaItem.objects.filter(id__in=ids_para_excluir).delete()
+
+            for obj in formset.deleted_objects:
+                if obj.pk and obj.pk not in ids_para_excluir:
+                    if obj.variacao_id:
+                        variacao = obj.variacao
+                        variacao.quantidade += int(obj.quantidade or 0)
+                        variacao.save(update_fields=["quantidade"])
+                    else:
+                        produto = obj.produto
+                        produto.quantidade += int(obj.quantidade or 0)
+                        produto.save(update_fields=["quantidade"])
                     obj.delete()
 
-                for item in itens:
-                    if item.produto_id:
-                        item.preco_unitario = item.produto.valor_venda
-                    item.save()
+            venda.recalcular_total()
 
-                self.object.recalcular_total()
-
-                # baixa estoque somente na criação manual
-                if not venda_existente:
-                    self.object.baixar_estoque()
-
-            messages.success(request, "Venda salva com sucesso.")
-            return redirect("dashboard_venda_list")
-
-        except ValidationError as e:
-            form.add_error(None, e.message if hasattr(e, "message") else e)
-            messages.error(request, "Não foi possível salvar a venda.")
-            return self.render_to_response(
-                self.get_context_data(form=form, formset=formset)
-            )
+        messages.success(request, "Venda salva com sucesso.")
+        return redirect("dashboard_venda_detail", pk=venda.pk)
 
 
 class VendaExportXlsxView(DashboardPermissionMixin, View):
@@ -1285,20 +1447,74 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
             .order_by("-criado_em")
         )
 
-        status = self.request.GET.get("status")
-        mes = self.request.GET.get("mes")
-        ano = self.request.GET.get("ano")
+        status = (self.request.GET.get("status") or "").strip()
+        mes = (self.request.GET.get("mes") or "").strip()
+        ano = (self.request.GET.get("ano") or "").strip()
 
         if status:
             queryset = queryset.filter(status=status)
 
-        if mes:
-            queryset = queryset.filter(criado_em__month=mes)
+        if mes.isdigit():
+            queryset = queryset.filter(criado_em__month=int(mes))
 
-        if ano:
-            queryset = queryset.filter(criado_em__year=ano)
+        if ano.isdigit():
+            queryset = queryset.filter(criado_em__year=int(ano))
 
         return queryset
+
+    def _get_usuario_nome(self, usuario):
+        nome_completo = getattr(usuario, "get_full_name", lambda: "")()
+        if nome_completo:
+            return nome_completo
+
+        return (
+            getattr(usuario, "nome", "")
+            or getattr(usuario, "username", "")
+            or getattr(usuario, "email", "")
+            or str(usuario)
+        )
+
+    def _get_usuario_cpf(self, usuario):
+        return (
+            getattr(usuario, "cpf", "")
+            or getattr(usuario, "username", "")
+            or ""
+        )
+
+    def _formatar_variacao(self, item):
+        if not item.variacao:
+            return ""
+
+        partes = []
+
+        if item.variacao.tamanho:
+            partes.append(f"Tamanho {item.variacao.tamanho}")
+
+        if item.variacao.genero:
+            partes.append(item.variacao.get_genero_display())
+
+        if item.variacao.faixa_etaria:
+            partes.append(item.variacao.get_faixa_etaria_display())
+
+        if getattr(item.variacao, "cor", None):
+            partes.append(item.variacao.cor)
+
+        return " / ".join(partes)
+
+    def _formatar_item(self, item):
+        descricao = item.produto.nome
+
+        variacao_str = self._formatar_variacao(item)
+        if variacao_str:
+            descricao += f" - {variacao_str}"
+
+        descricao += (
+            f" (qtd: {item.quantidade}, "
+            f"unit: R$ {Decimal(item.preco_unitario or 0):.2f}, "
+            f"subtotal: R$ {Decimal(item.subtotal or 0):.2f})"
+        )
+
+        return descricao
 
     def get(self, request, *args, **kwargs):
         vendas = self.get_queryset()
@@ -1325,33 +1541,21 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
 
         for cell in ws[1]:
             cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
 
         for venda in vendas:
             usuario = venda.usuario
 
-            # Ajuste aqui conforme o nome real do campo no seu model de usuário
-            cpf = getattr(usuario, "cpf", "") or getattr(usuario, "username", "")
-
-            itens_str = ", ".join([
-                (
-                    f"{item.produto.nome}"
-                    + (
-                        f" - {item.variacao.tamanho}"
-                        + (f" / {item.variacao.get_genero_display()}" if item.variacao and item.variacao.genero else "")
-                        + (f" / {item.variacao.get_faixa_etaria_display()}" if item.variacao and item.variacao.faixa_etaria else "")
-                        if item.variacao else ""
-                    )
-                    + f" (qtd: {item.quantidade}, unit: R$ {item.preco_unitario}, subtotal: R$ {item.subtotal})"
-                )
-                for item in venda.itens.all()
-            ])
+            itens_str = "\n".join(
+                [self._formatar_item(item) for item in venda.itens.all()]
+            )
 
             ws.append([
                 venda.id,
                 venda.criado_em.strftime("%d/%m/%Y %H:%M"),
-                str(usuario),
-                cpf,
-                getattr(usuario, "email", ""),
+                self._get_usuario_nome(usuario),
+                self._get_usuario_cpf(usuario),
+                getattr(usuario, "email", "") or "",
                 str(venda.forma_pagamento),
                 venda.parcelas,
                 venda.get_status_display(),
@@ -1360,7 +1564,6 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
                 itens_str,
             ])
 
-        # Largura das colunas
         widths = {
             "A": 12,
             "B": 20,
@@ -1372,17 +1575,29 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
             "H": 15,
             "I": 15,
             "J": 40,
-            "K": 80,
+            "K": 100,
         }
+
         for col, width in widths.items():
             ws.column_dimensions[col].width = width
 
-        # Formata coluna de valor
         for row in range(2, ws.max_row + 1):
             ws[f"I{row}"].number_format = 'R$ #,##0.00'
+            ws[f"B{row}"].alignment = Alignment(vertical="top")
+            ws[f"C{row}"].alignment = Alignment(vertical="top")
+            ws[f"D{row}"].alignment = Alignment(vertical="top")
+            ws[f"E{row}"].alignment = Alignment(vertical="top")
+            ws[f"F{row}"].alignment = Alignment(vertical="top")
+            ws[f"G{row}"].alignment = Alignment(horizontal="center", vertical="top")
+            ws[f"H{row}"].alignment = Alignment(horizontal="center", vertical="top")
+            ws[f"I{row}"].alignment = Alignment(horizontal="right", vertical="top")
+            ws[f"J{row}"].alignment = Alignment(wrap_text=True, vertical="top")
+            ws[f"K{row}"].alignment = Alignment(wrap_text=True, vertical="top")
 
-        mes = request.GET.get("mes") or "todos"
-        ano = request.GET.get("ano") or "todos"
+        ws.freeze_panes = "A2"
+
+        mes = (request.GET.get("mes") or "todos").strip()
+        ano = (request.GET.get("ano") or "todos").strip()
         filename = f"vendas_{mes}_{ano}.xlsx"
 
         response = HttpResponse(

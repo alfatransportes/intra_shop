@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 
 from website.models import (FormaPagamento, NivelAvaria, Produto,
@@ -19,7 +20,8 @@ class BaseBootstrapForm(forms.ModelForm):
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = "form-check-input"
             elif isinstance(widget, forms.Select):
-                widget.attrs["class"] = "form-select"
+                existing_class = widget.attrs.get("class", "")
+                widget.attrs["class"] = f"{existing_class} form-select".strip()
             elif isinstance(widget, forms.Textarea):
                 widget.attrs["class"] = "form-control"
                 widget.attrs.setdefault("rows", 4)
@@ -27,7 +29,8 @@ class BaseBootstrapForm(forms.ModelForm):
                 existing_class = widget.attrs.get("class", "")
                 widget.attrs["class"] = f"{existing_class} form-control".strip()
             else:
-                widget.attrs["class"] = "form-control"
+                existing_class = widget.attrs.get("class", "")
+                widget.attrs["class"] = f"{existing_class} form-control".strip()
 
 
 class TipoForm(BaseBootstrapForm):
@@ -353,7 +356,7 @@ class VendaStatusForm(forms.ModelForm):
         return cleaned_data
 
 
-class VendaForm(forms.ModelForm):
+class VendaForm(BaseBootstrapForm):
     class Meta:
         model = Venda
         fields = [
@@ -361,10 +364,10 @@ class VendaForm(forms.ModelForm):
             "forma_pagamento",
             "status",
             "parcelas",
+            "observacao",
             "minuta",
             "comprovante_pix",
             "comprovante_vale",
-            "observacao",
         ]
         widgets = {
             "observacao": forms.Textarea(attrs={"rows": 4}),
@@ -443,20 +446,30 @@ class ProdutoVendaSelect(forms.Select):
         return option
 
 
-class VendaItemForm(forms.ModelForm):
+class VendaItemForm(BaseBootstrapForm):
+    variacao = forms.ModelChoiceField(
+        queryset=ProdutoVariacao.objects.select_related("produto").filter(ativo=True),
+        required=False,
+        label="Variação",
+    )
+
     subtotal_exibicao = forms.DecimalField(
-        label="Subtotal",
         required=False,
         decimal_places=2,
         max_digits=12,
-        disabled=True,
+        label="Subtotal",
+        widget=forms.NumberInput(attrs={"step": "0.01", "readonly": "readonly"}),
     )
 
     class Meta:
         model = VendaItem
-        fields = ["produto", "quantidade", "preco_unitario"]
+        fields = [
+            "produto",
+            "variacao",
+            "quantidade",
+            "preco_unitario",
+        ]
         widgets = {
-            "quantidade": forms.NumberInput(attrs={"min": 1}),
             "preco_unitario": forms.NumberInput(attrs={"step": "0.01", "readonly": "readonly"}),
         }
 
@@ -465,17 +478,24 @@ class VendaItemForm(forms.ModelForm):
 
         self.fields["produto"].queryset = Produto.objects.filter(ativo=True).order_by("nome")
         self.fields["produto"].widget.attrs["class"] = "form-select"
+        self.fields["variacao"].widget.attrs["class"] = "form-select"
         self.fields["quantidade"].widget.attrs["class"] = "form-control"
         self.fields["preco_unitario"].widget.attrs["class"] = "form-control"
         self.fields["subtotal_exibicao"].widget.attrs["class"] = "form-control"
 
         produto = None
+        variacao = None
         quantidade = 1
 
         if self.is_bound:
             produto_id = self.data.get(self.add_prefix("produto"))
+            variacao_id = self.data.get(self.add_prefix("variacao"))
+
             if produto_id:
                 produto = Produto.objects.filter(pk=produto_id).first()
+
+            if variacao_id:
+                variacao = ProdutoVariacao.objects.select_related("produto").filter(pk=variacao_id).first()
 
             try:
                 quantidade = int(self.data.get(self.add_prefix("quantidade")) or 1)
@@ -484,9 +504,15 @@ class VendaItemForm(forms.ModelForm):
 
         elif self.instance and self.instance.pk:
             produto = self.instance.produto
+            variacao = self.instance.variacao
             quantidade = self.instance.quantidade or 1
 
         if produto:
+            self.fields["variacao"].queryset = ProdutoVariacao.objects.filter(
+                produto=produto,
+                ativo=True,
+            ).order_by("categoria", "genero", "faixa_etaria", "tamanho", "cor", "id")
+
             self.initial["preco_unitario"] = produto.valor_venda
             self.initial["subtotal_exibicao"] = (
                 Decimal(produto.valor_venda) * Decimal(quantidade)
@@ -495,10 +521,18 @@ class VendaItemForm(forms.ModelForm):
             self.initial["preco_unitario"] = self.instance.preco_unitario
             self.initial["subtotal_exibicao"] = self.instance.subtotal
 
+        if variacao and not produto:
+            produto = variacao.produto
+            self.fields["variacao"].queryset = ProdutoVariacao.objects.filter(
+                produto=produto,
+                ativo=True,
+            ).order_by("categoria", "genero", "faixa_etaria", "tamanho", "cor", "id")
+
     def clean(self):
         cleaned_data = super().clean()
 
         produto = cleaned_data.get("produto")
+        variacao = cleaned_data.get("variacao")
         quantidade = cleaned_data.get("quantidade") or 0
 
         if not produto:
@@ -510,15 +544,47 @@ class VendaItemForm(forms.ModelForm):
             self.add_error("quantidade", "Informe uma quantidade maior que zero.")
             return cleaned_data
 
-        estoque_limite = produto.estoque_disponivel
-        if self.instance and self.instance.pk and self.instance.produto_id == produto.id:
-            estoque_limite += self.instance.quantidade or 0
+        if produto.usa_variacoes:
+            if not variacao:
+                self.add_error("variacao", "Selecione uma variação para este produto.")
+                return cleaned_data
 
-        if quantidade > estoque_limite:
-            self.add_error(
-                "quantidade",
-                f"Estoque disponível para este produto: {estoque_limite}."
-            )
+            if variacao.produto_id != produto.id:
+                self.add_error("variacao", "A variação selecionada não pertence ao produto.")
+                return cleaned_data
+
+            estoque_limite = int(variacao.quantidade or 0)
+            if (
+                self.instance
+                and self.instance.pk
+                and self.instance.variacao_id == variacao.id
+            ):
+                estoque_limite += int(self.instance.quantidade or 0)
+
+            if quantidade > estoque_limite:
+                self.add_error(
+                    "quantidade",
+                    f"Estoque disponível para esta variação: {estoque_limite}."
+                )
+        else:
+            if variacao:
+                self.add_error("variacao", "Este produto não usa variações.")
+                return cleaned_data
+
+            estoque_limite = int(produto.estoque_disponivel or 0)
+            if (
+                self.instance
+                and self.instance.pk
+                and self.instance.produto_id == produto.id
+                and not self.instance.variacao_id
+            ):
+                estoque_limite += int(self.instance.quantidade or 0)
+
+            if quantidade > estoque_limite:
+                self.add_error(
+                    "quantidade",
+                    f"Estoque disponível para este produto: {estoque_limite}."
+                )
 
         cleaned_data["preco_unitario"] = produto.valor_venda
         cleaned_data["subtotal_exibicao"] = (
@@ -526,6 +592,24 @@ class VendaItemForm(forms.ModelForm):
         ).quantize(Decimal("0.01"))
 
         return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        produto = self.cleaned_data.get("produto")
+        variacao = self.cleaned_data.get("variacao")
+        quantidade = self.cleaned_data.get("quantidade") or 0
+
+        instance.produto = produto
+        instance.variacao = variacao if produto and produto.usa_variacoes else None
+        instance.preco_unitario = self.cleaned_data.get("preco_unitario") or produto.valor_venda
+        instance.subtotal = (
+            Decimal(instance.preco_unitario) * Decimal(quantidade)
+        ).quantize(Decimal("0.01"))
+
+        if commit:
+            instance.save()
+
+        return instance
 
 
 VendaItemFormSet = inlineformset_factory(
@@ -535,4 +619,3 @@ VendaItemFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
-
