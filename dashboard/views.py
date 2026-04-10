@@ -1510,7 +1510,6 @@ class VendaManageView(DashboardPermissionMixin, TemplateView):
         messages.success(request, "Venda salva com sucesso.")
         return redirect("dashboard_venda_detail", pk=venda.pk)
 
-
 class VendaExportXlsxView(DashboardPermissionMixin, View):
     def get_queryset(self):
         queryset = (
@@ -1589,6 +1588,22 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
 
         return descricao
 
+    def _get_comprovante_url(self, request, venda):
+        arquivo = None
+
+        if getattr(venda, "comprovante_pix", None):
+            arquivo = venda.comprovante_pix
+        elif getattr(venda, "comprovante_vale", None):
+            arquivo = venda.comprovante_vale
+
+        if not arquivo:
+            return ""
+
+        try:
+            return request.build_absolute_uri(arquivo.url)
+        except Exception:
+            return ""
+
     def get(self, request, *args, **kwargs):
         vendas = self.get_queryset()
 
@@ -1607,6 +1622,7 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
             "Status",
             "Valor Total",
             "Observação",
+            "Link Comprovante",
             "Itens",
         ]
 
@@ -1623,6 +1639,8 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
                 [self._formatar_item(item) for item in venda.itens.all()]
             )
 
+            comprovante_url = self._get_comprovante_url(request, venda)
+
             ws.append([
                 venda.id,
                 venda.criado_em.strftime("%d/%m/%Y %H:%M"),
@@ -1634,6 +1652,7 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
                 venda.get_status_display(),
                 float(venda.total or Decimal("0.00")),
                 venda.observacao or "",
+                comprovante_url,
                 itens_str,
             ])
 
@@ -1648,7 +1667,8 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
             "H": 15,
             "I": 15,
             "J": 40,
-            "K": 100,
+            "K": 60,
+            "L": 100,
         }
 
         for col, width in widths.items():
@@ -1666,6 +1686,7 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
             ws[f"I{row}"].alignment = Alignment(horizontal="right", vertical="top")
             ws[f"J{row}"].alignment = Alignment(wrap_text=True, vertical="top")
             ws[f"K{row}"].alignment = Alignment(wrap_text=True, vertical="top")
+            ws[f"L{row}"].alignment = Alignment(wrap_text=True, vertical="top")
 
         ws.freeze_panes = "A2"
 
