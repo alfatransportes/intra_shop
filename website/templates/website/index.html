@@ -64,7 +64,7 @@
                         <div class="small text-muted mb-1">{{ produto.tipo_prod.nome }}</div>
                         <h6 class="fw-bold mb-2">{{ produto.nome }}</h6>
                         <p class="small text-muted flex-grow-1 mb-3">{{ produto.descricao|truncatechars:90 }}</p>
-                        <div class="small text-muted">Disponível: {{ produto.estoque_disponivel }}</div>
+                        <div class="small text-muted mt-1">Disponível: {{ produto.estoque_calc }}</div>
                         <div class="fw-bold fs-5 text-success mb-3">R$ {{ produto.valor_venda|floatformat:2 }}</div>
                         <div class="d-grid gap-2">
                             <a href="{% url 'detalhe_produto' produto.id %}" class="btn btn-outline-primary btn-sm rounded-pill">Ver</a>
