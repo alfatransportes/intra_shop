@@ -703,8 +703,10 @@ class ProdutoImportView(DashboardPermissionMixin, TemplateView):
                 request,
                 (
                     f"Importação concluída. "
-                    f"Criados: {resultado['criados']} | "
-                    f"Atualizados: {resultado['atualizados']} | "
+                    f"Produtos criados: {resultado['criados']} | "
+                    f"Produtos atualizados: {resultado['atualizados']} | "
+                    f"Variações criadas: {resultado['variacoes_criadas']} | "
+                    f"Variações atualizadas: {resultado['variacoes_atualizadas']} | "
                     f"Erros: {len(resultado['erros'])}"
                 ),
             )
@@ -712,7 +714,7 @@ class ProdutoImportView(DashboardPermissionMixin, TemplateView):
             if resultado["erros"]:
                 messages.warning(
                     request,
-                    "Algumas linhas não puderam ser importadas. Veja o relatório abaixo."
+                    "Algumas linhas não puderam ser importadas ou alguns produtos não puderam ser publicados. Veja o relatório abaixo."
                 )
 
             return self.render_to_response(
@@ -734,16 +736,19 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
     def get(self, request, *args, **kwargs):
         wb = Workbook()
 
-        ws_import = wb.active
-        ws_import.title = "IMPORTACAO_PRODUTOS"
+        ws_import_produtos = wb.active
+        ws_import_produtos.title = "IMPORTACAO_PRODUTOS"
+
+        ws_import_variacoes = wb.create_sheet("IMPORTACAO_VARIACOES")
         ws_listas = wb.create_sheet("LISTAS_SISTEMA")
         ws_instrucoes = wb.create_sheet("INSTRUCOES")
 
         contadores = self._build_listas_sheet(ws_listas)
         self._create_named_ranges(wb, contadores)
-        self._build_import_sheet(ws_import)
+        self._build_import_produtos_sheet(ws_import_produtos)
+        self._build_import_variacoes_sheet(ws_import_variacoes)
         self._build_instrucoes_sheet(ws_instrucoes)
-        self._apply_validations(ws_import)
+        self._apply_validations(ws_import_produtos, ws_import_variacoes)
 
         buffer = BytesIO()
         wb.save(buffer)
@@ -756,13 +761,26 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
         response["Content-Disposition"] = f'attachment; filename="{self.filename}"'
         return response
 
-    def _build_import_sheet(self, ws):
+    def _style_header(self, ws, color):
+        fill = PatternFill("solid", fgColor=color)
+        font = Font(bold=True, color="FFFFFF")
+        align = Alignment(horizontal="center", vertical="center")
+
+        for cell in ws[1]:
+            cell.fill = fill
+            cell.font = font
+            cell.alignment = align
+
+        ws.freeze_panes = "A2"
+
+    def _build_import_produtos_sheet(self, ws):
         headers = [
             "num_controle",
             "nome",
             "unidade_prod",
             "tipo_prod",
             "nivel_ava_prod",
+            "usa_variacoes",
             "quantidade",
             "maximo_por_usuario",
             "valor_nota",
@@ -771,61 +789,115 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
             "ativo",
         ]
         ws.append(headers)
-
-        fill = PatternFill("solid", fgColor="0D6EFD")
-        font = Font(bold=True, color="FFFFFF")
-        align = Alignment(horizontal="center", vertical="center")
-
-        for cell in ws[1]:
-            cell.fill = fill
-            cell.font = font
-            cell.alignment = align
+        self._style_header(ws, "0D6EFD")
 
         widths = {
-            1: 22,  # num_controle
-            2: 32,  # nome
-            3: 30,  # unidade_prod
-            4: 24,  # tipo_prod
-            5: 24,  # nivel_ava_prod
-            6: 14,  # quantidade
-            7: 22,  # maximo_por_usuario
-            8: 16,  # valor_nota
-            9: 18,  # porcen_desconto
-            10: 45, # descricao
-            11: 12, # ativo
+            1: 22,
+            2: 32,
+            3: 30,
+            4: 24,
+            5: 24,
+            6: 16,
+            7: 14,
+            8: 22,
+            9: 16,
+            10: 18,
+            11: 45,
+            12: 12,
         }
-
         for col_idx, width in widths.items():
             ws.column_dimensions[get_column_letter(col_idx)].width = width
 
-        ws.freeze_panes = "A2"
-
         ws.append([
-            "",
+            "SKU-001",
             "Notebook Dell",
             "",
             "",
             "",
+            "Não",
             5,
             1,
             3500.00,
             10.00,
             "Notebook corporativo",
-            "",
+            "Não",
         ])
-        
-    def _build_listas_sheet(self, ws):
-        headers = ["UNIDADES", "TIPOS", "NIVEIS_AVARIA", "ATIVO"]
+
+        ws.append([
+            "SKU-002",
+            "Tênis Esportivo",
+            "",
+            "",
+            "",
+            "Sim",
+            0,
+            1,
+            499.90,
+            15.00,
+            "Produto com grade de tamanhos",
+            "Não",
+        ])
+
+    def _build_import_variacoes_sheet(self, ws):
+        headers = [
+            "produto_ref",
+            "categoria",
+            "genero",
+            "faixa_etaria",
+            "tamanho",
+            "cor",
+            "quantidade",
+            "ativo",
+        ]
         ws.append(headers)
+        self._style_header(ws, "6F42C1")
 
-        fill = PatternFill("solid", fgColor="198754")
-        font = Font(bold=True, color="FFFFFF")
-        align = Alignment(horizontal="center", vertical="center")
+        widths = {
+            1: 22,
+            2: 20,
+            3: 20,
+            4: 20,
+            5: 14,
+            6: 18,
+            7: 14,
+            8: 12,
+        }
+        for col_idx, width in widths.items():
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
 
-        for cell in ws[1]:
-            cell.fill = fill
-            cell.font = font
-            cell.alignment = align
+        ws.append([
+            "SKU-002",
+            "",
+            "",
+            "",
+            "39",
+            "Preto",
+            3,
+            "Sim",
+        ])
+        ws.append([
+            "SKU-002",
+            "",
+            "",
+            "",
+            "40",
+            "Preto",
+            4,
+            "Sim",
+        ])
+
+    def _build_listas_sheet(self, ws):
+        headers = [
+            "UNIDADES",
+            "TIPOS",
+            "NIVEIS_AVARIA",
+            "BOOLEANOS",
+            "CATEGORIAS_VARIACAO",
+            "GENEROS_VARIACAO",
+            "FAIXAS_ETARIAS_VARIACAO",
+        ]
+        ws.append(headers)
+        self._style_header(ws, "198754")
 
         unidades = list(
             Unidade.objects.order_by("codigo", "nome").values_list("codigo", "nome")
@@ -836,122 +908,123 @@ class ProdutoImportTemplateDownloadView(DashboardPermissionMixin, View):
         niveis = list(
             NivelAvaria.objects.order_by("nome").values_list("nome", flat=True)
         )
-        ativos = ["Sim", "Não"]
+        booleanos = ["Sim", "Não"]
 
-        unidades_formatadas = []
-        for codigo, nome in unidades:
-            if codigo is not None:
-                unidades_formatadas.append(f"{codigo} - {nome}")
-            else:
-                unidades_formatadas.append(str(nome))
+        categoria_choices = ProdutoVariacao._meta.get_field("categoria").choices or []
+        genero_choices = ProdutoVariacao._meta.get_field("genero").choices or []
+        faixa_choices = ProdutoVariacao._meta.get_field("faixa_etaria").choices or []
 
-        max_len = max(len(unidades_formatadas), len(tipos), len(niveis), len(ativos), 1)
+        max_rows = max(
+            len(unidades),
+            len(tipos),
+            len(niveis),
+            len(booleanos),
+            len(categoria_choices),
+            len(genero_choices),
+            len(faixa_choices),
+            1,
+        )
 
-        for i in range(max_len):
+        for idx in range(max_rows):
+            unidade_val = ""
+            if idx < len(unidades):
+                codigo, nome = unidades[idx]
+                unidade_val = f"{codigo} - {nome}" if codigo is not None else nome
+
+            tipo_val = tipos[idx] if idx < len(tipos) else ""
+            nivel_val = niveis[idx] if idx < len(niveis) else ""
+            bool_val = booleanos[idx] if idx < len(booleanos) else ""
+            categoria_val = categoria_choices[idx][1] if idx < len(categoria_choices) else ""
+            genero_val = genero_choices[idx][1] if idx < len(genero_choices) else ""
+            faixa_val = faixa_choices[idx][1] if idx < len(faixa_choices) else ""
+
             ws.append([
-                unidades_formatadas[i] if i < len(unidades_formatadas) else "",
-                tipos[i] if i < len(tipos) else "",
-                niveis[i] if i < len(niveis) else "",
-                ativos[i] if i < len(ativos) else "",
+                unidade_val,
+                tipo_val,
+                nivel_val,
+                bool_val,
+                categoria_val,
+                genero_val,
+                faixa_val,
             ])
 
-        ws.column_dimensions["A"].width = 30
-        ws.column_dimensions["B"].width = 24
-        ws.column_dimensions["C"].width = 24
-        ws.column_dimensions["D"].width = 12
-
         return {
-            "unidades": max(len(unidades_formatadas), 1),
-            "tipos": max(len(tipos), 1),
-            "niveis": max(len(niveis), 1),
-            "ativos": max(len(ativos), 1),
+            "unidades": len(unidades),
+            "tipos": len(tipos),
+            "niveis": len(niveis),
+            "booleanos": len(booleanos),
+            "categorias_variacao": len(categoria_choices),
+            "generos_variacao": len(genero_choices),
+            "faixas_etarias_variacao": len(faixa_choices),
         }
 
     def _create_named_ranges(self, wb, contadores):
-        nomes = [
-            ("LISTA_UNIDADES", "'LISTAS_SISTEMA'!$A$2:$A$" + str(contadores["unidades"] + 1)),
-            ("LISTA_TIPOS", "'LISTAS_SISTEMA'!$B$2:$B$" + str(contadores["tipos"] + 1)),
-            ("LISTA_NIVEIS_AVARIA", "'LISTAS_SISTEMA'!$C$2:$C$" + str(contadores["niveis"] + 1)),
-            ("LISTA_ATIVO", "'LISTAS_SISTEMA'!$D$2:$D$" + str(contadores["ativos"] + 1)),
-        ]
+        ranges = {
+            "LISTA_UNIDADES": ("LISTAS_SISTEMA", "A", contadores["unidades"]),
+            "LISTA_TIPOS": ("LISTAS_SISTEMA", "B", contadores["tipos"]),
+            "LISTA_NIVEIS_AVARIA": ("LISTAS_SISTEMA", "C", contadores["niveis"]),
+            "LISTA_BOOLEANOS": ("LISTAS_SISTEMA", "D", contadores["booleanos"]),
+            "LISTA_CATEGORIAS_VARIACAO": ("LISTAS_SISTEMA", "E", contadores["categorias_variacao"]),
+            "LISTA_GENEROS_VARIACAO": ("LISTAS_SISTEMA", "F", contadores["generos_variacao"]),
+            "LISTA_FAIXAS_ETARIAS_VARIACAO": ("LISTAS_SISTEMA", "G", contadores["faixas_etarias_variacao"]),
+        }
 
-        for nome, referencia in nomes:
-            wb.defined_names[nome] = DefinedName(name=nome, attr_text=referencia)
+        for nome, (aba, coluna, total) in ranges.items():
+            if total <= 0:
+                continue
+            ref = f"'{aba}'!${coluna}$2:${coluna}${total + 1}"
+            wb.defined_names.add(DefinedName(nome, attr_text=ref))
+
+    def _apply_validations(self, ws_produtos, ws_variacoes):
+        limite = 1000
+
+        dv_unidades = DataValidation(type="list", formula1="=LISTA_UNIDADES", allow_blank=True)
+        dv_tipos = DataValidation(type="list", formula1="=LISTA_TIPOS", allow_blank=True)
+        dv_niveis = DataValidation(type="list", formula1="=LISTA_NIVEIS_AVARIA", allow_blank=True)
+        dv_bool = DataValidation(type="list", formula1="=LISTA_BOOLEANOS", allow_blank=True)
+
+        dv_cat = DataValidation(type="list", formula1="=LISTA_CATEGORIAS_VARIACAO", allow_blank=True)
+        dv_gen = DataValidation(type="list", formula1="=LISTA_GENEROS_VARIACAO", allow_blank=True)
+        dv_faixa = DataValidation(type="list", formula1="=LISTA_FAIXAS_ETARIAS_VARIACAO", allow_blank=True)
+
+        ws_produtos.add_data_validation(dv_unidades)
+        ws_produtos.add_data_validation(dv_tipos)
+        ws_produtos.add_data_validation(dv_niveis)
+        ws_produtos.add_data_validation(dv_bool)
+
+        ws_variacoes.add_data_validation(dv_cat)
+        ws_variacoes.add_data_validation(dv_gen)
+        ws_variacoes.add_data_validation(dv_faixa)
+        ws_variacoes.add_data_validation(dv_bool)
+
+        dv_unidades.add(f"C2:C{limite}")
+        dv_tipos.add(f"D2:D{limite}")
+        dv_niveis.add(f"E2:E{limite}")
+        dv_bool.add(f"F2:F{limite}")
+        dv_bool.add(f"L2:L{limite}")
+
+        dv_cat.add(f"B2:B{limite}")
+        dv_gen.add(f"C2:C{limite}")
+        dv_faixa.add(f"D2:D{limite}")
+        dv_bool.add(f"H2:H{limite}")
 
     def _build_instrucoes_sheet(self, ws):
         linhas = [
-            "INSTRUÇÕES DE PREENCHIMENTO",
-            "",
-            "1. Preencha somente a aba IMPORTACAO_PRODUTOS.",
-            "2. Clique nas células das colunas unidade_prod, tipo_prod, nivel_ava_prod e ativo para escolher uma opção.",
-            "3. Não altere o nome das colunas.",
-            "4. Salve e envie o arquivo em formato .xlsx.",
+            ["COMO USAR O IMPORTADOR"],
+            [""],
+            ["1. Preencha a aba IMPORTACAO_PRODUTOS."],
+            ["2. Para produtos com variações, marque usa_variacoes = Sim."],
+            ["3. Para produtos com variações, deixe quantidade base = 0 e use a aba IMPORTACAO_VARIACOES."],
+            ["4. Em produto_ref, use preferencialmente o num_controle. Se não houver, use o nome exato do produto."],
+            ["5. O sistema recalcula automaticamente o valor de venda."],
+            ["6. Produto pode continuar em rascunho se não cumprir as regras de ativação (ex.: sem imagem)."],
         ]
 
         for linha in linhas:
-            ws.append([linha])
+            ws.append(linha)
 
-        ws["A1"].font = Font(bold=True, size=14)
         ws.column_dimensions["A"].width = 110
-
-    def _apply_validations(self, ws):
-        dv_unidade = DataValidation(type="list", formula1="=LISTA_UNIDADES", allow_blank=True)
-        dv_unidade.promptTitle = "Unidade"
-        dv_unidade.prompt = "Selecione uma unidade da lista."
-        dv_unidade.showInputMessage = True
-
-        dv_tipo = DataValidation(type="list", formula1="=LISTA_TIPOS", allow_blank=True)
-        dv_tipo.promptTitle = "Tipo"
-        dv_tipo.prompt = "Selecione um tipo da lista."
-        dv_tipo.showInputMessage = True
-
-        dv_nivel = DataValidation(type="list", formula1="=LISTA_NIVEIS_AVARIA", allow_blank=True)
-        dv_nivel.promptTitle = "Nível de avaria"
-        dv_nivel.prompt = "Selecione um nível de avaria da lista."
-        dv_nivel.showInputMessage = True
-
-        dv_ativo = DataValidation(type="list", formula1="=LISTA_ATIVO", allow_blank=True)
-        dv_ativo.promptTitle = "Ativo"
-        dv_ativo.prompt = "Selecione um status da lista."
-        dv_ativo.showInputMessage = True
-
-        dv_quantidade = DataValidation(
-            type="whole",
-            operator="greaterThanOrEqual",
-            formula1="1",
-            allow_blank=False,
-        )
-        dv_maximo = DataValidation(
-            type="whole",
-            operator="greaterThanOrEqual",
-            formula1="0",
-            allow_blank=True,
-        )
-        dv_valor = DataValidation(
-            type="decimal",
-            operator="greaterThanOrEqual",
-            formula1="0",
-            allow_blank=False,
-        )
-        dv_desconto = DataValidation(
-            type="decimal",
-            operator="between",
-            formula1="0",
-            formula2="100",
-            allow_blank=False,
-        )
-
-        for dv in [dv_unidade, dv_tipo, dv_nivel, dv_ativo, dv_quantidade, dv_maximo, dv_valor, dv_desconto]:
-            ws.add_data_validation(dv)
-
-        dv_unidade.add("C2:C1000")
-        dv_tipo.add("D2:D1000")
-        dv_nivel.add("E2:E1000")
-        dv_quantidade.add("F2:F1000")
-        dv_maximo.add("G2:G1000")
-        dv_valor.add("H2:H1000")
-        dv_desconto.add("I2:I1000")
-        dv_ativo.add("K2:K1000")
+        ws["A1"].font = Font(bold=True)
 
 # -------------------------
 # TIPOS
