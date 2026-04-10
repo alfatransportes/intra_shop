@@ -16,10 +16,16 @@ def index(request):
     tipo_id = (request.GET.get("categoria") or "").strip()
     ordenar = (request.GET.get("ordenar") or "").strip()
 
-    produtos_qs = produtos_com_estoque_disponivel().filter(ativo=True, estoque_calc__gt=0)
+    produtos_qs = produtos_com_estoque_disponivel().filter(
+        ativo=True,
+        estoque_calc__gt=0,
+    )
 
     if busca:
-        produtos_qs = produtos_qs.filter(Q(nome__icontains=busca) | Q(descricao__icontains=busca))
+        produtos_qs = produtos_qs.filter(
+            Q(nome__icontains=busca) | Q(descricao__icontains=busca)
+        )
+
     if tipo_id.isdigit():
         produtos_qs = produtos_qs.filter(tipo_prod_id=int(tipo_id))
 
@@ -28,6 +34,7 @@ def index(request):
         "preco_desc": ("-valor_venda", "-id"),
         "nome": ("nome", "-id"),
     }.get(ordenar, ("-id",))
+
     produtos_qs = produtos_qs.order_by(*ordenacao)
 
     paginator = Paginator(produtos_qs, 12)
@@ -35,8 +42,18 @@ def index(request):
 
     categorias = Tipo.objects.filter(ativo=True).order_by("nome")
     filtros_ativos = bool(busca or tipo_id or ordenar)
-    config_ativa = ConfigWebsite.objects.prefetch_related("banners").filter(active=True).first()
-    banners = config_ativa.banners.filter(ativo=True).order_by("ordem", "id") if config_ativa else []
+
+    config_ativa = (
+        ConfigWebsite.objects
+        .prefetch_related("banners")
+        .filter(active=True)
+        .first()
+    )
+
+    banners = (
+        config_ativa.banners.filter(ativo=True).order_by("ordem", "id")
+        if config_ativa else []
+    )
 
     return render(
         request,

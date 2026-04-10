@@ -1,0 +1,644 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% block title %}- Cadastro rápido de produto{% endblock %}
+{% block header %}
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">
+                {% if object %}
+                    Editar produto
+                {% else %}
+                    Novo produto
+                {% endif %}
+            </h1>
+            <div class="text-secondary">Preencha tudo de uma vez. No final, escolha se quer salvar como rascunho ou publicar.</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'dashboard_produto_list' %}"
+               class="btn btn-outline-secondary">Voltar para lista</a>
+            {% if object %}
+                <a href="{% url 'dashboard_produto_update' object.pk %}"
+                   class="btn btn-outline-primary">Ver fluxo antigo</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    <style>
+.pm-card { border:0; border-radius:1rem; box-shadow:0 .125rem .5rem rgba(0,0,0,.06); }
+.pm-sticky { position: sticky; top: 1rem; }
+.pm-check { border-radius: 1rem; }
+.pm-zone { border: 1px dashed rgba(0,0,0,.14); border-radius: 1rem; background: #fafafa; }
+.pm-pill { border-radius:999px; }
+.pm-section-title { font-size:1rem; font-weight:700; }
+.pm-formset-row + .pm-formset-row { margin-top: 1rem; }
+.pm-removed { opacity: .45; pointer-events: none; }
+.pm-hidden-delete { display: none !important; }
+.pm-empty-state { color:#6c757d; font-size:.92rem; }
+
+.pm-image-card,
+.pm-variacao-card {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+.pm-image-preview-wrap {
+    width: 120px;
+    min-width: 120px;
+}
+
+.pm-preview {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: .9rem;
+    border:1px solid rgba(0,0,0,.08);
+    background: #f8f9fa;
+    display: block;
+}
+
+.pm-preview-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: .9rem;
+    border:1px dashed rgba(0,0,0,.12);
+    background: #f8f9fa;
+    color: #6c757d;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size: .85rem;
+    padding: .75rem;
+}
+
+.pm-image-fields .form-control,
+.pm-image-fields .form-select {
+    min-height: 44px;
+}
+
+.pm-image-principal-box,
+.pm-variacao-ativa-box {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: .9rem;
+    background: #f8f9fa;
+    padding: .85rem 1rem;
+}
+
+.pm-actions-inline {
+    display:flex;
+    justify-content:flex-end;
+    gap:.5rem;
+    flex-wrap:wrap;
+}
+
+.pm-upload-label {
+    font-size: .92rem;
+    font-weight: 600;
+    margin-bottom: .4rem;
+    display:block;
+}
+
+.pm-status-badge {
+    display:inline-flex;
+    align-items:center;
+    gap:.5rem;
+    padding:.55rem .85rem;
+    border-radius:999px;
+    font-weight:600;
+    font-size:.92rem;
+}
+
+@media (max-width: 991.98px) {
+    .pm-sticky { position: static; }
+}
+
+@media (max-width: 767.98px) {
+    .pm-image-preview-wrap {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    .pm-preview,
+    .pm-preview-placeholder {
+        width: 100%;
+        height: 180px;
+    }
+}
+    </style>
+    <form method="post"
+          enctype="multipart/form-data"
+          novalidate
+          id="produto-rapido-form">
+        {% csrf_token %}
+        {{ form.ativo }}
+        <div class="row g-4">
+            <div class="col-12 col-xl-8">
+                <div class="card pm-card mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <div class="pm-section-title">1. Dados principais</div>
+                                <div class="text-secondary small">Preencha uma vez só.</div>
+                            </div>
+                            {% if object %}<span class="badge text-bg-light pm-pill">ID {{ object.pk }}</span>{% endif %}
+                        </div>
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger rounded-4 border-0">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                {{ form.unidade_prod.label_tag }}
+                                {{ form.unidade_prod }}
+                                {{ form.unidade_prod.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.tipo_prod.label_tag }}
+                                {{ form.tipo_prod }}
+                                {{ form.tipo_prod.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.nivel_ava_prod.label_tag }}
+                                {{ form.nivel_ava_prod }}
+                                {{ form.nivel_ava_prod.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.num_controle.label_tag }}
+                                {{ form.num_controle }}
+                                {{ form.num_controle.errors }}
+                            </div>
+                            <div class="col-md-8">
+                                {{ form.nome.label_tag }}
+                                {{ form.nome }}
+                                {{ form.nome.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.valor_nota.label_tag }}
+                                {{ form.valor_nota }}
+                                {{ form.valor_nota.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.porcen_desconto.label_tag }}
+                                {{ form.porcen_desconto }}
+                                {{ form.porcen_desconto.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.maximo_por_usuario.label_tag }}
+                                {{ form.maximo_por_usuario }}
+                                {{ form.maximo_por_usuario.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mt-4 pt-2">
+                                    {{ form.usa_variacoes }}
+                                    <label class="form-check-label" for="{{ form.usa_variacoes.id_for_label }}">{{ form.usa_variacoes.label }}</label>
+                                </div>
+                                {{ form.usa_variacoes.errors }}
+                            </div>
+                            <div class="col-md-4 js-simple-stock">
+                                {{ form.quantidade.label_tag }}
+                                {{ form.quantidade }}
+                                <div class="form-text">Usado apenas para produto sem variações.</div>
+                                {{ form.quantidade.errors }}
+                            </div>
+                            <div class="col-12">
+                                {{ form.descricao.label_tag }}
+                                {{ form.descricao }}
+                                {{ form.descricao.errors }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card pm-card mb-4 js-variacoes-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <div class="pm-section-title">2. Variações</div>
+                                <div class="text-secondary small">Só preencha se o produto usa variações.</div>
+                            </div>
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    id="add-variacao-row">Adicionar variação</button>
+                        </div>
+                        {{ variation_formset.management_form }}
+                        {% if variation_formset.non_form_errors %}
+                            <div class="alert alert-danger rounded-4 border-0 mb-3">{{ variation_formset.non_form_errors }}</div>
+                        {% endif %}
+                        <div class="pm-zone p-3">
+                            <div id="variacoes-container">
+                                {% for vform in variation_formset.forms %}
+                                    <div class="pm-formset-row js-variacao-row"
+                                         data-form-index="{{ forloop.counter0 }}">
+                                        {{ vform.id }}
+                                        {% if vform.DELETE %}<div class="pm-hidden-delete">{{ vform.DELETE }}</div>{% endif %}
+                                        <div class="pm-variacao-card">
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-md-3">
+                                                    {{ vform.categoria.label_tag }}
+                                                    {{ vform.categoria }}
+                                                    {{ vform.categoria.errors }}
+                                                </div>
+                                                <div class="col-md-3">
+                                                    {{ vform.genero.label_tag }}
+                                                    {{ vform.genero }}
+                                                    {{ vform.genero.errors }}
+                                                </div>
+                                                <div class="col-md-3">
+                                                    {{ vform.faixa_etaria.label_tag }}
+                                                    {{ vform.faixa_etaria }}
+                                                    {{ vform.faixa_etaria.errors }}
+                                                </div>
+                                                <div class="col-md-3">
+                                                    {{ vform.tamanho.label_tag }}
+                                                    {{ vform.tamanho }}
+                                                    {{ vform.tamanho.errors }}
+                                                </div>
+                                                <div class="col-md-4">
+                                                    {{ vform.cor.label_tag }}
+                                                    {{ vform.cor }}
+                                                    {{ vform.cor.errors }}
+                                                </div>
+                                                <div class="col-md-3">
+                                                    {{ vform.quantidade.label_tag }}
+                                                    {{ vform.quantidade }}
+                                                    {{ vform.quantidade.errors }}
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <div class="pm-variacao-ativa-box">
+                                                        <div class="form-check m-0">
+                                                            {{ vform.ativo }}
+                                                            <label class="form-check-label fw-semibold"
+                                                                   for="{{ vform.ativo.id_for_label }}">
+                                                                Variação ativa
+                                                            </label>
+                                                        </div>
+                                                        {{ vform.ativo.errors }}
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="pm-actions-inline">
+                                                        <button type="button"
+                                                                class="btn btn-outline-danger btn-sm js-remove-row"
+                                                                data-kind="variacao">Remover variação</button>
+                                                        <button type="button"
+                                                                class="btn btn-outline-secondary btn-sm js-undo-remove d-none"
+                                                                data-kind="variacao">Desfazer</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <div class="pm-empty-state" id="variacoes-empty-state">Nenhuma variação cadastrada.</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card pm-card mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                            <div>
+                                <div class="pm-section-title">3. Imagens</div>
+                                <div class="text-secondary small">Adicione as imagens já nesta tela.</div>
+                            </div>
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    id="add-imagem-row">Adicionar imagem</button>
+                        </div>
+                        {{ image_formset.management_form }}
+                        {% if image_formset.non_form_errors %}
+                            <div class="alert alert-danger rounded-4 border-0 mb-3">{{ image_formset.non_form_errors }}</div>
+                        {% endif %}
+                        <div class="pm-zone p-3">
+                            <div id="imagens-container">
+                                {% for iform in image_formset.forms %}
+                                    <div class="pm-formset-row js-imagem-row"
+                                         data-form-index="{{ forloop.counter0 }}">
+                                        {{ iform.id }}
+                                        {% if iform.DELETE %}<div class="pm-hidden-delete">{{ iform.DELETE }}</div>{% endif %}
+                                        <div class="pm-image-card">
+                                            <div class="d-flex flex-column flex-md-row gap-4">
+                                                <div class="pm-image-preview-wrap">
+                                                    {% if iform.instance.pk and iform.instance.imagem %}
+                                                        <img src="{{ iform.instance.imagem.url }}"
+                                                             alt="preview"
+                                                             class="pm-preview js-image-preview">
+                                                        <div class="pm-preview-placeholder js-image-placeholder d-none">Prévia da imagem</div>
+                                                    {% else %}
+                                                        <img src="" alt="preview" class="pm-preview js-image-preview d-none">
+                                                        <div class="pm-preview-placeholder js-image-placeholder">Prévia da imagem</div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div class="row g-3 pm-image-fields">
+                                                        <div class="col-12 col-lg-6">
+                                                            <label class="pm-upload-label" for="{{ iform.imagem.id_for_label }}">Imagem</label>
+                                                            {{ iform.imagem }}
+                                                            {{ iform.imagem.errors }}
+                                                        </div>
+                                                        <div class="col-12 col-lg-4">
+                                                            {{ iform.legenda.label_tag }}
+                                                            {{ iform.legenda }}
+                                                            {{ iform.legenda.errors }}
+                                                        </div>
+                                                        <div class="col-12 col-lg-2">
+                                                            {{ iform.ordem.label_tag }}
+                                                            {{ iform.ordem }}
+                                                            {{ iform.ordem.errors }}
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <div class="pm-image-principal-box">
+                                                                <div class="form-check m-0">
+                                                                    {{ iform.principal }}
+                                                                    <label class="form-check-label fw-semibold"
+                                                                           for="{{ iform.principal.id_for_label }}">
+                                                                        Definir como imagem principal
+                                                                    </label>
+                                                                </div>
+                                                                {{ iform.principal.errors }}
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <div class="pm-actions-inline">
+                                                                <button type="button"
+                                                                        class="btn btn-outline-danger btn-sm js-remove-row"
+                                                                        data-kind="imagem">Remover imagem</button>
+                                                                <button type="button"
+                                                                        class="btn btn-outline-secondary btn-sm js-undo-remove d-none"
+                                                                        data-kind="imagem">Desfazer</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <div class="pm-empty-state" id="imagens-empty-state">Nenhuma imagem cadastrada.</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-4">
+                <div class="pm-sticky d-grid gap-4">
+                    <div class="card pm-card">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="pm-section-title">Situação</div>
+                                {% if object and object.ativo %}
+                                    <span class="pm-status-badge bg-success-subtle text-success-emphasis">Publicado</span>
+                                {% else %}
+                                    <span class="pm-status-badge bg-secondary-subtle text-secondary-emphasis">Rascunho</span>
+                                {% endif %}
+                            </div>
+                            <div class="p-3 rounded-4 {% if status_cards.has_images %}bg-success-subtle{% else %}bg-warning-subtle{% endif %} mb-3 pm-check">
+                                <div class="fw-semibold">Imagens</div>
+                                <div class="small">
+                                    {% if status_cards.has_images %}
+                                        Produto possui imagens cadastradas.
+                                    {% else %}
+                                        Adicione ao menos uma imagem.
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="p-3 rounded-4 {% if form.instance.usa_variacoes %}{% if status_cards.has_valid_variations %}bg-success-subtle{% else %}bg-warning-subtle{% endif %}{% else %}bg-light{% endif %} mb-3 pm-check">
+                                <div class="fw-semibold">Estoque</div>
+                                <div class="small">
+                                    {% if form.instance.usa_variacoes %}
+                                        {% if status_cards.has_valid_variations %}
+                                            Há ao menos uma variação ativa com estoque.
+                                        {% else %}
+                                            Falta uma variação ativa com estoque.
+                                        {% endif %}
+                                    {% else %}
+                                        Produto simples usa o campo quantidade.
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="p-3 rounded-4 {% if status_cards.can_publish %}bg-success-subtle{% else %}bg-danger-subtle{% endif %} pm-check">
+                                <div class="fw-semibold">Pronto para publicar</div>
+                                <div class="small">
+                                    {% if status_cards.can_publish %}
+                                        Sim.
+                                    {% else %}
+                                        {{ status_cards.reason|default:"Ainda faltam requisitos." }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card pm-card">
+                        <div class="card-body p-4">
+                            <div class="pm-section-title mb-3">Ações</div>
+                            <div class="d-grid gap-2">
+                                <button type="submit"
+                                        name="action"
+                                        value="draft"
+                                        class="btn btn-outline-secondary btn-lg">Salvar rascunho</button>
+                                <button type="submit"
+                                        name="action"
+                                        value="publish"
+                                        class="btn btn-primary btn-lg">Salvar e publicar</button>
+                                <button type="submit"
+                                        name="action"
+                                        value="new"
+                                        class="btn btn-outline-primary">Salvar e cadastrar outro</button>
+                                {% if object %}
+                                    <a href="{% url 'dashboard_produto_qrcode_pdf' object.pk %}"
+                                       class="btn btn-outline-secondary">Gerar PDF com QR Code</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card pm-card">
+                        <div class="card-body p-4">
+                            <div class="pm-section-title mb-2">Como usar</div>
+                            <ul class="small text-secondary mb-0 ps-3">
+                                <li>preencha os dados principais</li>
+                                <li>se for produto com variações, cadastre-as abaixo</li>
+                                <li>adicione ao menos uma imagem</li>
+                                <li>use “Salvar rascunho” para continuar depois</li>
+                                <li>use “Salvar e publicar” só quando estiver completo</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <template id="variacao-empty-row-template">
+        <div class="pm-formset-row js-variacao-row" data-form-index="__prefix__">
+            <input type="hidden"
+                   name="{{ variation_formset.prefix }}-__prefix__-id"
+                   id="id_{{ variation_formset.prefix }}-__prefix__-id">
+            <input type="checkbox"
+                   name="{{ variation_formset.prefix }}-__prefix__-DELETE"
+                   id="id_{{ variation_formset.prefix }}-__prefix__-DELETE"
+                   class="pm-hidden-delete">
+            <div class="pm-variacao-card">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="id_{{ variation_formset.prefix }}-__prefix__-categoria">Categoria:</label>
+                        <select name="{{ variation_formset.prefix }}-__prefix__-categoria"
+                                id="id_{{ variation_formset.prefix }}-__prefix__-categoria"
+                                class="form-select">
+                            {% for value, label in variation_formset.empty_form.fields.categoria.choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="id_{{ variation_formset.prefix }}-__prefix__-genero">Gênero:</label>
+                        <select name="{{ variation_formset.prefix }}-__prefix__-genero"
+                                id="id_{{ variation_formset.prefix }}-__prefix__-genero"
+                                class="form-select">
+                            {% for value, label in variation_formset.empty_form.fields.genero.choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="id_{{ variation_formset.prefix }}-__prefix__-faixa_etaria">Faixa etária:</label>
+                        <select name="{{ variation_formset.prefix }}-__prefix__-faixa_etaria"
+                                id="id_{{ variation_formset.prefix }}-__prefix__-faixa_etaria"
+                                class="form-select">
+                            {% for value, label in variation_formset.empty_form.fields.faixa_etaria.choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="id_{{ variation_formset.prefix }}-__prefix__-tamanho">Tamanho:</label>
+                        <input type="text"
+                               name="{{ variation_formset.prefix }}-__prefix__-tamanho"
+                               id="id_{{ variation_formset.prefix }}-__prefix__-tamanho"
+                               class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_{{ variation_formset.prefix }}-__prefix__-cor">Cor:</label>
+                        <input type="text"
+                               name="{{ variation_formset.prefix }}-__prefix__-cor"
+                               id="id_{{ variation_formset.prefix }}-__prefix__-cor"
+                               class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="id_{{ variation_formset.prefix }}-__prefix__-quantidade">Quantidade:</label>
+                        <input type="number"
+                               name="{{ variation_formset.prefix }}-__prefix__-quantidade"
+                               id="id_{{ variation_formset.prefix }}-__prefix__-quantidade"
+                               class="form-control"
+                               value="0"
+                               min="0">
+                    </div>
+                    <div class="col-md-5">
+                        <div class="pm-variacao-ativa-box">
+                            <div class="form-check m-0">
+                                <input type="checkbox"
+                                       name="{{ variation_formset.prefix }}-__prefix__-ativo"
+                                       id="id_{{ variation_formset.prefix }}-__prefix__-ativo"
+                                       class="form-check-input"
+                                       checked>
+                                <label class="form-check-label fw-semibold"
+                                       for="id_{{ variation_formset.prefix }}-__prefix__-ativo">Variação ativa</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="pm-actions-inline">
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm js-remove-row"
+                                    data-kind="variacao">Remover variação</button>
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm js-undo-remove d-none"
+                                    data-kind="variacao">Desfazer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <template id="imagem-empty-row-template">
+        <div class="pm-formset-row js-imagem-row" data-form-index="__prefix__">
+            <input type="hidden"
+                   name="{{ image_formset.prefix }}-__prefix__-id"
+                   id="id_{{ image_formset.prefix }}-__prefix__-id">
+            <input type="checkbox"
+                   name="{{ image_formset.prefix }}-__prefix__-DELETE"
+                   id="id_{{ image_formset.prefix }}-__prefix__-DELETE"
+                   class="pm-hidden-delete">
+            <div class="pm-image-card">
+                <div class="d-flex flex-column flex-md-row gap-4">
+                    <div class="pm-image-preview-wrap">
+                        <img src="" alt="preview" class="pm-preview js-image-preview d-none">
+                        <div class="pm-preview-placeholder js-image-placeholder">Prévia da imagem</div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="row g-3 pm-image-fields">
+                            <div class="col-12 col-lg-6">
+                                <label class="pm-upload-label"
+                                       for="id_{{ image_formset.prefix }}-__prefix__-imagem">Imagem</label>
+                                <input type="file"
+                                       name="{{ image_formset.prefix }}-__prefix__-imagem"
+                                       id="id_{{ image_formset.prefix }}-__prefix__-imagem"
+                                       class="form-control js-image-input"
+                                       accept="image/*">
+                            </div>
+                            <div class="col-12 col-lg-4">
+                                <label for="id_{{ image_formset.prefix }}-__prefix__-legenda">Legenda:</label>
+                                <input type="text"
+                                       name="{{ image_formset.prefix }}-__prefix__-legenda"
+                                       id="id_{{ image_formset.prefix }}-__prefix__-legenda"
+                                       class="form-control">
+                            </div>
+                            <div class="col-12 col-lg-2">
+                                <label for="id_{{ image_formset.prefix }}-__prefix__-ordem">Ordem:</label>
+                                <input type="number"
+                                       name="{{ image_formset.prefix }}-__prefix__-ordem"
+                                       id="id_{{ image_formset.prefix }}-__prefix__-ordem"
+                                       class="form-control"
+                                       value="0"
+                                       min="0">
+                            </div>
+                            <div class="col-12">
+                                <div class="pm-image-principal-box">
+                                    <div class="form-check m-0">
+                                        <input type="checkbox"
+                                               name="{{ image_formset.prefix }}-__prefix__-principal"
+                                               id="id_{{ image_formset.prefix }}-__prefix__-principal"
+                                               class="form-check-input">
+                                        <label class="form-check-label fw-semibold"
+                                               for="id_{{ image_formset.prefix }}-__prefix__-principal">
+                                            Definir como imagem principal
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="pm-actions-inline">
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm js-remove-row"
+                                            data-kind="imagem">Remover imagem</button>
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm js-undo-remove d-none"
+                                            data-kind="imagem">Desfazer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <script>
+window.produtoRapidoConfig = {
+    usaVariacoesFieldId: "{{ form.usa_variacoes.id_for_label }}",
+    variacoesPrefix: "{{ variation_formset.prefix }}",
+    imagensPrefix: "{{ image_formset.prefix }}",
+};
+    </script>
+    <script src="{% static 'dashboard/js/produto_manage_fast.js' %}"></script>
+{% endblock %}

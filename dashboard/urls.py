@@ -16,6 +16,8 @@ from .views import (FormaPagamentoCreateView, FormaPagamentoDeleteView,
                     UnidadeUpdateView, VendaDetailView, VendaExportXlsxView,
                     VendaListView, VendaManageView, VendaUpdateStatusView,
                     produto_qrcode_pdf)
+from .views_produto_rapido import (ProdutoRapidoCreateView,
+                                   ProdutoRapidoUpdateView)
 
 urlpatterns = [
     path("painel-controle/", PainelControleView.as_view(), name="painel_controle"),
@@ -27,7 +29,23 @@ urlpatterns = [
     path("painel-controle/produtos/export/xlsx/", ProdutoExportXlsxView.as_view(), name="dashboard_produto_export_xlsx"),
     path("painel-controle/produtos/<int:pk>/qrcode/pdf/", produto_qrcode_pdf, name="dashboard_produto_qrcode_pdf"),
     path("painel-controle/produtos/importar/", ProdutoImportView.as_view(), name="dashboard_produto_import"),
-    path("painel-controle/produtos/importar/modelo/", ProdutoImportTemplateDownloadView.as_view(), name="dashboard_produto_import_template"),
+    path(
+        "painel-controle/produtos/importar/modelo/",
+        ProdutoImportTemplateDownloadView.as_view(),
+        name="dashboard_produto_import_template",
+    ),
+
+    # fluxo rápido
+    path(
+        "painel-controle/produtos/novo/rapido/",
+        ProdutoRapidoCreateView.as_view(),
+        name="dashboard_produto_create_rapido",
+    ),
+    path(
+        "painel-controle/produtos/<int:pk>/editar/rapido/",
+        ProdutoRapidoUpdateView.as_view(),
+        name="dashboard_produto_update_rapido",
+    ),
 
     path("painel-controle/tipos/", TipoListView.as_view(), name="dashboard_tipo_list"),
     path("painel-controle/tipos/novo/", TipoCreateView.as_view(), name="dashboard_tipo_create"),
