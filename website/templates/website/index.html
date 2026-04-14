@@ -20,8 +20,8 @@
     </div>
     {% endif %}
 
-    <div class="container mt-4">
-        <div class="d-flex flex-wrap gap-2 mb-4" id="produtos">
+    <div class="container ">
+        <div class="d-flex flex-wrap gap-2 py-4" id="produtos">
             <a href="{% url 'index' %}" class="badge text-bg-{% if not categoria %}primary{% else %}light{% endif %} text-decoration-none">Todas</a>
             {% for c in categorias %}
             <a href="?categoria={{ c.id }}{% if busca %}&q={{ busca|urlencode }}{% endif %}{% if ordenar %}&ordenar={{ ordenar }}{% endif %}" class="badge text-bg-{% if categoria == c.id|stringformat:'s' %}primary{% else %}light{% endif %} text-decoration-none">{{ c.nome }}</a>
