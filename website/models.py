@@ -296,14 +296,17 @@ class ProdutoVariacao(models.Model):
     class Categoria(models.TextChoices):
         CALCADO = "CALCADO", "Calçado"
         ROUPA = "ROUPA", "Roupa"
+        PNEU = "PNEU", "Pneu"
         OUTRO = "OUTRO", "Outro"
 
     class Genero(models.TextChoices):
+        AUTOMOVEIS = "AUTOMOVEIS", "Automóveis"
         MASCULINO = "MASCULINO", "Masculino"
         FEMININO = "FEMININO", "Feminino"
         UNISSEX = "UNISSEX", "Unissex"
 
     class FaixaEtaria(models.TextChoices):
+        QUALQUER = "QUALQUER", "Qualquer"
         ADULTO = "ADULTO", "Adulto"
         INFANTIL = "INFANTIL", "Infantil"
 
@@ -311,7 +314,7 @@ class ProdutoVariacao(models.Model):
     categoria = models.CharField(max_length=20, choices=Categoria.choices, default=Categoria.OUTRO)
     genero = models.CharField(max_length=20, choices=Genero.choices, blank=True, null=True)
     faixa_etaria = models.CharField(max_length=20, choices=FaixaEtaria.choices, blank=True, null=True)
-    tamanho = models.CharField(max_length=20, blank=True, null=True)
+    tamanho = models.CharField(max_length=40, blank=True, null=True)
     cor = models.CharField(max_length=50, blank=True, null=True)
     quantidade = models.PositiveIntegerField(default=0)
     ativo = models.BooleanField(default=True)
@@ -319,31 +322,75 @@ class ProdutoVariacao(models.Model):
     class Meta:
         ordering = ["categoria", "genero", "faixa_etaria", "tamanho", "cor", "id"]
         constraints = [
-            models.UniqueConstraint(fields=["produto", "categoria", "genero", "faixa_etaria", "tamanho", "cor"], name="unique_produto_variacao")
+            models.UniqueConstraint(
+                fields=["produto", "categoria", "genero", "faixa_etaria", "tamanho", "cor"],
+                name="unique_produto_variacao"
+            )
         ]
 
-    def __str__(self):
-        partes = [self.produto.nome]
-        if self.categoria:
-            partes.append(self.get_categoria_display())
-        if self.genero:
-            partes.append(self.get_genero_display())
-        if self.faixa_etaria:
-            partes.append(self.get_faixa_etaria_display())
-        if self.tamanho:
-            partes.append(f"Tamanho {self.tamanho}")
-        if self.cor:
-            partes.append(self.cor)
-        return " - ".join(partes)
+    @property
+    def rotulo_tamanho(self):
+        if self.categoria == self.Categoria.PNEU:
+            return "Medida"
+        return "Tamanho"
 
-    def clean(self):
-        super().clean()
-        self.tamanho = (self.tamanho or "").strip().upper() or None
-        self.cor = (self.cor or "").strip() or None
-        if self.quantidade < 0:
-            raise ValidationError({"quantidade": "A quantidade não pode ser negativa."})
-        if self.quantidade > 0 and not self.tamanho:
-            raise ValidationError({"tamanho": "Informe o tamanho da variação."})
+    @property
+    def descricao_curta(self):
+        partes = []
+
+        if self.categoria == self.Categoria.PNEU:
+            if self.tamanho:
+                partes.append(f"Medida {self.tamanho}")
+            if self.genero:
+                partes.append(self.get_genero_display())
+            if self.cor:
+                partes.append(self.cor)
+        else:
+            if self.genero:
+                partes.append(self.get_genero_display())
+            if self.faixa_etaria:
+                partes.append(self.get_faixa_etaria_display())
+            if self.tamanho:
+                partes.append(f"Tamanho {self.tamanho}")
+            if self.cor:
+                partes.append(self.cor)
+
+        return " • ".join(partes)
+
+    @property
+    def ficha_tecnica(self):
+        """
+        Retorna pares (rótulo, valor) para renderizar no detalhe do produto.
+        """
+        itens = []
+
+        if self.categoria:
+            itens.append(("Categoria", self.get_categoria_display()))
+
+        if self.categoria == self.Categoria.PNEU:
+            if self.tamanho:
+                itens.append(("Medida", self.tamanho))
+            if self.genero:
+                itens.append(("Aplicação", self.get_genero_display()))
+            if self.cor:
+                itens.append(("Cor", self.cor))
+        else:
+            if self.genero:
+                itens.append(("Gênero", self.get_genero_display()))
+            if self.faixa_etaria:
+                itens.append(("Faixa etária", self.get_faixa_etaria_display()))
+            if self.tamanho:
+                itens.append(("Tamanho", self.tamanho))
+            if self.cor:
+                itens.append(("Cor", self.cor))
+
+        itens.append(("Estoque", str(self.quantidade)))
+        return itens
+
+    def __str__(self):
+        if self.descricao_curta:
+            return f"{self.produto.nome} - {self.descricao_curta}"
+        return self.produto.nome
 
 
 class Carrinho(models.Model):

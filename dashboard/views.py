@@ -1576,9 +1576,8 @@ class VendaExportXlsxView(DashboardPermissionMixin, View):
     def _formatar_item(self, item):
         descricao = item.produto.nome
 
-        variacao_str = self._formatar_variacao(item)
-        if variacao_str:
-            descricao += f" - {variacao_str}"
+        if item.variacao:
+            descricao += f" - {item.variacao.descricao_variacao}"
 
         descricao += (
             f" (qtd: {item.quantidade}, "

@@ -160,7 +160,19 @@ class BaseProdutoVariacaoRapidoFormSet(BaseInlineFormSet):
             combinacoes.add(chave)
 
             if quantidade > 0 and not tamanho:
-                form.add_error("tamanho", "Informe o tamanho quando houver estoque.")
+                if categoria == ProdutoVariacao.Categoria.PNEU:
+                    form.add_error("tamanho", "Informe a medida do pneu quando houver estoque.")
+                else:
+                    form.add_error("tamanho", "Informe o tamanho da variação quando houver estoque.")
+            
+            if categoria == ProdutoVariacao.Categoria.PNEU:
+                if faixa_etaria:
+                    form.add_error("faixa_etaria", "Pneu não usa faixa etária.")
+                if genero and genero != ProdutoVariacao.Genero.AUTOMOVEIS:
+                    form.add_error("genero", "Para pneus, use o gênero 'Automóveis'.")
+            else:
+                if genero == ProdutoVariacao.Genero.AUTOMOVEIS:
+                    form.add_error("genero", "O gênero 'Automóveis' é exclusivo para pneus.")
 
 
 ProdutoImagemRapidoFormSet = inlineformset_factory(

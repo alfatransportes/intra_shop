@@ -225,6 +225,7 @@ ProdutoImagemFormSet = inlineformset_factory(
     can_delete=True,
 )
 
+
 class ProdutoVariacaoForm(BaseBootstrapForm):
     class Meta:
         model = ProdutoVariacao
@@ -238,23 +239,24 @@ class ProdutoVariacaoForm(BaseBootstrapForm):
             "ativo",
         ]
 
-    def clean(self):
-        cleaned_data = super().clean()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        if cleaned_data.get("DELETE"):
-            return cleaned_data
+        categoria = None
 
-        tamanho = (cleaned_data.get("tamanho") or "").strip()
-        cor = (cleaned_data.get("cor") or "").strip()
-        quantidade = cleaned_data.get("quantidade") or 0
+        if self.is_bound:
+            categoria = self.data.get(self.add_prefix("categoria"))
+        elif self.instance and self.instance.pk:
+            categoria = self.instance.categoria
+        else:
+            categoria = self.initial.get("categoria")
 
-        if quantidade > 0 and not tamanho:
-            self.add_error("tamanho", "Informe o tamanho da variação.")
-
-        cleaned_data["tamanho"] = tamanho.upper() if tamanho else ""
-        cleaned_data["cor"] = cor
-
-        return cleaned_data
+        if categoria == ProdutoVariacao.Categoria.PNEU:
+            self.fields["tamanho"].label = "Medida"
+            self.fields["tamanho"].help_text = "Ex.: 175/70R13, 205/55R16"
+        else:
+            self.fields["tamanho"].label = "Tamanho"
+            self.fields["tamanho"].help_text = ""
 
 
 class BaseProdutoVariacaoFormSet(forms.BaseInlineFormSet):
