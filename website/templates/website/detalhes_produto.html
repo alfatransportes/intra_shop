@@ -70,7 +70,7 @@
                                 <select name="variacao_id" id="id_variacao" class="form-select" required>
                                     <option value="">Selecione</option>
                                     {% for variacao in variacoes_disponiveis %}
-                                    <option value="{{ variacao.id }}">{{ variacao.tamanho }} {% if variacao.genero %}• {{ variacao.get_genero_display }}{% endif %} {% if variacao.faixa_etaria %}• {{ variacao.get_faixa_etaria_display }}{% endif %} • Estoque: {{ variacao.quantidade }}</option>
+                                    <option value="{{ variacao.id }}">{{ variacao.descricao_select }} • Estoque: {{ variacao.quantidade }}</option>
                                     {% endfor %}
                                 </select>
                             </div>

@@ -386,11 +386,62 @@ class ProdutoVariacao(models.Model):
 
         itens.append(("Estoque", str(self.quantidade)))
         return itens
+    
+    @property
+    def descricao_select(self):
+        partes = []
+
+        if self.categoria == self.Categoria.PNEU:
+            if self.tamanho:
+                partes.append(self.tamanho)
+            if self.genero:
+                partes.append(self.get_genero_display())
+            if self.cor:
+                partes.append(self.cor)
+        else:
+            if self.tamanho:
+                partes.append(self.tamanho)
+            if self.genero:
+                partes.append(self.get_genero_display())
+            if self.faixa_etaria:
+                partes.append(self.get_faixa_etaria_display())
+            if self.cor:
+                partes.append(self.cor)
+
+        return " • ".join([p for p in partes if p])
 
     def __str__(self):
         if self.descricao_curta:
             return f"{self.produto.nome} - {self.descricao_curta}"
         return self.produto.nome
+    
+    def clean(self):
+        super().clean()
+
+        self.tamanho = (self.tamanho or "").strip().upper() or None
+        self.cor = (self.cor or "").strip() or None
+
+        if self.quantidade < 0:
+            raise ValidationError({"quantidade": "A quantidade não pode ser negativa."})
+
+        if self.quantidade > 0 and not self.tamanho:
+            if self.categoria == self.Categoria.PNEU:
+                raise ValidationError({"tamanho": "Informe a medida do pneu."})
+            raise ValidationError({"tamanho": "Informe o tamanho da variação."})
+
+        if self.categoria == self.Categoria.PNEU:
+            self.faixa_etaria = None
+
+            if self.genero and self.genero != self.Genero.AUTOMOVEIS:
+                raise ValidationError({
+                    "genero": "Para pneus, use o gênero 'Automóveis'."
+                })
+
+        else:
+            if self.genero == self.Genero.AUTOMOVEIS:
+                raise ValidationError({
+                    "genero": "O gênero 'Automóveis' é exclusivo para pneus."
+                })
 
 
 class Carrinho(models.Model):
