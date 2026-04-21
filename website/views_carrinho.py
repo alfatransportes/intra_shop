@@ -104,7 +104,7 @@ def carrinho_add(request, pk):
     item.preco_unitario = produto.valor_venda
     item.save()
     messages.success(request, "Produto adicionado ao carrinho.")
-    return redirect("carrinho_detail") if request.POST.get("acao") == "comprar" else redirect("carrinho_detail")
+    return redirect("carrinho_detail") if request.POST.get("acao") == "comprar" else redirect("detalhe_produto", pk=produto.pk)
 
 
 @login_required
