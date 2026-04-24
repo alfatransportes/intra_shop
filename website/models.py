@@ -618,10 +618,17 @@ class Venda(models.Model):
 
     def clean(self):
         super().clean()
-        if self.status == self.Status.APROVADA and self.forma_pagamento.codigo == FormaPagamento.Codigo.VALE and not self.comprovante_vale:
-            raise ValidationError({"comprovante_vale": "Para aprovar uma venda em VALE, anexe o comprovante primeiro."})
-        if self.status == self.Status.APROVADA and self.forma_pagamento.codigo == FormaPagamento.Codigo.PIX and not self.comprovante_pix:
-            raise ValidationError({"comprovante_pix": "Para aprovar uma venda Pix, o comprador deve anexar o comprovante primeiro."})
+
+        if self.status in [self.Status.APROVADA, self.Status.CONCLUIDA]:
+            if self.forma_pagamento.codigo == FormaPagamento.Codigo.VALE and not self.comprovante_vale:
+                raise ValidationError({
+                    "comprovante_vale": "Para aprovar/concluir uma venda em VALE, anexe o comprovante primeiro."
+                })
+
+            if self.forma_pagamento.codigo == FormaPagamento.Codigo.PIX and not self.comprovante_pix:
+                raise ValidationError({
+                    "comprovante_pix": "Para aprovar/concluir uma venda Pix, o comprador deve anexar o comprovante primeiro."
+                })
 
     def save(self, *args, **kwargs):
         self.full_clean()
