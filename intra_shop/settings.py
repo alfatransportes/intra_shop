@@ -18,9 +18,11 @@ if not SECRET_KEY:
 DEBUG = True
 
 ALLOWED_HOSTS = ["api.alfatransportes.com.br", "intrashop.swem.com.br", "alfatransportes.com.br", "127.0.0.1", "localhost", "[::1]", "192.168.1.27", "192.168.1.194", "10.0.0.42"]
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 CSRF_TRUSTED_ORIGINS = [
     "https://api.alfatransportes.com.br",
+    "https://intranet.alfatransportes.com.br",
     "https://alfatransportes.com.br",
     "https://intrashop.swem.com.br",
     "http://127.0.0.1:8000",
@@ -164,14 +166,15 @@ USE_L10N = True
 
 USE_TZ = True
 
+FORCE_SCRIPT_NAME = "/intra_shop"
 
 # Arquivos Staticos
-STATIC_URL = '/static/'
+STATIC_URL = "/intra_shop/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 # Arquivos de Media/upload
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
+MEDIA_URL = "/intra_shop/media/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
