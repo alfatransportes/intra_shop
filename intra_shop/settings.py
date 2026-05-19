@@ -17,7 +17,7 @@ if not SECRET_KEY:
         raise RuntimeError("DJANGO_SECRET_KEY não definido em produção.")
 DEBUG = True
 
-ALLOWED_HOSTS = ["api.alfatransportes.com.br", "intrashop.swem.com.br", "alfatransportes.com.br", "127.0.0.1", "localhost", "[::1]", "192.168.1.27", "192.168.1.194", "10.0.0.42"]
+ALLOWED_HOSTS = ["api.alfatransportes.com.br", "intrashop.swem.com.br", "intranet.alfatransportes.com.br", "alfatransportes.com.br", "127.0.0.1", "localhost", "[::1]", "192.168.1.27", "192.168.1.194", "10.0.0.42"]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 CSRF_TRUSTED_ORIGINS = [
